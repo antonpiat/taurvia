@@ -1,13 +1,13 @@
-import { BrowserRouter } from "react-router-dom";
+import { HashRouter } from "react-router-dom";
 import { WalletProvider } from "@/context/WalletContext";
 import { AppRouter } from "@/router";
 
 function App() {
   return (
     <WalletProvider>
-      <BrowserRouter>
+      <HashRouter>
         <AppRouter />
-      </BrowserRouter>
+      </HashRouter>
     </WalletProvider>
   );
 }

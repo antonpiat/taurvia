@@ -16,11 +16,18 @@
         "width": 1100,
         "height": 720,
         "minWidth": 900,
-        "minHeight": 600
+        "minHeight": 600,
+        "backgroundColor": "#0b0f14"
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:1420 ws://localhost:1421"
+      "csp": {
+        "default-src": "'self' asset:",
+        "connect-src": "ipc: http://ipc.localhost",
+        "img-src": "'self' asset: data:",
+        "style-src": "'unsafe-inline' 'self'"
+      },
+      "devCsp": "default-src 'self' asset: ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; img-src 'self' asset: data:; style-src 'unsafe-inline' 'self'"
     }
   },
   "bundle": {
@@ -32,6 +39,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false,
+        "files": {}
+      }
+    }
   }
 }
