@@ -57,6 +57,7 @@ dependencies = [
  "bip39",
  "models",
  "rand 0.10.2",
+ "rayon",
  "solana-account-decoder",
  "solana-client",
  "solana-commitment-config",

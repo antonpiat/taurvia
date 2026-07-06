@@ -66,6 +66,11 @@ pub fn reveal_mnemonic(password: String, state: State<AppState>) -> CommandResul
 }
 
 #[tauri::command]
+pub fn get_wallet_snapshot(state: State<AppState>) -> CommandResult<models::WalletSnapshot> {
+    state.wallet.get_snapshot().map_err(map_wallet_error)
+}
+
+#[tauri::command]
 pub fn get_sol_balance(state: State<AppState>) -> CommandResult<f64> {
     state.wallet.get_sol_balance().map_err(map_wallet_error)
 }

@@ -10,7 +10,7 @@ import { ApiError, walletApi } from "@/lib/tauri";
 
 export function SetPasswordPage() {
   const navigate = useNavigate();
-  const { refresh } = useWallet();
+  const { unlock } = useWallet();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +38,9 @@ export function SetPasswordPage() {
       } else {
         await walletApi.createWallet(mnemonic, password);
       }
-      await walletApi.unlockWallet(password);
       sessionStorage.removeItem("aegis_onboarding_mnemonic");
       sessionStorage.removeItem("aegis_onboarding_mode");
-      await refresh();
+      await unlock(password);
       navigate("/onboarding/ready");
     } catch (err) {
       const apiError = err as ApiError;

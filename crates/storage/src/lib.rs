@@ -44,7 +44,7 @@ impl WalletStorage {
             fs::create_dir_all(parent)?;
         }
 
-        let serialized = serde_json::to_vec_pretty(wallet)?;
+        let serialized = serde_json::to_vec(wallet)?;
         let temp_path = self.wallet_path.with_extension("json.tmp");
         {
             let mut file = fs::File::create(&temp_path)?;

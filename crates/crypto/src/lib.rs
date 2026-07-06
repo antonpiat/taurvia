@@ -50,13 +50,14 @@ pub fn derive_key(password: &str, salt: &[u8]) -> Result<DerivedKey, CryptoError
 }
 
 pub fn encrypt(plaintext: &[u8], key: &[u8; KEY_LEN]) -> Result<(Vec<u8>, Vec<u8>), CryptoError> {
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     let mut nonce_bytes = [0u8; NONCE_LEN];
     rand::fill(&mut nonce_bytes);
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let nonce = Nonce::try_from(&nonce_bytes[..])
+        .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     let ciphertext = cipher
-        .encrypt(nonce, plaintext)
+        .encrypt(&nonce, plaintext)
         .map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     Ok((nonce_bytes.to_vec(), ciphertext))
 }
@@ -69,11 +70,12 @@ pub fn decrypt(
     if nonce.len() != NONCE_LEN {
         return Err(CryptoError::DecryptionFailed("invalid nonce length".into()));
     }
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|e| CryptoError::DecryptionFailed(e.to_string()))?;
-    let nonce = Nonce::from_slice(nonce);
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| CryptoError::DecryptionFailed(e.to_string()))?;
+    let nonce =
+        Nonce::try_from(&nonce[..]).map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
     cipher
-        .decrypt(nonce, ciphertext)
+        .decrypt(&nonce, ciphertext)
         .map_err(|_| CryptoError::InvalidPassword)
 }
 

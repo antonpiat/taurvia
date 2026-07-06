@@ -9,7 +9,7 @@ use crypto::{
 };
 use models::{
     ActivityItem, CryptoEnvelope, EncryptedPayload, Network, SendPreview, SendResult,
-    TokenBalance, DEFAULT_DERIVATION_PATH, WALLET_FILE_VERSION,
+    TokenBalance, WalletSnapshot, DEFAULT_DERIVATION_PATH, WALLET_FILE_VERSION,
 };
 use models::WalletFile;
 use storage::WalletStorage;
@@ -46,6 +46,7 @@ struct WalletSession {
 pub struct WalletService {
     storage: WalletStorage,
     session: Arc<Mutex<Option<WalletSession>>>,
+    cached_wallet: Mutex<Option<WalletFile>>,
     rpc: SolanaRpc,
 }
 
@@ -54,6 +55,7 @@ impl WalletService {
         Self {
             storage: WalletStorage::new(data_dir),
             session: Arc::new(Mutex::new(None)),
+            cached_wallet: Mutex::new(None),
             rpc: SolanaRpc::new(rpc_url),
         }
     }
@@ -71,6 +73,46 @@ impl WalletService {
             return Some(session.public_key.clone());
         }
         self.storage.load().ok().map(|w| w.public_key)
+    }
+
+    pub fn get_snapshot(&self) -> Result<WalletSnapshot, WalletError> {
+        let exists = self.wallet_exists();
+        if !exists {
+            return Ok(WalletSnapshot {
+                exists: false,
+                unlocked: false,
+                public_key: None,
+                sol_balance: None,
+                tokens: None,
+            });
+        }
+
+        let unlocked = self.is_unlocked();
+        let public_key = self.get_public_key();
+
+        if !unlocked {
+            return Ok(WalletSnapshot {
+                exists: true,
+                unlocked: false,
+                public_key,
+                sol_balance: None,
+                tokens: None,
+            });
+        }
+
+        let pubkey = self.require_pubkey()?;
+        let (lamports, tokens) = self
+            .rpc
+            .get_balances_parallel(&pubkey)
+            .map_err(WalletError::Operation)?;
+
+        Ok(WalletSnapshot {
+            exists: true,
+            unlocked: true,
+            public_key,
+            sol_balance: Some(lamports_to_sol(lamports)),
+            tokens: Some(tokens),
+        })
     }
 
     pub fn generate_mnemonic(&self) -> Result<String, WalletError> {
@@ -101,12 +143,14 @@ impl WalletService {
             public_key: public_key.clone(),
             keypair,
         });
+        *self.cached_wallet.lock().unwrap() = Some(wallet);
         Ok(public_key)
     }
 
     pub fn lock(&self) {
         let mut session = self.session.lock().unwrap();
         *session = None;
+        *self.cached_wallet.lock().unwrap() = None;
     }
 
     pub fn reveal_mnemonic(&self, password: &str) -> Result<String, WalletError> {
@@ -194,6 +238,7 @@ impl WalletService {
         };
         let wallet = self.encrypt_wallet_file(&keypair, &payload, password)?;
         self.storage.save(&wallet)?;
+        *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
         Ok(wallet)
     }
 
@@ -255,7 +300,13 @@ impl WalletService {
     }
 
     fn verify_password(&self, password: &str) -> Result<(), WalletError> {
-        let wallet = self.storage.load()?;
+        let wallet = self
+            .cached_wallet
+            .lock()
+            .unwrap()
+            .clone()
+            .or_else(|| self.storage.load().ok())
+            .ok_or(WalletError::NotFound)?;
         self.decrypt_payload(&wallet, password)?;
         Ok(())
     }

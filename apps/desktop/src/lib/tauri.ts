@@ -37,6 +37,14 @@ export interface SendResult {
   status: string;
 }
 
+export interface WalletSnapshot {
+  exists: boolean;
+  unlocked: boolean;
+  public_key: string | null;
+  sol_balance: number | null;
+  tokens: TokenBalance[] | null;
+}
+
 async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   try {
     return await invoke<T>(command, args);
@@ -49,6 +57,7 @@ async function invokeCommand<T>(command: string, args?: Record<string, unknown>)
 }
 
 export const walletApi = {
+  getWalletSnapshot: () => invokeCommand<WalletSnapshot>("get_wallet_snapshot"),
   walletExists: () => invokeCommand<boolean>("wallet_exists"),
   generateMnemonic: () => invokeCommand<string>("generate_mnemonic"),
   createWallet: (mnemonic: string, password: string) =>

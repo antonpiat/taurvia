@@ -38,6 +38,7 @@ pub fn keypair_from_base64(encoded: &str) -> Result<Keypair> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use solana_sdk::signer::Signer;
 
     #[test]
     fn mnemonic_round_trip() {

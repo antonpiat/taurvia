@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/misc";
@@ -15,10 +15,6 @@ export function DashboardPage() {
     await refresh();
     setRefreshing(false);
   };
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   return (
     <div className="space-y-6">

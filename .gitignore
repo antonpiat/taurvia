@@ -1,8 +1,11 @@
 # Dependencies
 node_modules/
 dist/
-target/
 .tmp/
+
+# Rust
+Cargo.lock
+target/
 
 # Environment
 .env

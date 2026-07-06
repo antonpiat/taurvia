@@ -11,9 +11,9 @@ name = "aegis_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 wallet-core = { path = "../../../crates/wallet-core" }
 models = { path = "../../../crates/models" }
-tauri = { version = "2", features = [] }
+tauri = { version = "2.11.5", features = [] }

@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ApiError, TokenBalance, walletApi } from "@/lib/tauri";
 
 interface WalletContextValue {
@@ -10,6 +18,7 @@ interface WalletContextValue {
   tokens: TokenBalance[];
   error: string | null;
   refresh: () => Promise<void>;
+  refreshBalances: () => Promise<void>;
   unlock: (password: string) => Promise<void>;
   lock: () => Promise<void>;
   clearError: () => void;
@@ -25,37 +34,49 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [solBalance, setSolBalance] = useState<number | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const refreshPromise = useRef<Promise<void> | null>(null);
+
+  const applySnapshot = useCallback(
+    (snapshot: Awaited<ReturnType<typeof walletApi.getWalletSnapshot>>) => {
+      setWalletExists(snapshot.exists);
+      setUnlocked(snapshot.unlocked);
+      setPublicKey(snapshot.public_key);
+      setSolBalance(snapshot.sol_balance);
+      setTokens(snapshot.tokens ?? []);
+    },
+    [],
+  );
+
+  const refreshBalances = useCallback(async () => {
+    if (!walletExists || !unlocked) return;
+    const [balance, tokenBalances] = await Promise.all([
+      walletApi.getSolBalance(),
+      walletApi.getTokenBalances(),
+    ]);
+    setSolBalance(balance);
+    setTokens(tokenBalances);
+  }, [walletExists, unlocked]);
 
   const refresh = useCallback(async () => {
-    try {
-      const exists = await walletApi.walletExists();
-      setWalletExists(exists);
-      if (!exists) {
-        setUnlocked(false);
-        setPublicKey(null);
-        setSolBalance(null);
-        setTokens([]);
-        return;
-      }
-
-      const isUnlocked = await walletApi.isUnlocked();
-      setUnlocked(isUnlocked);
-      const key = await walletApi.getPublicKey();
-      setPublicKey(key);
-
-      if (isUnlocked) {
-        const [balance, tokenBalances] = await Promise.all([
-          walletApi.getSolBalance(),
-          walletApi.getTokenBalances(),
-        ]);
-        setSolBalance(balance);
-        setTokens(tokenBalances);
-      }
-    } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError.message ?? "Failed to load wallet state");
+    if (refreshPromise.current) {
+      return refreshPromise.current;
     }
-  }, []);
+
+    const run = (async () => {
+      try {
+        const snapshot = await walletApi.getWalletSnapshot();
+        applySnapshot(snapshot);
+      } catch (err) {
+        const apiError = err as ApiError;
+        setError(apiError.message ?? "Failed to load wallet state");
+      } finally {
+        refreshPromise.current = null;
+      }
+    })();
+
+    refreshPromise.current = run;
+    return run;
+  }, [applySnapshot]);
 
   useEffect(() => {
     void (async () => {
@@ -70,18 +91,26 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const key = await walletApi.unlockWallet(password);
       setPublicKey(key);
       setUnlocked(true);
-      await refresh();
+      setWalletExists(true);
+      const [balance, tokenBalances] = await Promise.all([
+        walletApi.getSolBalance(),
+        walletApi.getTokenBalances(),
+      ]);
+      setSolBalance(balance);
+      setTokens(tokenBalances);
     },
-    [refresh],
+    [],
   );
 
   const lock = useCallback(async () => {
     await walletApi.lockWallet();
     setUnlocked(false);
+    setPublicKey(null);
     setSolBalance(null);
     setTokens([]);
-    await refresh();
-  }, [refresh]);
+  }, []);
+
+  const clearError = useCallback(() => setError(null), []);
 
   const value = useMemo(
     () => ({
@@ -93,11 +122,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       tokens,
       error,
       refresh,
+      refreshBalances,
       unlock,
       lock,
-      clearError: () => setError(null),
+      clearError,
     }),
-    [loading, walletExists, unlocked, publicKey, solBalance, tokens, error, refresh, unlock, lock],
+    [
+      loading,
+      walletExists,
+      unlocked,
+      publicKey,
+      solBalance,
+      tokens,
+      error,
+      refresh,
+      refreshBalances,
+      unlock,
+      lock,
+      clearError,
+    ],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

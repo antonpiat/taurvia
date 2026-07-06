@@ -18,7 +18,7 @@ import { shortenAddress } from "@/lib/utils";
 type TokenOption = { type: "sol" } | { type: "spl"; mint: string; symbol: string };
 
 export function SendPage() {
-  const { tokens } = useWallet();
+  const { tokens, refreshBalances } = useWallet();
   const [token, setToken] = useState<TokenOption>({ type: "sol" });
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
@@ -64,6 +64,7 @@ export function SendPage() {
       setPassword("");
       setAmount("");
       setTo("");
+      await refreshBalances();
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message ?? "Transaction failed");

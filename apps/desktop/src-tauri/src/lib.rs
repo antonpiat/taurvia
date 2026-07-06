@@ -29,6 +29,7 @@ pub fn run() {
             commands::is_unlocked,
             commands::get_public_key,
             commands::reveal_mnemonic,
+            commands::get_wallet_snapshot,
             commands::get_sol_balance,
             commands::get_token_balances,
             commands::get_activity,
