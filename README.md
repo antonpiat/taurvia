@@ -16,7 +16,9 @@
   <a href="#getting-started">Getting started</a> ·
   <a href="#features">Features</a> ·
   <a href="#security">Security</a> ·
-  <a href="#architecture">Architecture</a>
+  <a href="#architecture">Architecture</a> ·
+  <a href="doc/CHANGELOG.md">Changelog</a> ·
+  <a href="doc/SECURITY.md">Security policy</a>
 </p>
 
 ---
@@ -140,7 +142,10 @@ aegis/
 │   ├── solana/            # RPC client, transfers, keypairs
 │   ├── storage/           # encrypted wallet file I/O
 │   └── wallet-core/       # session, signing, snapshots
-└── doc/                   # project assets (README branding)
+└── doc/                   # project docs
+    ├── AEGIS.png          # README branding
+    ├── CHANGELOG.md       # release history
+    └── SECURITY.md        # vulnerability reporting
 ```
 
 ## License
