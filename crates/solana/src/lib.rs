@@ -1,14 +1,11 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod keypair;
+mod rpc;
+mod transfer;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use keypair::{derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64};
+pub use rpc::SolanaRpc;
+pub use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub fn lamports_to_sol(lamports: u64) -> f64 {
+    lamports as f64 / solana_native_token::LAMPORTS_PER_SOL as f64
 }

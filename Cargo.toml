@@ -1,15 +1,33 @@
 [workspace]
 members = [
-    "crates/wallet-core",
+    "crates/models",
     "crates/crypto",
     "crates/storage",
     "crates/solana",
-    "crates/models",
-    "apps/desktop/src-tauri"
+    "crates/wallet-core",
+    "apps/desktop/src-tauri",
 ]
 resolver = "2"
 
 [workspace.package]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/antonpiat/aegis"
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+thiserror = "2.0.18"
+anyhow = "1.0.103"
+uuid = { version = "1.23.4", features = ["v4", "serde"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+base64 = "0.22.1"
+rand = "0.10.2"
+zeroize = { version = "1.9.0", features = ["derive"] }
+argon2 = "0.5.3"
+aes-gcm = "0.11.0"
+bip39 = "2.2.2"
+solana-sdk = "4.0.1"
+solana-client = "4.1.1"
+solana-commitment-config = "3.1.1"
+spl-token-interface = "3.0.0"
+spl-associated-token-account-interface = "2.0.0"

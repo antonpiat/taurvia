@@ -1,35 +1,24 @@
-# IDE
-.idea/
-.vscode/
-
-# Rust
-target/
-Cargo.lock
-
-# Node / pnpm
+# Dependencies
 node_modules/
-.pnpm-store/
 dist/
-build/
+target/
+.tmp/
+
+# Environment
+.env
+.env.local
+
+# Wallet data (never commit)
+**/wallets/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
 
 # Tauri
-apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/gen/
-apps/desktop/src-tauri/.tauri/
-
-# Env / secrets
-.env
-.env.*
-*.key
-*.pem
-*.wallet
-*.wallet.json
-
-# OS
-.DS_Store
-Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-pnpm-debug.log*

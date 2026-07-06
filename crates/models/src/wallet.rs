@@ -1,0 +1,53 @@
+use serde::{Deserialize, Serialize};
+
+pub const WALLET_FILE_VERSION: u32 = 1;
+pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/501'/0'/0'";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Network {
+    SolanaMainnet,
+    SolanaDevnet,
+}
+
+impl Network {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::SolanaMainnet => "solana-mainnet",
+            Self::SolanaDevnet => "solana-devnet",
+        }
+    }
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Self::SolanaMainnet
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CryptoEnvelope {
+    pub kdf: String,
+    pub salt: String,
+    pub cipher: String,
+    pub nonce: String,
+    pub ciphertext: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptedPayload {
+    pub mnemonic: String,
+    #[serde(rename = "private_key")]
+    pub private_key: String,
+    pub derivation_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WalletFile {
+    pub version: u32,
+    pub wallet_id: String,
+    pub network: String,
+    pub public_key: String,
+    pub created_at: String,
+    pub crypto: CryptoEnvelope,
+}
