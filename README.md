@@ -1,89 +1,146 @@
-# Aegis
+<p align="center">
+  <img src="doc/AEGIS.png" alt="Aegis Wallet" width="300" />
+</p>
 
-Aegis is a security-first, non-custodial Solana desktop wallet built with Tauri and Rust.
+<h1 align="center">Aegis</h1>
 
-## Features (MVP)
+<p align="center">
+  <strong>Secure. Simple. On Solana.</strong>
+</p>
 
-- Create and import Solana wallets from seed phrase
-- Local encrypted wallet storage (Argon2id + AES-256-GCM)
-- SOL and basic SPL token balances
-- Send SOL and SPL tokens with transaction confirmation
-- Receive via QR code and address copy
-- On-chain activity history via Solana RPC
-- Password-gated unlock, signing, and seed reveal
+<p align="center">
+  A non-custodial Solana desktop wallet — keys stay on your machine, signing stays in Rust.
+</p>
+
+<p align="center">
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#security">Security</a> ·
+  <a href="#architecture">Architecture</a>
+</p>
+
+---
+
+## Why Aegis
+
+Most wallets ask you to trust a browser tab or a hosted service. Aegis is a **native desktop app**: your seed phrase and private keys never leave your device, and every signature is produced inside a Rust core the UI cannot bypass.
+
+Built with **Tauri v2** for a small footprint and **Solana SDK 4** for mainnet-ready transactions.
+
+## Features
+
+| | |
+|---|---|
+| **Create & import** | New wallet or recover from a 12/24-word seed phrase |
+| **Balances** | SOL and SPL token holdings via RPC |
+| **Send** | SOL and SPL transfers with fee preview and confirmation |
+| **Receive** | Address display and QR code |
+| **Activity** | Recent on-chain history |
+| **Lock screen** | Password-gated unlock, signing, and seed reveal |
+
+## Security
+
+Aegis is designed so the frontend never becomes a secret keeper.
+
+```mermaid
+flowchart TB
+  UI["React UI<br/>apps/desktop<br/><i>balances · forms · QR</i><br/><b>no private keys</b>"]
+  WC["wallet-core<br/><i>unlock · sign · send</i>"]
+  CRYPTO["crypto<br/>Argon2id · AES-256-GCM"]
+  SOL["solana<br/>RPC · txs · SPL"]
+  STORE["storage<br/>encrypted wallet file"]
+
+  UI -->|Tauri IPC| WC
+  WC --> CRYPTO
+  WC --> SOL
+  WC --> STORE
+```
+
+- **At rest:** Argon2id key derivation + AES-256-GCM encryption
+- **In memory:** keys exist only while the wallet is unlocked
+- **At sign time:** transactions are built and signed in Rust, not JavaScript
+- **Seed reveal:** requires password verification every time
 
 ## Stack
 
-- **Desktop shell:** Tauri v2
-- **Backend:** Rust workspace (`crypto`, `storage`, `solana`, `wallet-core`, `models`)
-- **Frontend:** React + TypeScript + Vite + Tailwind + shadcn-style components
-- **Package manager:** pnpm
+| Layer | Technology |
+|-------|------------|
+| Shell | Tauri v2 |
+| Core | Rust workspace — `crypto`, `storage`, `solana`, `wallet-core`, `models` |
+| UI | React 19, TypeScript, Vite, Tailwind CSS 4 |
+| Chain | Solana SDK 4, SPL token interfaces |
+| Package manager | pnpm |
 
-## Development
+## Getting started
 
 ### Prerequisites
 
-- Rust (stable)
-- Node.js 20+
-- pnpm
-- Linux system dependencies for Tauri ([docs](https://v2.tauri.app/start/prerequisites/))
+- [Rust](https://rustup.rs/) (stable)
+- [Node.js](https://nodejs.org/) 20+
+- [pnpm](https://pnpm.io/)
+- [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/) (Linux)
 
-### Setup
+### Install & run
 
 ```bash
-cd apps/desktop
+git clone <your-repo-url>
+cd aegis/apps/desktop
 pnpm install
-```
-
-Optional RPC configuration:
-
-```bash
-cp ../../.env.example ../../.env
-# edit AEGIS_RPC_URL if needed
-```
-
-### Run
-
-From `apps/desktop`:
-
-```bash
 pnpm tauri dev
 ```
 
-Or build the workspace crates:
+### Optional: custom RPC
+
+By default Aegis uses the public Solana mainnet RPC. For better reliability, point at your own endpoint:
 
 ```bash
-cd ../..
-export TMPDIR=$PWD/.tmp
-cargo test
+cp ../../.env.example ../../.env
+# AEGIS_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
 ```
 
 ### Build
+
+Production bundles (`.deb`, `.rpm`, `.AppImage` on Linux):
 
 ```bash
 cd apps/desktop
 pnpm tauri build
 ```
 
-## Security model
+Output lands in `target/release/bundle/`.
 
-- Private keys and mnemonics are encrypted at rest
-- Signing happens only in the Rust core
-- Frontend never receives raw private keys
-- Seed phrase reveal requires password verification
-- Send operations require password + confirmation screen
+### Test the Rust workspace
+
+```bash
+cd aegis
+export TMPDIR=$PWD/.tmp
+cargo test
+```
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI["React UI"] -->|invoke| WC["wallet-core"]
+  WC --> CRYPTO["crypto"]
+  WC --> STORE["storage"]
+  WC --> SOL["solana / RPC"]
+  STORE --> DISK[("~/.local/share/com.aegis.wallet")]
+```
 
 ## Project structure
 
 ```
 aegis/
+├── apps/desktop/          # Tauri shell + React frontend
+│   └── src-tauri/         # Rust commands, config, icons
 ├── crates/
-│   ├── models/       # shared types
-│   ├── crypto/       # Argon2id + AES-GCM
-│   ├── storage/      # encrypted wallet file I/O
-│   ├── solana/       # RPC + transaction building
-│   └── wallet-core/  # wallet orchestration
-└── apps/desktop/     # Tauri + React UI
+│   ├── crypto/            # Argon2id + AES-256-GCM
+│   ├── models/            # shared types
+│   ├── solana/            # RPC client, transfers, keypairs
+│   ├── storage/           # encrypted wallet file I/O
+│   └── wallet-core/       # session, signing, snapshots
+└── doc/                   # project assets (README branding)
 ```
 
 ## License
