@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  A non-custodial Solana desktop wallet — keys stay on your machine, signing stays in Rust.
+  A non-custodial Solana desktop wallet for retail users — keys stay on your machine, signing stays in Rust.
 </p>
 
 <p align="center">
