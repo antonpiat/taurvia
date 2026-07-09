@@ -30,6 +30,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
 
 fn typescript_exporter() -> specta_typescript::Typescript {
     specta_typescript::Typescript::default()
+        .header("// @ts-nocheck")
         .bigint(specta_typescript::BigIntExportBehavior::Number)
 }
 

@@ -17,18 +17,29 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
-## [0.1.1] - 2026-07-09
+## [0.1.2] - 2026-07-09
+
+### Added
+
+- Tokio async runtime for Solana RPC and wallet-core network work
+- Typed TypeScript bindings generated with `tauri-specta` (`apps/desktop/src/bindings.ts`)
+- Specta `Type` derives on shared `models` DTOs for end-to-end command typing
 
 ### Changed
 
 - Switched Solana RPC to `solana_client::nonblocking::rpc_client::RpcClient` with Tokio
-- Made wallet-core RPC methods and Tauri RPC commands fully async
+- Made `wallet_core` RPC methods and Tauri RPC commands fully async
 - Replaced thread/`rayon` RPC parallelism with `tokio::join!` and bounded `buffer_unordered` concurrency
 - Share a single `Arc<RpcClient>` instead of creating a client (and hidden runtime) per request
+- Renamed crate path/package `wallet-core` → `wallet_core`
+- Split `wallet_core` into focused modules (`session`, `wallet_file`, `balances`, `send`)
+- Split Tauri IPC into `commands/{wallet,balances,send}.rs`
+- Frontend `tauri.ts` now wraps generated bindings instead of hand-rolled invoke helpers
 
 ### Fixed
 
 - Long send/confirm and activity fetches no longer block Tauri worker threads
+- Clearer separation between wallet session logic and Tauri command glue
 
 ---
 
@@ -57,7 +68,7 @@ First public MVP release.
 
 ### Security
 
-- Signing and key handling confined to the Rust `wallet-core` crate
+- Signing and key handling confined to the Rust `wallet_core` crate
 - Frontend never receives raw private keys or mnemonics
 
 ### Known limitations
@@ -73,11 +84,13 @@ First public MVP release.
 When cutting a new version:
 
 1. Move items from **Unreleased** into a new `## [x.y.z] - YYYY-MM-DD` section.
-2. Update the version in `apps/desktop/package.json`, `apps/desktop/src-tauri/tauri.conf.json`, and `apps/desktop/src-tauri/Cargo.toml`.
-3. Build and test: `cargo test` and `pnpm tauri build`.
-4. Create a GitHub Release tagged `vx.y.z` and attach binaries from `target/release/bundle/`.
-5. Copy the new section into the GitHub Release notes.
+2. Update the version in all workspace `Cargo.toml` packages, `apps/desktop/package.json`, and `apps/desktop/src-tauri/tauri.conf.json`.
+3. Refresh `Cargo.lock` with `cargo check` / `cargo test`.
+4. Update `README.md` version note if present.
+5. Build and test: `cargo test` and `pnpm tauri build`.
+6. Create a GitHub Release tagged `vx.y.z` and attach binaries from `target/release/bundle/`.
+7. Copy the new section into the GitHub Release notes.
 
-[Unreleased]: https://github.com/antonpiat/aegis/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/antonpiat/aegis/releases/tag/v0.1.1
+[Unreleased]: https://github.com/antonpiat/aegis/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/antonpiat/aegis/releases/tag/v0.1.2
 [0.1.0]: https://github.com/antonpiat/aegis/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 [package]
 name = "aegis-desktop"
-version = "0.1.1"
+version = "0.1.2"
 description = "Aegis Solana Desktop Wallet"
 authors = ["you"]
 edition.workspace = true
