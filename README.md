@@ -173,7 +173,7 @@ aegis/
 
 ## Version
 
-Current release: **0.1.2** — see [Changelog](doc/CHANGELOG.md).
+Current release: **0.3.2** — see [Changelog](doc/CHANGELOG.md).
 
 ## License
 
