@@ -23,6 +23,7 @@ async function unwrap<T>(promise: Promise<Result<T, unknown>> | Promise<T>): Pro
 export const walletApi = {
   getWalletSnapshot: () => unwrap(commands.getWalletSnapshot()),
   generateMnemonic: () => unwrap(commands.generateMnemonic()),
+  validateMnemonic: (mnemonic: string) => unwrap(commands.validateMnemonic(mnemonic)),
   createWallet: (mnemonic: string, password: string) =>
     unwrap(commands.createWallet(mnemonic, password)),
   importWallet: (mnemonic: string, password: string) =>
@@ -30,6 +31,7 @@ export const walletApi = {
   unlockWallet: (password: string) => unwrap(commands.unlockWallet(password)),
   lockWallet: () => commands.lockWallet(),
   revealMnemonic: (password: string) => unwrap(commands.revealMnemonic(password)),
+  removeWallet: (password: string) => unwrap(commands.removeWallet(password)),
   getSolBalance: () => unwrap(commands.getSolBalance()),
   getTokenBalances: () => unwrap(commands.getTokenBalances()),
   getActivity: (limit: number) => unwrap(commands.getActivity(limit)),

@@ -13,6 +13,14 @@ async generateMnemonic() : Promise<Result<string, ApiError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async validateMnemonic(mnemonic: string) : Promise<Result<null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("validate_mnemonic", { mnemonic }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async createWallet(mnemonic: string, password: string) : Promise<Result<WalletFile, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("create_wallet", { mnemonic, password }) };
@@ -43,6 +51,14 @@ async lockWallet() : Promise<void> {
 async revealMnemonic(password: string) : Promise<Result<string, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("reveal_mnemonic", { password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async removeWallet(password: string) : Promise<Result<null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_wallet", { password }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

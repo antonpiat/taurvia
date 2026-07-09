@@ -1,6 +1,6 @@
 use aegis_solana::{
     derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64,
-    Keypair, Signer,
+    validate_mnemonic, Keypair, Signer,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::Utc;
@@ -19,6 +19,10 @@ use crate::WalletError;
 impl WalletService {
     pub fn generate_mnemonic(&self) -> Result<String, WalletError> {
         generate_mnemonic().map_err(WalletError::Operation)
+    }
+
+    pub fn validate_mnemonic(&self, mnemonic: &str) -> Result<(), WalletError> {
+        validate_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)
     }
 
     pub fn create_wallet(&self, mnemonic: &str, password: &str) -> Result<WalletFile, WalletError> {
@@ -53,6 +57,13 @@ impl WalletService {
         let wallet = self.storage.load()?;
         let payload = self.decrypt_payload(&wallet, password)?;
         Ok(payload.mnemonic)
+    }
+
+    pub fn remove_wallet(&self, password: &str) -> Result<(), WalletError> {
+        self.verify_password(password)?;
+        self.lock();
+        self.storage.delete()?;
+        Ok(())
     }
 
     fn save_wallet_from_mnemonic(
