@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use specta::Type;
 
 pub const WALLET_FILE_VERSION: u32 = 1;
 pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/501'/0'/0'";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "kebab-case")]
 pub enum Network {
     SolanaMainnet,
@@ -25,7 +26,7 @@ impl Default for Network {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CryptoEnvelope {
     pub kdf: String,
     pub salt: String,
@@ -34,7 +35,7 @@ pub struct CryptoEnvelope {
     pub ciphertext: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct EncryptedPayload {
     pub mnemonic: String,
     #[serde(rename = "private_key")]
@@ -42,7 +43,7 @@ pub struct EncryptedPayload {
     pub derivation_path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WalletFile {
     pub version: u32,
     pub wallet_id: String,

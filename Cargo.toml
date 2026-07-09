@@ -4,7 +4,7 @@ members = [
     "crates/crypto",
     "crates/storage",
     "crates/solana",
-    "crates/wallet-core",
+    "crates/wallet_core",
     "apps/desktop/src-tauri",
 ]
 resolver = "2"
@@ -31,5 +31,5 @@ solana-client = "4.1.1"
 solana-commitment-config = "3.1.1"
 spl-token-interface = "3.0.0"
 spl-associated-token-account-interface = "2.0.0"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
-futures = "0.3"
+tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "time"] }
+futures = "0.3.32"
