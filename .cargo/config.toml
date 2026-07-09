@@ -1,6 +1,0 @@
-[build]
-target-dir = "target"
-
-[env]
-# Avoid /tmp quota exhaustion during native dependency builds (e.g. zstd-sys).
-TMPDIR = { value = ".tmp", relative = true, force = true }

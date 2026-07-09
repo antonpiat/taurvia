@@ -115,7 +115,8 @@ Output lands in `target/release/bundle/`.
 
 ```bash
 cd aegis
-export TMPDIR=$PWD/.tmp
+# Optional: if /tmp is small or quota-limited
+mkdir -p .tmp && export TMPDIR=$PWD/.tmp
 cargo test
 ```
 
