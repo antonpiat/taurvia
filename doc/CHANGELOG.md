@@ -28,11 +28,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Changed
 
 - Switched Solana RPC to `solana_client::nonblocking::rpc_client::RpcClient` with Tokio
-- Made `wallet_core` RPC methods and Tauri RPC commands fully async
+- Made `wallet-core` RPC methods and Tauri RPC commands fully async
 - Replaced thread/`rayon` RPC parallelism with `tokio::join!` and bounded `buffer_unordered` concurrency
 - Share a single `Arc<RpcClient>` instead of creating a client (and hidden runtime) per request
-- Renamed crate path/package `wallet-core` → `wallet_core`
-- Split `wallet_core` into focused modules (`session`, `wallet_file`, `balances`, `send`)
+- Standardized package name to kebab-case `wallet-core` (Rust import remains `wallet_core`)
+- Split `wallet-core` into focused modules (`session`, `wallet_file`, `balances`, `send`)
 - Split Tauri IPC into `commands/{wallet,balances,send}.rs`
 - Frontend `tauri.ts` now wraps generated bindings instead of hand-rolled invoke helpers
 
@@ -68,7 +68,7 @@ First public MVP release.
 
 ### Security
 
-- Signing and key handling confined to the Rust `wallet_core` crate
+- Signing and key handling confined to the Rust `wallet-core` crate
 - Frontend never receives raw private keys or mnemonics
 
 ### Known limitations

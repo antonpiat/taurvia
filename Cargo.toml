@@ -3,8 +3,8 @@ members = [
     "crates/models",
     "crates/crypto",
     "crates/storage",
-    "crates/solana",
-    "crates/wallet_core",
+    "crates/aegis-solana",
+    "crates/wallet-core",
     "apps/desktop/src-tauri",
 ]
 resolver = "2"

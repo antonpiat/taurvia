@@ -1,11 +1,11 @@
 [package]
-name = "wallet_core"
+name = "wallet-core"
 version = "0.1.2"
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-aegis-solana = { path = "../solana" }
+aegis-solana = { path = "../aegis-solana" }
 crypto = { path = "../crypto" }
 models = { path = "../models" }
 storage = { path = "../storage" }
