@@ -48,10 +48,6 @@ impl SolanaRpc {
         Self { client }
     }
 
-    pub fn from_env() -> Self {
-        Self::new(std::env::var("AEGIS_RPC_URL").ok().as_deref())
-    }
-
     pub async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64> {
         self.client
             .get_balance(pubkey)

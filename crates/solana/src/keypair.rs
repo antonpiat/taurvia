@@ -1,11 +1,10 @@
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use bip39::Mnemonic;
+use models::DEFAULT_DERIVATION_PATH;
 use solana_derivation_path::DerivationPath;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::keypair::keypair_from_seed_and_derivation_path;
-
-pub const DERIVATION_PATH: &str = "m/44'/501'/0'/0'";
 
 pub fn generate_mnemonic() -> Result<String> {
     let mut entropy = [0u8; 16];
@@ -18,7 +17,7 @@ pub fn derive_keypair_from_mnemonic(mnemonic: &str) -> Result<Keypair> {
     let mnemonic =
         Mnemonic::parse(mnemonic).map_err(|_| anyhow!("invalid mnemonic phrase"))?;
     let seed = mnemonic.to_seed("");
-    let path = DerivationPath::from_absolute_path_str(DERIVATION_PATH)
+    let path = DerivationPath::from_absolute_path_str(DEFAULT_DERIVATION_PATH)
         .map_err(|e| anyhow!("invalid derivation path: {e}"))?;
     keypair_from_seed_and_derivation_path(&seed, Some(path))
         .map_err(|e| anyhow!("key derivation failed: {e}"))

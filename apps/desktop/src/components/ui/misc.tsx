@@ -21,7 +21,3 @@ export function Badge({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
     />
   );
 }
-
-export function Separator({ className, ...props }: React.HTMLAttributes<HTMLHRElement>) {
-  return <hr className={cn("border-border", className)} {...props} />;
-}

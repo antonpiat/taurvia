@@ -10,8 +10,6 @@ pub const DEFAULT_WALLET_FILENAME: &str = "default.json";
 pub enum StorageError {
     #[error("wallet not found")]
     NotFound,
-    #[error("wallet already exists")]
-    AlreadyExists,
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
     #[error("json error: {0}")]
@@ -29,10 +27,6 @@ impl WalletStorage {
             .join("wallets")
             .join(DEFAULT_WALLET_FILENAME);
         Self { wallet_path }
-    }
-
-    pub fn wallet_path(&self) -> &Path {
-        &self.wallet_path
     }
 
     pub fn exists(&self) -> bool {

@@ -5,9 +5,6 @@
 
 
 export const commands = {
-async walletExists() : Promise<boolean> {
-    return await TAURI_INVOKE("wallet_exists");
-},
 async generateMnemonic() : Promise<Result<string, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("generate_mnemonic") };
@@ -42,12 +39,6 @@ async unlockWallet(password: string) : Promise<Result<string, ApiError>> {
 },
 async lockWallet() : Promise<void> {
     await TAURI_INVOKE("lock_wallet");
-},
-async isUnlocked() : Promise<boolean> {
-    return await TAURI_INVOKE("is_unlocked");
-},
-async getPublicKey() : Promise<string | null> {
-    return await TAURI_INVOKE("get_public_key");
 },
 async revealMnemonic(password: string) : Promise<Result<string, ApiError>> {
     try {

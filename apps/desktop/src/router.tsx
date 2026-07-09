@@ -14,7 +14,7 @@ import { ShowSeedPage } from "@/pages/onboarding/ShowSeedPage";
 import { WalletReadyPage } from "@/pages/onboarding/WalletReadyPage";
 import { WelcomePage } from "@/pages/onboarding/WelcomePage";
 
-function AppRoutes() {
+export function AppRouter() {
   const { loading, walletExists, unlocked } = useWallet();
 
   if (loading) {
@@ -30,14 +30,8 @@ function AppRoutes() {
       {!walletExists && (
         <>
           <Route path="/onboarding" element={<WelcomePage />} />
-          <Route
-            path="/onboarding/create"
-            element={<CreateImportPage mode="create" />}
-          />
-          <Route
-            path="/onboarding/import"
-            element={<CreateImportPage mode="import" />}
-          />
+          <Route path="/onboarding/create" element={<CreateImportPage mode="create" />} />
+          <Route path="/onboarding/import" element={<CreateImportPage mode="import" />} />
           <Route path="/onboarding/seed" element={<ShowSeedPage />} />
           <Route path="/onboarding/confirm" element={<ConfirmSeedPage />} />
           <Route path="/onboarding/password" element={<SetPasswordPage />} />
@@ -65,8 +59,4 @@ function AppRoutes() {
       )}
     </Routes>
   );
-}
-
-export function AppRouter() {
-  return <AppRoutes />;
 }

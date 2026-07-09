@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ApiError, TokenBalance, walletApi } from "@/lib/tauri";
+import { TokenBalance, walletApi } from "@/lib/tauri";
 
 interface WalletContextValue {
   loading: boolean;
@@ -16,12 +16,10 @@ interface WalletContextValue {
   publicKey: string | null;
   solBalance: number | null;
   tokens: TokenBalance[];
-  error: string | null;
   refresh: () => Promise<void>;
   refreshBalances: () => Promise<void>;
   unlock: (password: string) => Promise<void>;
   lock: () => Promise<void>;
-  clearError: () => void;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -33,7 +31,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const refreshPromise = useRef<Promise<void> | null>(null);
 
   const applySnapshot = useCallback(
@@ -47,6 +44,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const refresh = useCallback(async () => {
+    if (refreshPromise.current) {
+      return refreshPromise.current;
+    }
+
+    const run = (async () => {
+      try {
+        applySnapshot(await walletApi.getWalletSnapshot());
+      } finally {
+        refreshPromise.current = null;
+      }
+    })();
+
+    refreshPromise.current = run;
+    return run;
+  }, [applySnapshot]);
+
   const refreshBalances = useCallback(async () => {
     if (!walletExists || !unlocked) return;
     const [balance, tokenBalances] = await Promise.all([
@@ -56,27 +70,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setSolBalance(balance);
     setTokens(tokenBalances);
   }, [walletExists, unlocked]);
-
-  const refresh = useCallback(async () => {
-    if (refreshPromise.current) {
-      return refreshPromise.current;
-    }
-
-    const run = (async () => {
-      try {
-        const snapshot = await walletApi.getWalletSnapshot();
-        applySnapshot(snapshot);
-      } catch (err) {
-        const apiError = err as ApiError;
-        setError(apiError.message ?? "Failed to load wallet state");
-      } finally {
-        refreshPromise.current = null;
-      }
-    })();
-
-    refreshPromise.current = run;
-    return run;
-  }, [applySnapshot]);
 
   useEffect(() => {
     void (async () => {
@@ -88,18 +81,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const unlock = useCallback(
     async (password: string) => {
-      const key = await walletApi.unlockWallet(password);
-      setPublicKey(key);
-      setUnlocked(true);
-      setWalletExists(true);
-      const [balance, tokenBalances] = await Promise.all([
-        walletApi.getSolBalance(),
-        walletApi.getTokenBalances(),
-      ]);
-      setSolBalance(balance);
-      setTokens(tokenBalances);
+      await walletApi.unlockWallet(password);
+      await refresh();
     },
-    [],
+    [refresh],
   );
 
   const lock = useCallback(async () => {
@@ -110,8 +95,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setTokens([]);
   }, []);
 
-  const clearError = useCallback(() => setError(null), []);
-
   const value = useMemo(
     () => ({
       loading,
@@ -120,12 +103,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       publicKey,
       solBalance,
       tokens,
-      error,
       refresh,
       refreshBalances,
       unlock,
       lock,
-      clearError,
     }),
     [
       loading,
@@ -134,12 +115,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       publicKey,
       solBalance,
       tokens,
-      error,
       refresh,
       refreshBalances,
       unlock,
       lock,
-      clearError,
     ],
   );
 
