@@ -1,6 +1,7 @@
 mod balances;
 mod send;
 mod session;
+mod swap;
 mod wallet_file;
 
 pub use session::WalletService;

@@ -13,3 +13,14 @@ export function shortenAddress(address: string, chars = 4): string {
 export function formatSol(amount: number): string {
   return `${amount.toFixed(4)} SOL`;
 }
+
+export function formatUsd(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || Number.isNaN(amount)) {
+    return "—";
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: amount >= 1 ? 2 : 4,
+  }).format(amount);
+}

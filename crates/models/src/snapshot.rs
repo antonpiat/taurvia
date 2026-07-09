@@ -9,5 +9,8 @@ pub struct WalletSnapshot {
     pub unlocked: bool,
     pub public_key: Option<String>,
     pub sol_balance: Option<f64>,
+    pub sol_price_usd: Option<f64>,
+    pub sol_value_usd: Option<f64>,
+    pub total_portfolio_usd: Option<f64>,
     pub tokens: Option<Vec<TokenBalance>>,
 }

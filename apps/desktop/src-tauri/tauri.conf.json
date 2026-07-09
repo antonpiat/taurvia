@@ -15,8 +15,8 @@
         "title": "Aegis",
         "width": 1100,
         "height": 720,
-        "minWidth": 900,
-        "minHeight": 600,
+        "minWidth": 420,
+        "minHeight": 560,
         "backgroundColor": "#0b0f14"
       }
     ],
@@ -24,10 +24,10 @@
       "csp": {
         "default-src": "'self' asset:",
         "connect-src": "ipc: http://ipc.localhost",
-        "img-src": "'self' asset: data:",
+        "img-src": "'self' asset: data: https:",
         "style-src": "'unsafe-inline' 'self'"
       },
-      "devCsp": "default-src 'self' asset: ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; img-src 'self' asset: data:; style-src 'unsafe-inline' 'self'"
+      "devCsp": "default-src 'self' asset: ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; img-src 'self' asset: data: https:; style-src 'unsafe-inline' 'self'"
     }
   },
   "bundle": {

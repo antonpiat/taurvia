@@ -1,6 +1,14 @@
 import { commands } from "@/bindings";
 import type { Result } from "@/bindings";
-export type { ActivityItem, ApiError, SendPreview, TokenBalance } from "@/bindings";
+export type {
+  ActivityItem,
+  ApiError,
+  SendPreview,
+  SwapQuote,
+  SwapResult,
+  TokenBalance,
+  TokenInfo,
+} from "@/bindings";
 
 async function unwrap<T>(promise: Promise<Result<T, unknown>> | Promise<T>): Promise<T> {
   const value = await promise;
@@ -43,4 +51,18 @@ export const walletApi = {
     unwrap(commands.sendSol(password, to, amountSol)),
   sendSpl: (password: string, mint: string, to: string, amount: number) =>
     unwrap(commands.sendSpl(password, mint, to, amount)),
+  resolveToken: (mint: string) => unwrap(commands.resolveToken(mint)),
+  previewSwapQuote: (
+    inputMint: string,
+    outputMint: string,
+    amountUi: number,
+    slippageBps: number,
+  ) => unwrap(commands.previewSwapQuote(inputMint, outputMint, amountUi, slippageBps)),
+  executeSwap: (
+    password: string,
+    inputMint: string,
+    outputMint: string,
+    amountUi: number,
+    slippageBps: number,
+  ) => unwrap(commands.executeSwap(password, inputMint, outputMint, amountUi, slippageBps)),
 };

@@ -11,10 +11,14 @@ import { TokenBalance, walletApi } from "@/lib/tauri";
 
 interface WalletContextValue {
   loading: boolean;
+  balancesLoading: boolean;
   walletExists: boolean;
   unlocked: boolean;
   publicKey: string | null;
   solBalance: number | null;
+  solPriceUsd: number | null;
+  solValueUsd: number | null;
+  totalPortfolioUsd: number | null;
   tokens: TokenBalance[];
   refresh: () => Promise<void>;
   refreshBalances: () => Promise<void>;
@@ -26,10 +30,14 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
+  const [balancesLoading, setBalancesLoading] = useState(false);
   const [walletExists, setWalletExists] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [solPriceUsd, setSolPriceUsd] = useState<number | null>(null);
+  const [solValueUsd, setSolValueUsd] = useState<number | null>(null);
+  const [totalPortfolioUsd, setTotalPortfolioUsd] = useState<number | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const refreshPromise = useRef<Promise<void> | null>(null);
 
@@ -39,6 +47,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setUnlocked(snapshot.unlocked);
       setPublicKey(snapshot.public_key);
       setSolBalance(snapshot.sol_balance);
+      setSolPriceUsd(snapshot.sol_price_usd);
+      setSolValueUsd(snapshot.sol_value_usd);
+      setTotalPortfolioUsd(snapshot.total_portfolio_usd);
       setTokens(snapshot.tokens ?? []);
     },
     [],
@@ -50,9 +61,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
 
     const run = (async () => {
+      setBalancesLoading(true);
       try {
         applySnapshot(await walletApi.getWalletSnapshot());
       } finally {
+        setBalancesLoading(false);
         refreshPromise.current = null;
       }
     })();
@@ -63,13 +76,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBalances = useCallback(async () => {
     if (!walletExists || !unlocked) return;
-    const [balance, tokenBalances] = await Promise.all([
-      walletApi.getSolBalance(),
-      walletApi.getTokenBalances(),
-    ]);
-    setSolBalance(balance);
-    setTokens(tokenBalances);
-  }, [walletExists, unlocked]);
+    await refresh();
+  }, [walletExists, unlocked, refresh]);
 
   useEffect(() => {
     void (async () => {
@@ -81,8 +89,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const unlock = useCallback(
     async (password: string) => {
-      await walletApi.unlockWallet(password);
-      await refresh();
+      const key = await walletApi.unlockWallet(password);
+      // Unlock should feel instant: enter the app immediately, then load balances.
+      setWalletExists(true);
+      setUnlocked(true);
+      setPublicKey(key);
+      setSolBalance(null);
+      setSolPriceUsd(null);
+      setSolValueUsd(null);
+      setTotalPortfolioUsd(null);
+      setTokens([]);
+      void refresh();
     },
     [refresh],
   );
@@ -92,16 +109,24 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setUnlocked(false);
     setPublicKey(null);
     setSolBalance(null);
+    setSolPriceUsd(null);
+    setSolValueUsd(null);
+    setTotalPortfolioUsd(null);
     setTokens([]);
+    setBalancesLoading(false);
   }, []);
 
   const value = useMemo(
     () => ({
       loading,
+      balancesLoading,
       walletExists,
       unlocked,
       publicKey,
       solBalance,
+      solPriceUsd,
+      solValueUsd,
+      totalPortfolioUsd,
       tokens,
       refresh,
       refreshBalances,
@@ -110,10 +135,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       loading,
+      balancesLoading,
       walletExists,
       unlocked,
       publicKey,
       solBalance,
+      solPriceUsd,
+      solValueUsd,
+      totalPortfolioUsd,
       tokens,
       refresh,
       refreshBalances,

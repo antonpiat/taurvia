@@ -9,6 +9,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Jupiter-backed USD prices, token metadata, and portfolio totals on the dashboard
+- Any-to-any swap quote and password-gated execute via Jupiter Swap API
+- Optional `AEGIS_JUPITER_API_KEY` for higher Jupiter rate limits (keyless by default)
+
 ### Changed
 
 ### Fixed

@@ -36,3 +36,8 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Keep long addresses / mint strings from blowing out narrow layouts */
+.font-mono {
+  overflow-wrap: anywhere;
+}
