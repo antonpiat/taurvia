@@ -1,8 +1,12 @@
 use aegis_solana::{get_metadata, get_prices, lamports_to_sol, WRAPPED_SOL_MINT};
-use models::{ActivityItem, TokenBalance, WalletSnapshot};
+use models::{ActivityItem, TokenBalance, TokenInfo, WalletSnapshot};
+use std::collections::HashMap;
+use std::time::Duration;
 
 use crate::session::WalletService;
 use crate::WalletError;
+
+const MARKET_DATA_BUDGET: Duration = Duration::from_secs(4);
 
 impl WalletService {
     pub async fn get_snapshot(&self) -> Result<WalletSnapshot, WalletError> {
@@ -43,12 +47,33 @@ impl WalletService {
             .await
             .map_err(WalletError::Operation)?;
 
-        enrich_token_balances(&mut tokens).await;
+        // Curated labels first; Jupiter enrichment is budgeted so unlock/dashboard
+        // never waits on a slow market-data API.
+        apply_local_metadata(&mut tokens);
+        let mints: Vec<String> = tokens.iter().map(|token| token.mint.clone()).collect();
+        let sol_mint = WRAPPED_SOL_MINT.to_string();
+        let enrichment = tokio::time::timeout(MARKET_DATA_BUDGET, async {
+            tokio::join!(
+                get_metadata(&mints),
+                get_prices(&mints),
+                get_prices(std::slice::from_ref(&sol_mint)),
+            )
+        })
+        .await;
+
+        let mut sol_price_usd = None;
+        if let Ok((metadata, prices, sol_prices)) = enrichment {
+            apply_remote_enrichment(
+                &mut tokens,
+                metadata.unwrap_or_default(),
+                prices.unwrap_or_default(),
+            );
+            sol_price_usd = sol_prices
+                .ok()
+                .and_then(|prices| prices.get(WRAPPED_SOL_MINT).copied());
+        }
+
         let sol_balance = lamports_to_sol(lamports);
-        let sol_price_usd = get_prices(&[WRAPPED_SOL_MINT.to_string()])
-            .await
-            .ok()
-            .and_then(|prices| prices.get(WRAPPED_SOL_MINT).copied());
         let sol_value_usd = sol_price_usd.map(|price| price * sol_balance);
         let tokens_value: f64 = tokens.iter().filter_map(|token| token.value_usd).sum();
         let total_portfolio_usd = Some(sol_value_usd.unwrap_or(0.0) + tokens_value);
@@ -99,23 +124,58 @@ async fn enrich_token_balances(tokens: &mut [TokenBalance]) {
     if tokens.is_empty() {
         return;
     }
-
+    apply_local_metadata(tokens);
     let mints: Vec<String> = tokens.iter().map(|token| token.mint.clone()).collect();
-    let (metadata, prices) = tokio::join!(get_metadata(&mints), get_prices(&mints));
-    let metadata = metadata.unwrap_or_default();
-    let prices = prices.unwrap_or_default();
+    let enrichment = tokio::time::timeout(MARKET_DATA_BUDGET, async {
+        tokio::join!(get_metadata(&mints), get_prices(&mints))
+    })
+    .await;
+    if let Ok((metadata, prices)) = enrichment {
+        apply_remote_enrichment(
+            tokens,
+            metadata.unwrap_or_default(),
+            prices.unwrap_or_default(),
+        );
+    }
+}
 
+fn apply_local_metadata(tokens: &mut [TokenBalance]) {
     for token in tokens.iter_mut() {
-        if let Some(info) = metadata.get(&token.mint) {
-            token.symbol = info.symbol.clone();
-            token.name = info.name.clone();
+        if let Some(info) = aegis_solana::resolve_mint_local(&token.mint) {
+            token.symbol = info.symbol;
+            token.name = info.name;
             if info.decimals > 0 {
                 token.decimals = info.decimals;
                 if let Ok(raw) = token.amount.parse::<u64>() {
                     token.ui_amount = raw as f64 / 10f64.powi(info.decimals as i32);
                 }
             }
-            token.logo_uri = info.logo_uri.clone();
+            token.logo_uri = info.logo_uri;
+        }
+    }
+}
+
+fn apply_remote_enrichment(
+    tokens: &mut [TokenBalance],
+    metadata: HashMap<String, TokenInfo>,
+    prices: HashMap<String, f64>,
+) {
+    for token in tokens.iter_mut() {
+        if let Some(info) = metadata.get(&token.mint) {
+            // Prefer real symbols over shortened-mint fallbacks.
+            if !info.symbol.contains("...") {
+                token.symbol = info.symbol.clone();
+                token.name = info.name.clone();
+            }
+            if info.decimals > 0 {
+                token.decimals = info.decimals;
+                if let Ok(raw) = token.amount.parse::<u64>() {
+                    token.ui_amount = raw as f64 / 10f64.powi(info.decimals as i32);
+                }
+            }
+            if info.logo_uri.is_some() {
+                token.logo_uri = info.logo_uri.clone();
+            }
         }
         if let Some(price) = prices.get(&token.mint).copied() {
             token.price_usd = Some(price);

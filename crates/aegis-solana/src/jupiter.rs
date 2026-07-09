@@ -6,6 +6,9 @@ use std::time::Duration;
 pub const WRAPPED_SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 pub const JUPITER_API_BASE: &str = "https://api.jup.ag";
 
+/// Keep market-data calls short so unlock/dashboard never stalls on Jupiter.
+pub const JUPITER_MARKET_DATA_TIMEOUT: Duration = Duration::from_secs(3);
+
 pub fn jupiter_api_key() -> Option<String> {
     std::env::var("AEGIS_JUPITER_API_KEY")
         .ok()
@@ -24,8 +27,12 @@ pub fn http_client() -> &'static Client {
 }
 
 pub async fn jupiter_get(path: &str) -> Result<reqwest::Response> {
+    jupiter_get_timeout(path, Duration::from_secs(20)).await
+}
+
+pub async fn jupiter_get_timeout(path: &str, timeout: Duration) -> Result<reqwest::Response> {
     let url = format!("{JUPITER_API_BASE}{path}");
-    let mut request = http_client().get(&url);
+    let mut request = http_client().get(&url).timeout(timeout);
     if let Some(api_key) = jupiter_api_key() {
         request = request.header("x-api-key", api_key);
     }

@@ -1,4 +1,6 @@
-use crate::jupiter::{jupiter_get, shorten_mint, WRAPPED_SOL_MINT};
+use crate::jupiter::{
+    jupiter_get_timeout, shorten_mint, JUPITER_MARKET_DATA_TIMEOUT, WRAPPED_SOL_MINT,
+};
 use anyhow::{Context, Result};
 use models::TokenInfo;
 use moka::future::Cache;
@@ -106,12 +108,16 @@ fn map_jupiter_token(mint: &str, token: JupiterToken) -> TokenInfo {
     }
 }
 
-pub async fn resolve_mint(mint: &str) -> Result<TokenInfo> {
+/// Instant curated metadata only (no network). Used to paint UI before Jupiter returns.
+pub fn resolve_mint_local(mint: &str) -> Option<TokenInfo> {
     if mint.eq_ignore_ascii_case("sol") {
-        return Ok(curated_token_info(WRAPPED_SOL_MINT).expect("SOL curated"));
+        return curated_token_info(WRAPPED_SOL_MINT);
     }
+    curated_token_info(mint)
+}
 
-    if let Some(info) = curated_token_info(mint) {
+pub async fn resolve_mint(mint: &str) -> Result<TokenInfo> {
+    if let Some(info) = resolve_mint_local(mint) {
         return Ok(info);
     }
 
@@ -191,7 +197,11 @@ async fn fetch_mints_metadata(mints: &[String]) -> Result<HashMap<String, TokenI
 
     // Mint addresses are base58; commas are safe in this query string.
     let query = mints.join(",");
-    let response = jupiter_get(&format!("/tokens/v2/search?query={query}")).await?;
+    let response = jupiter_get_timeout(
+        &format!("/tokens/v2/search?query={query}"),
+        JUPITER_MARKET_DATA_TIMEOUT,
+    )
+    .await?;
     let tokens: Vec<JupiterToken> = response
         .json()
         .await

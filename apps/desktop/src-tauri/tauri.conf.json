@@ -15,8 +15,8 @@
         "title": "Aegis",
         "width": 1100,
         "height": 720,
-        "minWidth": 900,
-        "minHeight": 600,
+        "minWidth": 420,
+        "minHeight": 560,
         "backgroundColor": "#0b0f14"
       }
     ],

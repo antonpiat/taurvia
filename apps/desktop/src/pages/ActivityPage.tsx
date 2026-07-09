@@ -24,10 +24,12 @@ export function ActivityPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Activity</h1>
-        <p className="text-muted-foreground">Recent on-chain transactions for your wallet.</p>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Activity</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          Recent on-chain transactions for your wallet.
+        </p>
       </div>
 
       <Card>
@@ -44,23 +46,25 @@ export function ActivityPage() {
           {items.map((item) => (
             <div
               key={item.signature}
-              className="flex items-start justify-between rounded-lg border border-border bg-background/50 px-4 py-3"
+              className="flex flex-col gap-3 rounded-lg border border-border bg-background/50 px-3 py-3 sm:flex-row sm:items-start sm:justify-between sm:px-4"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">{item.description}</p>
-                <p className="font-mono text-xs text-muted-foreground">{shortenAddress(item.signature, 8)}</p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {shortenAddress(item.signature, 8)}
+                </p>
                 {item.timestamp && (
                   <p className="text-xs text-muted-foreground">
                     {new Date(item.timestamp * 1000).toLocaleString()}
                   </p>
                 )}
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <Badge className={item.status === "confirmed" ? "text-primary" : "text-destructive"}>
                   {item.status}
                 </Badge>
                 {item.amount_sol !== null && (
-                  <p className="mt-2 text-sm font-mono">{item.amount_sol.toFixed(6)} SOL</p>
+                  <p className="mt-2 font-mono text-sm">{item.amount_sol.toFixed(6)} SOL</p>
                 )}
               </div>
             </div>

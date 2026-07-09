@@ -273,10 +273,10 @@ export function SwapPage() {
   )}%`;
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto w-full max-w-xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Swap</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-semibold sm:text-3xl">Swap</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Exchange tokens at the current estimated rate.
         </p>
       </div>
@@ -451,11 +451,16 @@ export function SwapPage() {
             <Alert className="border-destructive/40 text-destructive">{displayError}</Alert>
           )}
 
-          <div className="flex gap-3">
-            <Button onClick={() => void handleQuote()} disabled={!canQuote}>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => void handleQuote()}
+              disabled={!canQuote}
+            >
               {loading && !confirmOpen ? "Fetching..." : "Get quote"}
             </Button>
             <Button
+              className="w-full sm:w-auto"
               variant="secondary"
               disabled={!quote || loading || sameToken}
               onClick={() => {

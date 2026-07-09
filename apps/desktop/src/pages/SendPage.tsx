@@ -109,10 +109,12 @@ export function SendPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Send</h1>
-        <p className="text-muted-foreground">Transfer SOL or SPL tokens securely.</p>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Send</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          Transfer SOL or SPL tokens securely.
+        </p>
       </div>
 
       <Card>

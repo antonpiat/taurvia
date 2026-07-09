@@ -11,6 +11,7 @@ import { TokenBalance, walletApi } from "@/lib/tauri";
 
 interface WalletContextValue {
   loading: boolean;
+  balancesLoading: boolean;
   walletExists: boolean;
   unlocked: boolean;
   publicKey: string | null;
@@ -29,6 +30,7 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
+  const [balancesLoading, setBalancesLoading] = useState(false);
   const [walletExists, setWalletExists] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -59,9 +61,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
 
     const run = (async () => {
+      setBalancesLoading(true);
       try {
         applySnapshot(await walletApi.getWalletSnapshot());
       } finally {
+        setBalancesLoading(false);
         refreshPromise.current = null;
       }
     })();
@@ -85,8 +89,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const unlock = useCallback(
     async (password: string) => {
-      await walletApi.unlockWallet(password);
-      await refresh();
+      const key = await walletApi.unlockWallet(password);
+      // Unlock should feel instant: enter the app immediately, then load balances.
+      setWalletExists(true);
+      setUnlocked(true);
+      setPublicKey(key);
+      setSolBalance(null);
+      setSolPriceUsd(null);
+      setSolValueUsd(null);
+      setTotalPortfolioUsd(null);
+      setTokens([]);
+      void refresh();
     },
     [refresh],
   );
@@ -100,11 +113,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setSolValueUsd(null);
     setTotalPortfolioUsd(null);
     setTokens([]);
+    setBalancesLoading(false);
   }, []);
 
   const value = useMemo(
     () => ({
       loading,
+      balancesLoading,
       walletExists,
       unlocked,
       publicKey,
@@ -120,6 +135,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       loading,
+      balancesLoading,
       walletExists,
       unlocked,
       publicKey,

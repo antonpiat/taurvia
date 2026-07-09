@@ -1,4 +1,5 @@
 use crate::jupiter::shorten_mint;
+use crate::token_metadata::resolve_mint_local;
 use crate::transfer::{build_sol_transfer, build_spl_transfer};
 use anyhow::{anyhow, Context, Result};
 use base64::Engine;
@@ -107,16 +108,27 @@ impl SolanaRpc {
         let mut balances = Vec::with_capacity(holdings.len());
         for (mint, amount) in holdings {
             let mint_str = mint.to_string();
-            let decimals = decimals_by_mint.get(&mint).copied().unwrap_or(0);
+            let local = resolve_mint_local(&mint_str);
+            let decimals = local
+                .as_ref()
+                .map(|info| info.decimals)
+                .or_else(|| decimals_by_mint.get(&mint).copied())
+                .unwrap_or(0);
             let short = shorten_mint(&mint_str);
             balances.push(TokenBalance {
                 mint: mint_str,
-                symbol: short.clone(),
-                name: format!("SPL {short}"),
+                symbol: local
+                    .as_ref()
+                    .map(|info| info.symbol.clone())
+                    .unwrap_or(short.clone()),
+                name: local
+                    .as_ref()
+                    .map(|info| info.name.clone())
+                    .unwrap_or_else(|| format!("SPL {short}")),
                 amount: amount.to_string(),
                 decimals,
                 ui_amount: amount as f64 / 10f64.powi(decimals as i32),
-                logo_uri: None,
+                logo_uri: local.and_then(|info| info.logo_uri),
                 price_usd: None,
                 value_usd: None,
             });

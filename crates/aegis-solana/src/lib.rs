@@ -15,7 +15,7 @@ pub use price::{get_prices, get_sol_price};
 pub use rpc::SolanaRpc;
 pub use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
 pub use swap::{normalize_mint, ui_amount_to_raw};
-pub use token_metadata::{curated_major_mints, get_metadata, resolve_mint};
+pub use token_metadata::{curated_major_mints, get_metadata, resolve_mint, resolve_mint_local};
 
 pub fn lamports_to_sol(lamports: u64) -> f64 {
     lamports as f64 / solana_native_token::LAMPORTS_PER_SOL as f64

@@ -32,7 +32,7 @@ export function UnlockPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="mb-2 flex items-center gap-2 text-primary">
@@ -56,7 +56,7 @@ export function UnlockPage() {
             </div>
             {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
             <Button className="w-full" type="submit" disabled={loading || !password}>
-              {loading ? "Unlocking..." : "Unlock"}
+              {loading ? "Checking password..." : "Unlock"}
             </Button>
           </form>
         </CardContent>

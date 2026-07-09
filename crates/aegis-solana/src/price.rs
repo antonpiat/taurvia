@@ -1,4 +1,4 @@
-use crate::jupiter::{jupiter_get, WRAPPED_SOL_MINT};
+use crate::jupiter::{jupiter_get_timeout, JUPITER_MARKET_DATA_TIMEOUT, WRAPPED_SOL_MINT};
 use anyhow::{Context, Result};
 use moka::future::Cache;
 use serde::Deserialize;
@@ -39,7 +39,9 @@ pub async fn get_prices(mints: &[String]) -> Result<HashMap<String, f64>> {
             continue;
         }
         let ids = chunk.join(",");
-        let response = jupiter_get(&format!("/price/v3?ids={ids}")).await?;
+        let response =
+            jupiter_get_timeout(&format!("/price/v3?ids={ids}"), JUPITER_MARKET_DATA_TIMEOUT)
+                .await?;
         let payload: HashMap<String, PriceEntry> = response
             .json()
             .await

@@ -70,10 +70,12 @@ export function SettingsPage() {
   const words = mnemonic?.split(/\s+/).filter(Boolean) ?? [];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Settings</h1>
-        <p className="text-muted-foreground">Security and wallet preferences.</p>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Settings</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          Security and wallet preferences.
+        </p>
       </div>
 
       <Card>

@@ -17,10 +17,12 @@ export function ReceivePage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
+    <div className="mx-auto w-full max-w-xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Receive</h1>
-        <p className="text-muted-foreground">Share your address to receive SOL or SPL tokens.</p>
+        <h1 className="text-2xl font-semibold sm:text-3xl">Receive</h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          Share your address to receive SOL or SPL tokens.
+        </p>
       </div>
 
       <Card>
@@ -31,8 +33,8 @@ export function ReceivePage() {
         <CardContent className="flex flex-col items-center gap-4">
           {publicKey ? (
             <>
-              <div className="rounded-xl bg-white p-4">
-                <QRCodeSVG value={publicKey} size={220} />
+              <div className="rounded-xl bg-white p-3 sm:p-4">
+                <QRCodeSVG className="h-44 w-44 sm:h-[220px] sm:w-[220px]" value={publicKey} size={220} />
               </div>
               <p className="break-all text-center font-mono text-sm">{publicKey}</p>
               <Button onClick={handleCopy}>
