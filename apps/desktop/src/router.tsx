@@ -3,9 +3,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useWallet } from "@/context/WalletContext";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { ManageAccountsPage } from "@/pages/ManageAccountsPage";
 import { ReceivePage } from "@/pages/ReceivePage";
 import { SendPage } from "@/pages/SendPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { SwapPage } from "@/pages/SwapPage";
 import { UnlockPage } from "@/pages/UnlockPage";
 import { ConfirmSeedPage } from "@/pages/onboarding/ConfirmSeedPage";
 import { CreateImportPage } from "@/pages/onboarding/CreateImportPage";
@@ -50,9 +52,11 @@ export function AppRouter() {
       {walletExists && unlocked && (
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/swap" element={<SwapPage />} />
           <Route path="/send" element={<SendPage />} />
           <Route path="/receive" element={<ReceivePage />} />
           <Route path="/activity" element={<ActivityPage />} />
+          <Route path="/accounts" element={<ManageAccountsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

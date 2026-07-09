@@ -1,3 +1,4 @@
+use crate::jupiter::shorten_mint;
 use crate::transfer::{build_sol_transfer, build_spl_transfer};
 use anyhow::{anyhow, Context, Result};
 use base64::Engine;
@@ -19,6 +20,7 @@ use solana_transaction_status_client_types::{
     EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiMessage,
     UiTransactionEncoding,
 };
+use spl_associated_token_account_interface::address::get_associated_token_address;
 use spl_token_interface::state::{Account as TokenAccount, Mint};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -46,6 +48,10 @@ impl SolanaRpc {
             CommitmentConfig::confirmed(),
         ));
         Self { client }
+    }
+
+    pub(crate) fn client(&self) -> &RpcClient {
+        self.client.as_ref()
     }
 
     pub async fn get_balance(&self, pubkey: &Pubkey) -> Result<u64> {
@@ -110,6 +116,9 @@ impl SolanaRpc {
                 amount: amount.to_string(),
                 decimals,
                 ui_amount: amount as f64 / 10f64.powi(decimals as i32),
+                logo_uri: None,
+                price_usd: None,
+                value_usd: None,
             });
         }
 
@@ -138,6 +147,7 @@ impl SolanaRpc {
             amount: format!("{amount_sol} SOL"),
             estimated_fee_lamports: fee,
             estimated_fee_sol: crate::lamports_to_sol(fee),
+            creates_token_account: false,
         })
     }
 
@@ -155,6 +165,8 @@ impl SolanaRpc {
             .await
             .context("failed to fetch mint decimals")?;
         let raw_amount = (amount * 10f64.powi(decimals as i32)).round() as u64;
+        let destination_ata = get_associated_token_address(&to_pubkey, &mint_pubkey);
+        let creates_token_account = !self.account_exists(&destination_ata).await?;
         let blockhash = self
             .client
             .get_latest_blockhash()
@@ -162,13 +174,18 @@ impl SolanaRpc {
             .context("failed to fetch latest blockhash")?;
         let tx = build_spl_transfer(from, &mint_pubkey, &to_pubkey, raw_amount, blockhash)?;
         let fee = self.estimate_fee(&tx).await?;
+        let token_symbol = crate::resolve_mint(mint)
+            .await
+            .map(|info| info.symbol)
+            .unwrap_or_else(|_| shorten_mint(mint));
         Ok(SendPreview {
             from: from.pubkey().to_string(),
             to: to_pubkey.to_string(),
-            token: shorten_mint(mint),
+            token: token_symbol,
             amount: format!("{amount}"),
             estimated_fee_lamports: fee,
             estimated_fee_sol: crate::lamports_to_sol(fee),
+            creates_token_account,
         })
     }
 
@@ -261,6 +278,15 @@ impl SolanaRpc {
             }
         }
         Ok(decimals_by_mint)
+    }
+
+    async fn account_exists(&self, pubkey: &Pubkey) -> Result<bool> {
+        let accounts = self
+            .client
+            .get_multiple_accounts(&[*pubkey])
+            .await
+            .context("failed to check account existence")?;
+        Ok(accounts.first().and_then(|account| account.as_ref()).is_some())
     }
 
     async fn estimate_fee(&self, tx: &Transaction) -> Result<u64> {
@@ -381,14 +407,6 @@ fn sol_to_lamports(amount_sol: f64) -> Result<u64> {
         return Err(anyhow!("amount too small"));
     }
     Ok(lamports)
-}
-
-fn shorten_mint(mint: &str) -> String {
-    if mint.len() <= 10 {
-        mint.to_string()
-    } else {
-        format!("{}...{}", &mint[..4], &mint[mint.len() - 4..])
-    }
 }
 
 fn find_account_index(

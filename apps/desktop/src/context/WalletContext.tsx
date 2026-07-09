@@ -15,6 +15,9 @@ interface WalletContextValue {
   unlocked: boolean;
   publicKey: string | null;
   solBalance: number | null;
+  solPriceUsd: number | null;
+  solValueUsd: number | null;
+  totalPortfolioUsd: number | null;
   tokens: TokenBalance[];
   refresh: () => Promise<void>;
   refreshBalances: () => Promise<void>;
@@ -30,6 +33,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [unlocked, setUnlocked] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [solPriceUsd, setSolPriceUsd] = useState<number | null>(null);
+  const [solValueUsd, setSolValueUsd] = useState<number | null>(null);
+  const [totalPortfolioUsd, setTotalPortfolioUsd] = useState<number | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const refreshPromise = useRef<Promise<void> | null>(null);
 
@@ -39,6 +45,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setUnlocked(snapshot.unlocked);
       setPublicKey(snapshot.public_key);
       setSolBalance(snapshot.sol_balance);
+      setSolPriceUsd(snapshot.sol_price_usd);
+      setSolValueUsd(snapshot.sol_value_usd);
+      setTotalPortfolioUsd(snapshot.total_portfolio_usd);
       setTokens(snapshot.tokens ?? []);
     },
     [],
@@ -63,13 +72,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const refreshBalances = useCallback(async () => {
     if (!walletExists || !unlocked) return;
-    const [balance, tokenBalances] = await Promise.all([
-      walletApi.getSolBalance(),
-      walletApi.getTokenBalances(),
-    ]);
-    setSolBalance(balance);
-    setTokens(tokenBalances);
-  }, [walletExists, unlocked]);
+    await refresh();
+  }, [walletExists, unlocked, refresh]);
 
   useEffect(() => {
     void (async () => {
@@ -92,6 +96,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setUnlocked(false);
     setPublicKey(null);
     setSolBalance(null);
+    setSolPriceUsd(null);
+    setSolValueUsd(null);
+    setTotalPortfolioUsd(null);
     setTokens([]);
   }, []);
 
@@ -102,6 +109,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       unlocked,
       publicKey,
       solBalance,
+      solPriceUsd,
+      solValueUsd,
+      totalPortfolioUsd,
       tokens,
       refresh,
       refreshBalances,
@@ -114,6 +124,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       unlocked,
       publicKey,
       solBalance,
+      solPriceUsd,
+      solValueUsd,
+      totalPortfolioUsd,
       tokens,
       refresh,
       refreshBalances,

@@ -24,10 +24,10 @@
       "csp": {
         "default-src": "'self' asset:",
         "connect-src": "ipc: http://ipc.localhost",
-        "img-src": "'self' asset: data:",
+        "img-src": "'self' asset: data: https:",
         "style-src": "'unsafe-inline' 'self'"
       },
-      "devCsp": "default-src 'self' asset: ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; img-src 'self' asset: data:; style-src 'unsafe-inline' 'self'"
+      "devCsp": "default-src 'self' asset: ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1421; img-src 'self' asset: data: https:; style-src 'unsafe-inline' 'self'"
     }
   },
   "bundle": {

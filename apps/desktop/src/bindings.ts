@@ -127,6 +127,30 @@ async sendSpl(password: string, mint: string, to: string, amount: number) : Prom
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async resolveToken(mint: string) : Promise<Result<TokenInfo, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("resolve_token", { mint }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async previewSwapQuote(inputMint: string, outputMint: string, amountUi: number, slippageBps: number) : Promise<Result<SwapQuote, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("preview_swap_quote", { inputMint, outputMint, amountUi, slippageBps }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async executeSwap(password: string, inputMint: string, outputMint: string, amountUi: number, slippageBps: number) : Promise<Result<SwapResult, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("execute_swap", { password, inputMint, outputMint, amountUi, slippageBps }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -143,11 +167,18 @@ async sendSpl(password: string, mint: string, to: string, amount: number) : Prom
 export type ActivityItem = { signature: string; timestamp: number | null; status: string; direction: string; amount_sol: number | null; description: string }
 export type ApiError = { code: string; message: string }
 export type CryptoEnvelope = { kdf: string; salt: string; cipher: string; nonce: string; ciphertext: string }
-export type SendPreview = { from: string; to: string; token: string; amount: string; estimated_fee_lamports: number; estimated_fee_sol: number }
+export type SendPreview = { from: string; to: string; token: string; amount: string; estimated_fee_lamports: number; estimated_fee_sol: number; 
+/**
+ * True when the recipient's associated token account will be created in this transfer.
+ */
+creates_token_account: boolean }
 export type SendResult = { signature: string; status: string }
-export type TokenBalance = { mint: string; symbol: string; name: string; amount: string; decimals: number; ui_amount: number }
+export type SwapQuote = { input_mint: string; output_mint: string; input_symbol: string; output_symbol: string; in_amount: string; out_amount: string; in_amount_ui: number; out_amount_ui: number; price_impact_pct: number | null; network_fee_lamports: number; network_fee_sol: number; slippage_bps: number }
+export type SwapResult = { signature: string; status: string }
+export type TokenBalance = { mint: string; symbol: string; name: string; amount: string; decimals: number; ui_amount: number; logo_uri: string | null; price_usd: number | null; value_usd: number | null }
+export type TokenInfo = { mint: string; symbol: string; name: string; decimals: number; logo_uri: string | null }
 export type WalletFile = { version: number; wallet_id: string; network: string; public_key: string; created_at: string; crypto: CryptoEnvelope }
-export type WalletSnapshot = { exists: boolean; unlocked: boolean; public_key: string | null; sol_balance: number | null; tokens: TokenBalance[] | null }
+export type WalletSnapshot = { exists: boolean; unlocked: boolean; public_key: string | null; sol_balance: number | null; sol_price_usd: number | null; sol_value_usd: number | null; total_portfolio_usd: number | null; tokens: TokenBalance[] | null }
 
 /** tauri-specta globals **/
 

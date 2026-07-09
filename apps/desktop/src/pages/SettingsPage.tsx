@@ -101,6 +101,20 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Advanced</CardTitle>
+          <CardDescription>
+            Token account tools stay out of the main Send and Swap flow.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => navigate("/accounts")}>
+            Manage accounts
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="border-destructive/40">
         <CardHeader>
           <CardTitle>Danger zone</CardTitle>
