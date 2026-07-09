@@ -4,9 +4,10 @@ use specta::Type;
 pub const WALLET_FILE_VERSION: u32 = 1;
 pub const DEFAULT_DERIVATION_PATH: &str = "m/44'/501'/0'/0'";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "kebab-case")]
 pub enum Network {
+    #[default]
     SolanaMainnet,
     SolanaDevnet,
 }
@@ -17,12 +18,6 @@ impl Network {
             Self::SolanaMainnet => "solana-mainnet",
             Self::SolanaDevnet => "solana-devnet",
         }
-    }
-}
-
-impl Default for Network {
-    fn default() -> Self {
-        Self::SolanaMainnet
     }
 }
 

@@ -1,14 +1,6 @@
 import { commands } from "@/bindings";
 import type { Result } from "@/bindings";
-export type {
-  ActivityItem,
-  ApiError,
-  SendPreview,
-  SendResult,
-  TokenBalance,
-  WalletFile,
-  WalletSnapshot,
-} from "@/bindings";
+export type { ActivityItem, ApiError, SendPreview, TokenBalance } from "@/bindings";
 
 async function unwrap<T>(promise: Promise<Result<T, unknown>> | Promise<T>): Promise<T> {
   const value = await promise;
@@ -30,7 +22,6 @@ async function unwrap<T>(promise: Promise<Result<T, unknown>> | Promise<T>): Pro
 
 export const walletApi = {
   getWalletSnapshot: () => unwrap(commands.getWalletSnapshot()),
-  walletExists: () => commands.walletExists(),
   generateMnemonic: () => unwrap(commands.generateMnemonic()),
   createWallet: (mnemonic: string, password: string) =>
     unwrap(commands.createWallet(mnemonic, password)),
@@ -38,8 +29,6 @@ export const walletApi = {
     unwrap(commands.importWallet(mnemonic, password)),
   unlockWallet: (password: string) => unwrap(commands.unlockWallet(password)),
   lockWallet: () => commands.lockWallet(),
-  isUnlocked: () => commands.isUnlocked(),
-  getPublicKey: () => commands.getPublicKey(),
   revealMnemonic: (password: string) => unwrap(commands.revealMnemonic(password)),
   getSolBalance: () => unwrap(commands.getSolBalance()),
   getTokenBalances: () => unwrap(commands.getTokenBalances()),

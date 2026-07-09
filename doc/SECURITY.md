@@ -48,7 +48,7 @@ We aim to acknowledge reports within **72 hours** and will work with you on a fi
 ## Security model (summary)
 
 ```
-React UI  →  Tauri IPC  →  wallet-core (Rust)  →  crypto / storage / solana
+React UI  →  Tauri IPC  →  wallet_core (Rust)  →  crypto / storage / solana
 ```
 
 - Private keys and mnemonics are encrypted at rest on disk.

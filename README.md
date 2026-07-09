@@ -47,7 +47,7 @@ Aegis is designed so the frontend never becomes a secret keeper.
 ```mermaid
 flowchart TB
   UI["React UI<br/>apps/desktop<br/><i>balances · forms · QR</i><br/><b>no private keys</b>"]
-  WC["wallet-core<br/><i>unlock · sign · send</i>"]
+  WC["wallet_core<br/><i>unlock · sign · send</i>"]
   CRYPTO["crypto<br/>Argon2id · AES-256-GCM"]
   SOL["solana<br/>RPC · txs · SPL"]
   STORE["storage<br/>encrypted wallet file"]
@@ -68,7 +68,7 @@ flowchart TB
 | Layer | Technology |
 |-------|------------|
 | Shell | Tauri v2 |
-| Core | Rust workspace — `crypto`, `storage`, `solana`, `wallet-core`, `models` |
+| Core | Rust workspace — `crypto`, `storage`, `solana`, `wallet_core`, `models` |
 | UI | React 19, TypeScript, Vite, Tailwind CSS 4 |
 | Chain | Solana SDK 4, SPL token interfaces |
 | Package manager | pnpm |
@@ -125,7 +125,7 @@ cargo test
 ```mermaid
 flowchart LR
   UI["React UI"] -->|bindings.ts| Shell["src-tauri commands"]
-  Shell --> WC["wallet-core"]
+  Shell --> WC["wallet_core"]
   WC --> CRYPTO["crypto"]
   WC --> STORE["storage"]
   WC --> SOL["aegis-solana"]
@@ -138,15 +138,15 @@ flowchart LR
 | `crypto` | Argon2id + AES-256-GCM primitives only |
 | `storage` | Persist `WalletFile` JSON to disk (does not encrypt) |
 | `aegis-solana` | Keypairs, RPC, transfers |
-| `wallet-core` | Session, encrypt/decrypt assembly, signing orchestration |
+| `wallet_core` | Session, encrypt/decrypt assembly, signing orchestration |
 | `aegis-desktop` | Thin Tauri shell + IPC commands |
 
 ### Future extension points
 
 | Growth | Where it goes |
 |--------|----------------|
-| Hardware / USB cold storage | New `crates/device` or module under `wallet-core` |
-| Second chain | New `crates/<chain>` + `wallet-core` facade |
+| Hardware / USB cold storage | New `crates/device` or module under `wallet_core` |
+| Second chain | New `crates/<chain>` + `wallet_core` facade |
 | Explorer links | Tauri opener + allowlisted capability |
 | QR scan | Prefer native/Rust on Linux (not webview WebRTC) |
 
@@ -162,12 +162,16 @@ aegis/
 │   ├── models/                # shared types
 │   ├── solana/                # RPC client, transfers, keypairs
 │   ├── storage/               # wallet file persistence
-│   └── wallet-core/           # session, signing, snapshots
+│   └── wallet_core/           # session, signing, snapshots
 └── doc/                       # project docs
     ├── AEGIS.png
     ├── CHANGELOG.md
     └── SECURITY.md
 ```
+
+## Version
+
+Current release: **0.1.2** — see [Changelog](doc/CHANGELOG.md).
 
 ## License
 
