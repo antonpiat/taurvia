@@ -1,6 +1,6 @@
 [package]
 name = "aegis-solana"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 
@@ -21,4 +21,5 @@ solana-system-interface = { version = "3.2.0", features = ["bincode"] }
 solana-transaction-status-client-types = { version = "4.1.1", features = ["agave-unstable-api"] }
 spl-associated-token-account-interface.workspace = true
 spl-token-interface.workspace = true
-rayon = "1.12"
+tokio.workspace = true
+futures.workspace = true
