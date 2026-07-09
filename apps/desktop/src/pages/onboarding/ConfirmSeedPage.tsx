@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,24 +12,35 @@ function pickQuizIndices(length: number): number[] {
     const j = Math.floor(Math.random() * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
-  return indices.slice(0, 3).sort((a, b) => a - b);
+  return indices.slice(0, Math.min(3, length)).sort((a, b) => a - b);
 }
 
 export function ConfirmSeedPage() {
   const navigate = useNavigate();
   const mnemonic = sessionStorage.getItem("aegis_onboarding_mnemonic") ?? "";
   const words = useMemo(() => mnemonic.split(/\s+/).filter(Boolean), [mnemonic]);
-  const [quizIndices] = useState(() => pickQuizIndices(words.length || 12));
+  const [quizIndices, setQuizIndices] = useState<number[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  if (!mnemonic) {
-    navigate("/onboarding");
+  useEffect(() => {
+    if (!mnemonic) {
+      navigate("/onboarding", { replace: true });
+      return;
+    }
+    setQuizIndices(pickQuizIndices(words.length || 12));
+    setAnswers({});
+    setError(null);
+  }, [mnemonic, words.length, navigate]);
+
+  if (!mnemonic || quizIndices.length === 0) {
     return null;
   }
 
   const handleConfirm = () => {
-    const valid = quizIndices.every((index) => answers[index]?.trim().toLowerCase() === words[index]);
+    const valid = quizIndices.every(
+      (index) => answers[index]?.trim().toLowerCase() === words[index],
+    );
     if (!valid) {
       setError("One or more words are incorrect. Please check your backup phrase.");
       return;
@@ -50,6 +61,9 @@ export function ConfirmSeedPage() {
               <Label htmlFor={`word-${index}`}>Word #{index + 1}</Label>
               <Input
                 id={`word-${index}`}
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
                 value={answers[index] ?? ""}
                 onChange={(e) => setAnswers((prev) => ({ ...prev, [index]: e.target.value }))}
               />

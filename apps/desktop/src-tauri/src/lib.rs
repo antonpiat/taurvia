@@ -9,11 +9,13 @@ use tauri_specta::{collect_commands, Builder};
 fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(collect_commands![
         commands::generate_mnemonic,
+        commands::validate_mnemonic,
         commands::create_wallet,
         commands::import_wallet,
         commands::unlock_wallet,
         commands::lock_wallet,
         commands::reveal_mnemonic,
+        commands::remove_wallet,
         commands::get_wallet_snapshot,
         commands::get_sol_balance,
         commands::get_token_balances,

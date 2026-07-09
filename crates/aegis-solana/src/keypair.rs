@@ -13,6 +13,10 @@ pub fn generate_mnemonic() -> Result<String> {
     Ok(mnemonic.to_string())
 }
 
+pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
+    Mnemonic::parse(mnemonic).map(|_| ()).map_err(|_| anyhow!("invalid mnemonic phrase"))
+}
+
 pub fn derive_keypair_from_mnemonic(mnemonic: &str) -> Result<Keypair> {
     let mnemonic =
         Mnemonic::parse(mnemonic).map_err(|_| anyhow!("invalid mnemonic phrase"))?;

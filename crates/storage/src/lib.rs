@@ -56,6 +56,14 @@ impl WalletStorage {
         let data = fs::read(&self.wallet_path)?;
         Ok(serde_json::from_slice(&data)?)
     }
+
+    pub fn delete(&self) -> Result<(), StorageError> {
+        if !self.exists() {
+            return Err(StorageError::NotFound);
+        }
+        fs::remove_file(&self.wallet_path)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -88,5 +96,15 @@ mod tests {
         storage.save(&wallet).unwrap();
         let loaded = storage.load().unwrap();
         assert_eq!(loaded.wallet_id, wallet.wallet_id);
+    }
+
+    #[test]
+    fn delete_wallet() {
+        let dir = tempfile::tempdir().unwrap();
+        let storage = WalletStorage::new(dir.path());
+        storage.save(&sample_wallet()).unwrap();
+        assert!(storage.exists());
+        storage.delete().unwrap();
+        assert!(!storage.exists());
     }
 }

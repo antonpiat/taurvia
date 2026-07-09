@@ -11,6 +11,15 @@ pub fn generate_mnemonic(state: State<'_, AppState>) -> CommandResult<String> {
 
 #[tauri::command]
 #[specta::specta]
+pub fn validate_mnemonic(mnemonic: String, state: State<'_, AppState>) -> CommandResult<()> {
+    state
+        .wallet
+        .validate_mnemonic(&mnemonic)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn create_wallet(
     mnemonic: String,
     password: String,
@@ -53,5 +62,14 @@ pub fn reveal_mnemonic(password: String, state: State<'_, AppState>) -> CommandR
     state
         .wallet
         .reveal_mnemonic(&password)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn remove_wallet(password: String, state: State<'_, AppState>) -> CommandResult<()> {
+    state
+        .wallet
+        .remove_wallet(&password)
         .map_err(map_wallet_error)
 }
