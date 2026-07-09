@@ -75,7 +75,7 @@ impl WalletService {
         self.storage.load().ok().map(|w| w.public_key)
     }
 
-    pub fn get_snapshot(&self) -> Result<WalletSnapshot, WalletError> {
+    pub async fn get_snapshot(&self) -> Result<WalletSnapshot, WalletError> {
         let exists = self.wallet_exists();
         if !exists {
             return Ok(WalletSnapshot {
@@ -104,6 +104,7 @@ impl WalletService {
         let (lamports, tokens) = self
             .rpc
             .get_balances_parallel(&pubkey)
+            .await
             .map_err(WalletError::Operation)?;
 
         Ok(WalletSnapshot {
@@ -159,34 +160,45 @@ impl WalletService {
         Ok(payload.mnemonic)
     }
 
-    pub fn get_sol_balance(&self) -> Result<f64, WalletError> {
+    pub async fn get_sol_balance(&self) -> Result<f64, WalletError> {
         let pubkey = self.require_pubkey()?;
-        let lamports = self.rpc.get_balance(&pubkey).map_err(WalletError::Operation)?;
+        let lamports = self
+            .rpc
+            .get_balance(&pubkey)
+            .await
+            .map_err(WalletError::Operation)?;
         Ok(lamports_to_sol(lamports))
     }
 
-    pub fn get_token_balances(&self) -> Result<Vec<TokenBalance>, WalletError> {
+    pub async fn get_token_balances(&self) -> Result<Vec<TokenBalance>, WalletError> {
         let pubkey = self.require_pubkey()?;
         self.rpc
             .get_token_balances(&pubkey)
+            .await
             .map_err(WalletError::Operation)
     }
 
-    pub fn get_activity(&self, limit: usize) -> Result<Vec<ActivityItem>, WalletError> {
+    pub async fn get_activity(&self, limit: usize) -> Result<Vec<ActivityItem>, WalletError> {
         let pubkey = self.require_pubkey()?;
         self.rpc
             .get_activity(&pubkey, limit)
+            .await
             .map_err(WalletError::Operation)
     }
 
-    pub fn preview_sol_send(&self, to: &str, amount_sol: f64) -> Result<SendPreview, WalletError> {
+    pub async fn preview_sol_send(
+        &self,
+        to: &str,
+        amount_sol: f64,
+    ) -> Result<SendPreview, WalletError> {
         let keypair = self.signing_keypair()?;
         self.rpc
             .preview_sol_send(&keypair, to, amount_sol)
+            .await
             .map_err(WalletError::Operation)
     }
 
-    pub fn preview_spl_send(
+    pub async fn preview_spl_send(
         &self,
         mint: &str,
         to: &str,
@@ -195,10 +207,11 @@ impl WalletService {
         let keypair = self.signing_keypair()?;
         self.rpc
             .preview_spl_send(&keypair, mint, to, amount)
+            .await
             .map_err(WalletError::Operation)
     }
 
-    pub fn send_sol(
+    pub async fn send_sol(
         &self,
         password: &str,
         to: &str,
@@ -208,10 +221,11 @@ impl WalletService {
         let keypair = self.signing_keypair()?;
         self.rpc
             .send_sol(&keypair, to, amount_sol)
+            .await
             .map_err(WalletError::Operation)
     }
 
-    pub fn send_spl(
+    pub async fn send_spl(
         &self,
         password: &str,
         mint: &str,
@@ -222,6 +236,7 @@ impl WalletService {
         let keypair = self.signing_keypair()?;
         self.rpc
             .send_spl(&keypair, mint, to, amount)
+            .await
             .map_err(WalletError::Operation)
     }
 
@@ -328,8 +343,8 @@ impl WalletService {
 mod tests {
     use super::*;
 
-    #[test]
-    fn create_import_unlock_flow() {
+    #[tokio::test]
+    async fn create_import_unlock_flow() {
         let dir = tempfile::tempdir().unwrap();
         let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
         let mnemonic = service.generate_mnemonic().unwrap();
