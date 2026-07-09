@@ -1,83 +1,55 @@
-import { invoke } from "@tauri-apps/api/core";
+import { commands } from "@/bindings";
+import type { Result } from "@/bindings";
+export type {
+  ActivityItem,
+  ApiError,
+  SendPreview,
+  SendResult,
+  TokenBalance,
+  WalletFile,
+  WalletSnapshot,
+} from "@/bindings";
 
-export interface ApiError {
-  code: string;
-  message: string;
-}
-
-export interface TokenBalance {
-  mint: string;
-  symbol: string;
-  name: string;
-  amount: string;
-  decimals: number;
-  ui_amount: number;
-}
-
-export interface ActivityItem {
-  signature: string;
-  timestamp: number | null;
-  status: string;
-  direction: string;
-  amount_sol: number | null;
-  description: string;
-}
-
-export interface SendPreview {
-  from: string;
-  to: string;
-  token: string;
-  amount: string;
-  estimated_fee_lamports: number;
-  estimated_fee_sol: number;
-}
-
-export interface SendResult {
-  signature: string;
-  status: string;
-}
-
-export interface WalletSnapshot {
-  exists: boolean;
-  unlocked: boolean;
-  public_key: string | null;
-  sol_balance: number | null;
-  tokens: TokenBalance[] | null;
-}
-
-async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(command, args);
-  } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && "message" in error) {
-      throw error as ApiError;
+async function unwrap<T>(promise: Promise<Result<T, unknown>> | Promise<T>): Promise<T> {
+  const value = await promise;
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    "status" in value &&
+    ((value as Result<T, unknown>).status === "ok" ||
+      (value as Result<T, unknown>).status === "error")
+  ) {
+    const result = value as Result<T, unknown>;
+    if (result.status === "ok") {
+      return result.data;
     }
-    throw { code: "unknown", message: String(error) } satisfies ApiError;
+    throw result.error;
   }
+  return value as T;
 }
 
 export const walletApi = {
-  getWalletSnapshot: () => invokeCommand<WalletSnapshot>("get_wallet_snapshot"),
-  walletExists: () => invokeCommand<boolean>("wallet_exists"),
-  generateMnemonic: () => invokeCommand<string>("generate_mnemonic"),
+  getWalletSnapshot: () => unwrap(commands.getWalletSnapshot()),
+  walletExists: () => commands.walletExists(),
+  generateMnemonic: () => unwrap(commands.generateMnemonic()),
   createWallet: (mnemonic: string, password: string) =>
-    invokeCommand("create_wallet", { mnemonic, password }),
+    unwrap(commands.createWallet(mnemonic, password)),
   importWallet: (mnemonic: string, password: string) =>
-    invokeCommand("import_wallet", { mnemonic, password }),
-  unlockWallet: (password: string) => invokeCommand<string>("unlock_wallet", { password }),
-  lockWallet: () => invokeCommand<void>("lock_wallet"),
-  isUnlocked: () => invokeCommand<boolean>("is_unlocked"),
-  getPublicKey: () => invokeCommand<string | null>("get_public_key"),
-  revealMnemonic: (password: string) => invokeCommand<string>("reveal_mnemonic", { password }),
-  getSolBalance: () => invokeCommand<number>("get_sol_balance"),
-  getTokenBalances: () => invokeCommand<TokenBalance[]>("get_token_balances"),
-  getActivity: (limit: number) => invokeCommand<ActivityItem[]>("get_activity", { limit }),
+    unwrap(commands.importWallet(mnemonic, password)),
+  unlockWallet: (password: string) => unwrap(commands.unlockWallet(password)),
+  lockWallet: () => commands.lockWallet(),
+  isUnlocked: () => commands.isUnlocked(),
+  getPublicKey: () => commands.getPublicKey(),
+  revealMnemonic: (password: string) => unwrap(commands.revealMnemonic(password)),
+  getSolBalance: () => unwrap(commands.getSolBalance()),
+  getTokenBalances: () => unwrap(commands.getTokenBalances()),
+  getActivity: (limit: number) => unwrap(commands.getActivity(limit)),
   previewSolSend: (to: string, amountSol: number) =>
-    invokeCommand<SendPreview>("preview_sol_send", { to, amountSol }),
+    unwrap(commands.previewSolSend(to, amountSol)),
   previewSplSend: (mint: string, to: string, amount: number) =>
-    invokeCommand<SendPreview>("preview_spl_send", { mint, to, amount }),
+    unwrap(commands.previewSplSend(mint, to, amount)),
   sendSol: (password: string, to: string, amountSol: number) =>
-    invokeCommand<SendResult>("send_sol", { password, to, amountSol }),
+    unwrap(commands.sendSol(password, to, amountSol)),
   sendSpl: (password: string, mint: string, to: string, amount: number) =>
-    invokeCommand<SendResult>("send_spl", { password, mint, to, amount }),
+    unwrap(commands.sendSpl(password, mint, to, amount)),
 };
