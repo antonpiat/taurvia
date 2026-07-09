@@ -9,10 +9,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
-- Jupiter-backed USD prices, token metadata, and portfolio totals on the dashboard
-- Any-to-any swap quote and password-gated execute via Jupiter Swap API
-- Optional `AEGIS_JUPITER_API_KEY` for higher Jupiter rate limits (keyless by default)
-
 ### Changed
 
 ### Fixed
@@ -21,7 +17,111 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
-## [0.1.2] - 2026-07-09
+## [0.3.2] - 2026-07-09
+
+### Fixed
+
+- Pinned the left sidebar to viewport height so the Active wallet panel stays visible on tall pages (Swap, Settings)
+- Main content scrolls independently; nav and wallet controls no longer get pushed off-screen
+
+---
+
+## [0.3.1] - 2026-07-08
+
+### Changed
+
+- Responsive shell: bottom nav + compact top bar on narrow windows, icon sidebar on medium, full sidebar on wide
+- Lowered minimum window size to `420×560`
+- Dashboard, Send, Swap, Receive, Activity, Settings, and dialogs wrap cleanly on smaller widths
+- Dashboard shows loading skeletons while balances and market data load
+
+---
+
+## [0.3.0] - 2026-07-08
+
+### Changed
+
+- Unlock returns immediately after password verification; balances and market data load in the background
+- Jupiter price/metadata requests use a short timeout budget so a slow API cannot stall the dashboard
+- Snapshot enrichment runs metadata, token prices, and SOL price in parallel
+- Curated majors (SOL, USDC, USDT, JUP, BONK) resolve locally before remote metadata returns
+
+### Fixed
+
+- Opening the wallet after unlock no longer waits on full Jupiter enrichment
+- Failed Jupiter lookups are no longer cached as shortened-mint fallbacks for an hour
+
+---
+
+## [0.2.4] - 2026-07-05
+
+### Added
+
+- Interactive Active wallet footer: copy address, portfolio USD, Mainnet badge, Lock, and Manage
+- Manage accounts page (`/accounts`) as an advanced entry point for future ATA tools
+- Settings → Advanced link to Manage accounts
+
+---
+
+## [0.2.3] - 2026-07-04
+
+### Added
+
+- SPL send preview detects whether the recipient ATA exists
+- Confirm dialog note when a token account will be created automatically: “A token account will be created for this asset.”
+
+### Changed
+
+- SPL send preview token label prefers resolved symbol over shortened mint
+
+---
+
+## [0.2.2] - 2026-07-03
+
+### Fixed
+
+- Token symbols and logos for curated majors no longer depend solely on Jupiter search success
+- Send page token picker replaced with a working dropdown (held SPL tokens selectable)
+- Swap confirm dialog shows clear You pay / You receive / Route rows with symbols
+
+### Changed
+
+- Shared `TokenDropdown` component used by Send and Swap
+
+---
+
+## [0.2.1] - 2026-07-02
+
+### Changed
+
+- Swap UI redesigned for retail use: custom token dropdowns with logo, symbol, and name
+- Amount shortcuts (25% / 50% / Max) and dynamic `Amount (SYMBOL)` label
+- Slippage and custom mint moved under Advanced settings (default 0.5%)
+- Clearer validation: same-token error, disabled Get quote until inputs are valid
+- Friendlier copy for quote review and local signing
+- Failed swap errors stay in the confirm dialog instead of sticking on the swap board
+
+---
+
+## [0.2.0] - 2026-07-01
+
+### Added
+
+- Jupiter-backed USD prices, token metadata, and portfolio totals on the dashboard
+- Any-to-any swap quote and password-gated execute via Jupiter Swap API
+- Optional `AEGIS_JUPITER_API_KEY` for higher Jupiter rate limits (keyless by default)
+- Swap page (`/swap`) with held tokens, curated majors, and paste-mint support
+- Models: `TokenInfo`, `SwapQuote`, `SwapResult`; USD fields on balances and snapshot
+- CSP `img-src https:` for remote token logos
+
+### Changed
+
+- Wallet snapshot enrichment joins RPC balances with metadata and prices
+- Tauri commands: `resolve_token`, `preview_swap_quote`, `execute_swap`
+
+---
+
+## [0.1.2] - 2026-06-28
 
 ### Added
 
@@ -47,7 +147,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
-## [0.1.0] - 2026-07-06
+## [0.1.0] - 2026-06-20
 
 First public MVP release.
 
@@ -57,7 +157,7 @@ First public MVP release.
 - Password-protected unlock and lock screen
 - Encrypted local wallet storage (Argon2id + AES-256-GCM)
 - SOL and SPL token balance display
-- Send SOL and SPL tokens with fee preview and confirmation
+- Send SOL and SPL transfers with fee preview and confirmation
 - Receive page with address copy and QR code
 - On-chain activity history via Solana RPC
 - Password-gated seed phrase reveal
@@ -95,6 +195,14 @@ When cutting a new version:
 6. Create a GitHub Release tagged `vx.y.z` and attach binaries from `target/release/bundle/`.
 7. Copy the new section into the GitHub Release notes.
 
-[Unreleased]: https://github.com/antonpiat/aegis/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/antonpiat/aegis/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/antonpiat/aegis/releases/tag/v0.3.2
+[0.3.1]: https://github.com/antonpiat/aegis/releases/tag/v0.3.1
+[0.3.0]: https://github.com/antonpiat/aegis/releases/tag/v0.3.0
+[0.2.4]: https://github.com/antonpiat/aegis/releases/tag/v0.2.4
+[0.2.3]: https://github.com/antonpiat/aegis/releases/tag/v0.2.3
+[0.2.2]: https://github.com/antonpiat/aegis/releases/tag/v0.2.2
+[0.2.1]: https://github.com/antonpiat/aegis/releases/tag/v0.2.1
+[0.2.0]: https://github.com/antonpiat/aegis/releases/tag/v0.2.0
 [0.1.2]: https://github.com/antonpiat/aegis/releases/tag/v0.1.2
 [0.1.0]: https://github.com/antonpiat/aegis/releases/tag/v0.1.0
