@@ -23,7 +23,7 @@ impl WalletService {
         let amount_raw = ui_amount_to_raw(&input_mint, amount_ui)
             .await
             .map_err(WalletError::Operation)?;
-        self.rpc
+        self.rpc_handle()
             .quote_swap(&input_mint, &output_mint, amount_raw, slippage_bps)
             .await
             .map_err(WalletError::Operation)
@@ -44,7 +44,7 @@ impl WalletService {
         let amount_raw = ui_amount_to_raw(&input_mint, amount_ui)
             .await
             .map_err(WalletError::Operation)?;
-        self.rpc
+        self.rpc_handle()
             .execute_swap(&keypair, &input_mint, &output_mint, amount_raw, slippage_bps)
             .await
             .map_err(WalletError::Operation)

@@ -1,4 +1,5 @@
 pub mod activity;
+pub mod config;
 pub mod error;
 pub mod send;
 pub mod snapshot;
@@ -7,6 +8,9 @@ pub mod token;
 pub mod wallet;
 
 pub use activity::ActivityItem;
+pub use config::{
+    AppSettings, OnboardingDraft, RuntimeConfig, MANAGED_DEFAULT_RPC_URL,
+};
 pub use error::ApiError;
 pub use send::{SendPreview, SendResult};
 pub use snapshot::WalletSnapshot;

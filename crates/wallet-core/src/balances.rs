@@ -41,8 +41,8 @@ impl WalletService {
         }
 
         let pubkey = self.require_pubkey()?;
-        let (lamports, mut tokens) = self
-            .rpc
+        let rpc = self.rpc_handle();
+        let (lamports, mut tokens) = rpc
             .get_balances_parallel(&pubkey)
             .await
             .map_err(WalletError::Operation)?;
@@ -93,7 +93,7 @@ impl WalletService {
     pub async fn get_sol_balance(&self) -> Result<f64, WalletError> {
         let pubkey = self.require_pubkey()?;
         let lamports = self
-            .rpc
+            .rpc_handle()
             .get_balance(&pubkey)
             .await
             .map_err(WalletError::Operation)?;
@@ -103,7 +103,7 @@ impl WalletService {
     pub async fn get_token_balances(&self) -> Result<Vec<TokenBalance>, WalletError> {
         let pubkey = self.require_pubkey()?;
         let mut tokens = self
-            .rpc
+            .rpc_handle()
             .get_token_balances(&pubkey)
             .await
             .map_err(WalletError::Operation)?;
@@ -113,7 +113,7 @@ impl WalletService {
 
     pub async fn get_activity(&self, limit: usize) -> Result<Vec<ActivityItem>, WalletError> {
         let pubkey = self.require_pubkey()?;
-        self.rpc
+        self.rpc_handle()
             .get_activity(&pubkey, limit)
             .await
             .map_err(WalletError::Operation)

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MaskedPhrase } from "@/components/MaskedPhrase";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,10 @@ import { ApiError, walletApi } from "@/lib/tauri";
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { lock, refresh } = useWallet();
+  const { lock, refresh, refreshBalances } = useWallet();
   const [seedOpen, setSeedOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [removePassword, setRemovePassword] = useState("");
   const [mnemonic, setMnemonic] = useState<string | null>(null);
@@ -28,6 +29,30 @@ export function SettingsPage() {
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [rpcUrl, setRpcUrl] = useState("");
+  const [jupiterKey, setJupiterKey] = useState("");
+  const [managedDefault, setManagedDefault] = useState("");
+  const [activeRpc, setActiveRpc] = useState("");
+  const [configMessage, setConfigMessage] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [settings, defaultUrl] = await Promise.all([
+          walletApi.getAppSettings(),
+          walletApi.getManagedDefaultRpcUrl(),
+        ]);
+        setManagedDefault(defaultUrl);
+        setRpcUrl(settings.rpc_url ?? "");
+        setJupiterKey(settings.jupiter_api_key ?? "");
+        setActiveRpc(settings.rpc_url?.trim() || defaultUrl);
+      } catch {
+        // ignore initial load errors
+      }
+    })();
+  }, []);
 
   const handleLock = async () => {
     await lock();
@@ -53,8 +78,7 @@ export function SettingsPage() {
     setRemoveError(null);
     try {
       await walletApi.removeWallet(removePassword);
-      sessionStorage.removeItem("aegis_onboarding_mnemonic");
-      sessionStorage.removeItem("aegis_onboarding_mode");
+      await walletApi.clearOnboardingDraft();
       setRemoveOpen(false);
       setRemovePassword("");
       await refresh();
@@ -64,6 +88,48 @@ export function SettingsPage() {
       setRemoveError(apiError.message ?? "Failed to remove wallet");
     } finally {
       setRemoving(false);
+    }
+  };
+
+  const handleSaveNetwork = async () => {
+    setSavingConfig(true);
+    setConfigError(null);
+    setConfigMessage(null);
+    try {
+      const runtime = await walletApi.updateAppSettings({
+        rpc_url: rpcUrl.trim() ? rpcUrl.trim() : null,
+        jupiter_api_key: jupiterKey.trim() ? jupiterKey.trim() : null,
+      });
+      setActiveRpc(runtime.rpc_url);
+      setConfigMessage("Network settings saved. Refreshing balances…");
+      await refreshBalances();
+    } catch (err) {
+      const apiError = err as ApiError;
+      setConfigError(apiError.message ?? "Failed to save network settings");
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleResetNetwork = async () => {
+    setRpcUrl("");
+    setJupiterKey("");
+    setSavingConfig(true);
+    setConfigError(null);
+    setConfigMessage(null);
+    try {
+      const runtime = await walletApi.updateAppSettings({
+        rpc_url: null,
+        jupiter_api_key: null,
+      });
+      setActiveRpc(runtime.rpc_url);
+      setConfigMessage("Reset to managed default RPC.");
+      await refreshBalances();
+    } catch (err) {
+      const apiError = err as ApiError;
+      setConfigError(apiError.message ?? "Failed to reset network settings");
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -96,10 +162,19 @@ export function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Network</CardTitle>
-          <CardDescription>MVP uses Solana mainnet via configured RPC URL.</CardDescription>
+          <CardDescription>
+            Solana mainnet. Works out of the box with Aegis managed defaults — no API key required.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">solana-mainnet</p>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">Network</span>
+            <span>solana-mainnet</span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">Active RPC</span>
+            <span className="max-w-[60%] truncate font-mono text-xs">{activeRpc || "—"}</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -107,13 +182,62 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Advanced</CardTitle>
           <CardDescription>
-            Token account tools stay out of the main Send and Swap flow.
+            Optional power-user overrides. Most users can leave these empty.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <Button variant="outline" onClick={() => navigate("/accounts")}>
             Manage accounts
           </Button>
+          <Button variant="secondary" onClick={() => setAdvancedOpen((open) => !open)}>
+            {advancedOpen ? "Hide network overrides" : "Custom RPC / Jupiter key"}
+          </Button>
+          {advancedOpen && (
+            <div className="space-y-3 rounded-md border border-border p-3">
+              <p className="text-xs text-muted-foreground">
+                Default RPC: {managedDefault || "managed public mainnet"}. Developer{" "}
+                <code className="font-mono">.env</code> is local-only and never ships in releases.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="rpc-url">Custom RPC URL</Label>
+                <Input
+                  id="rpc-url"
+                  value={rpcUrl}
+                  onChange={(e) => setRpcUrl(e.target.value)}
+                  placeholder={managedDefault || "https://api.mainnet-beta.solana.com"}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jupiter-key">Jupiter API key (optional)</Label>
+                <Input
+                  id="jupiter-key"
+                  type="password"
+                  value={jupiterKey}
+                  onChange={(e) => setJupiterKey(e.target.value)}
+                  placeholder="Leave empty for keyless Jupiter"
+                  autoComplete="off"
+                />
+              </div>
+              {configError && (
+                <Alert className="border-destructive/40 text-destructive">{configError}</Alert>
+              )}
+              {configMessage && <Alert>{configMessage}</Alert>}
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button onClick={() => void handleSaveNetwork()} disabled={savingConfig}>
+                  {savingConfig ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => void handleResetNetwork()}
+                  disabled={savingConfig}
+                >
+                  Reset to default
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -145,28 +269,24 @@ export function SettingsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reveal recovery phrase</DialogTitle>
-            <DialogDescription>Enter your password. Never share your seed phrase.</DialogDescription>
+            <DialogDescription>Enter your password to view the seed phrase.</DialogDescription>
           </DialogHeader>
-          {!mnemonic ? (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="seed-password">Password</Label>
-                <Input
-                  id="seed-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
-              <Button onClick={() => void handleRevealSeed()} disabled={loading || !password}>
-                {loading ? "Verifying..." : "Reveal phrase"}
-              </Button>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="reveal-password">Password</Label>
+              <Input
+                id="reveal-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-          ) : (
-            <MaskedPhrase words={words} />
-          )}
+            {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
+            {mnemonic && <MaskedPhrase words={words} />}
+            <Button onClick={() => void handleRevealSeed()} disabled={loading || !password}>
+              {loading ? "Verifying..." : "Reveal"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -182,22 +302,17 @@ export function SettingsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove wallet from this device</DialogTitle>
+            <DialogTitle>Remove wallet</DialogTitle>
             <DialogDescription>
-              This permanently deletes the encrypted wallet file on this device. You will need your
-              recovery phrase to restore access. Funds on-chain are not moved.
+              Confirm with your password. Make sure you have your recovery phrase.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Alert className="border-destructive/40 text-destructive">
-              Irreversible on this device. Make sure your recovery phrase is backed up.
-            </Alert>
             <div className="space-y-2">
               <Label htmlFor="remove-password">Password</Label>
               <Input
                 id="remove-password"
                 type="password"
-                autoComplete="current-password"
                 value={removePassword}
                 onChange={(e) => setRemovePassword(e.target.value)}
               />

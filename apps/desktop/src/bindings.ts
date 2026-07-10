@@ -151,6 +151,49 @@ async executeSwap(password: string, inputMint: string, outputMint: string, amoun
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getAppSettings() : Promise<Result<AppSettings, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_app_settings") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async updateAppSettings(settings: AppSettings) : Promise<Result<RuntimeConfig, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("update_app_settings", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getManagedDefaultRpcUrl() : Promise<string> {
+    return await TAURI_INVOKE("get_managed_default_rpc_url");
+},
+async setOnboardingDraft(mnemonic: string, mode: string) : Promise<Result<null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_onboarding_draft", { mnemonic, mode }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getOnboardingDraft() : Promise<Result<OnboardingDraft | null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_onboarding_draft") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async clearOnboardingDraft() : Promise<Result<null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clear_onboarding_draft") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -166,7 +209,18 @@ async executeSwap(password: string, inputMint: string, outputMint: string, amoun
 
 export type ActivityItem = { signature: string; timestamp: number | null; status: string; direction: string; amount_sol: number | null; description: string }
 export type ApiError = { code: string; message: string }
+export type AppSettings = { 
+/**
+ * Optional user override (Advanced). Empty / None = managed default.
+ */
+rpc_url: string | null; 
+/**
+ * Optional Jupiter portal key (Advanced). None = keyless.
+ */
+jupiter_api_key: string | null }
 export type CryptoEnvelope = { kdf: string; salt: string; cipher: string; nonce: string; ciphertext: string }
+export type OnboardingDraft = { mnemonic: string; mode: string }
+export type RuntimeConfig = { rpc_url: string; jupiter_api_key: string | null }
 export type SendPreview = { from: string; to: string; token: string; amount: string; estimated_fee_lamports: number; estimated_fee_sol: number; 
 /**
  * True when the recipient's associated token account will be created in this transfer.

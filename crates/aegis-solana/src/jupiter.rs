@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use reqwest::Client;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 use std::time::Duration;
 
 pub const WRAPPED_SOL_MINT: &str = "So11111111111111111111111111111111111111112";
@@ -9,10 +9,23 @@ pub const JUPITER_API_BASE: &str = "https://api.jup.ag";
 /// Keep market-data calls short so unlock/dashboard never stalls on Jupiter.
 pub const JUPITER_MARKET_DATA_TIMEOUT: Duration = Duration::from_secs(3);
 
+fn jupiter_key_slot() -> &'static RwLock<Option<String>> {
+    static SLOT: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+    SLOT.get_or_init(|| RwLock::new(None))
+}
+
+/// Inject Jupiter API key from `RuntimeConfig` (Settings / env). Clears when `None`.
+pub fn configure_jupiter_api_key(api_key: Option<String>) {
+    if let Ok(mut guard) = jupiter_key_slot().write() {
+        *guard = api_key.filter(|value| !value.is_empty());
+    }
+}
+
 pub fn jupiter_api_key() -> Option<String> {
-    std::env::var("AEGIS_JUPITER_API_KEY")
+    jupiter_key_slot()
+        .read()
         .ok()
-        .filter(|value| !value.is_empty())
+        .and_then(|guard| guard.clone())
 }
 
 pub fn http_client() -> &'static Client {

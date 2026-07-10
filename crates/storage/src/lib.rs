@@ -1,10 +1,11 @@
-use models::WalletFile;
+use models::{AppSettings, WalletFile};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
 pub const DEFAULT_WALLET_FILENAME: &str = "default.json";
+pub const APP_SETTINGS_FILENAME: &str = "config.json";
 
 #[derive(Debug, Error)]
 pub enum StorageError {
@@ -16,11 +17,20 @@ pub enum StorageError {
     Json(#[from] serde_json::Error),
 }
 
-pub struct WalletStorage {
+/// Platform-agnostic wallet persistence. Desktop/mobile shells inject an impl.
+pub trait WalletStore: Send + Sync {
+    fn exists(&self) -> bool;
+    fn save(&self, wallet: &WalletFile) -> Result<(), StorageError>;
+    fn load(&self) -> Result<WalletFile, StorageError>;
+    fn delete(&self) -> Result<(), StorageError>;
+}
+
+/// Filesystem-backed store: `{data_dir}/wallets/default.json`.
+pub struct FileWalletStore {
     wallet_path: PathBuf,
 }
 
-impl WalletStorage {
+impl FileWalletStore {
     pub fn new(data_dir: impl AsRef<Path>) -> Self {
         let wallet_path = data_dir
             .as_ref()
@@ -30,10 +40,28 @@ impl WalletStorage {
     }
 
     pub fn exists(&self) -> bool {
-        self.wallet_path.exists()
+        WalletStore::exists(self)
     }
 
     pub fn save(&self, wallet: &WalletFile) -> Result<(), StorageError> {
+        WalletStore::save(self, wallet)
+    }
+
+    pub fn load(&self) -> Result<WalletFile, StorageError> {
+        WalletStore::load(self)
+    }
+
+    pub fn delete(&self) -> Result<(), StorageError> {
+        WalletStore::delete(self)
+    }
+}
+
+impl WalletStore for FileWalletStore {
+    fn exists(&self) -> bool {
+        self.wallet_path.exists()
+    }
+
+    fn save(&self, wallet: &WalletFile) -> Result<(), StorageError> {
         if let Some(parent) = self.wallet_path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -49,22 +77,61 @@ impl WalletStorage {
         Ok(())
     }
 
-    pub fn load(&self) -> Result<WalletFile, StorageError> {
-        if !self.exists() {
+    fn load(&self) -> Result<WalletFile, StorageError> {
+        if !WalletStore::exists(self) {
             return Err(StorageError::NotFound);
         }
         let data = fs::read(&self.wallet_path)?;
         Ok(serde_json::from_slice(&data)?)
     }
 
-    pub fn delete(&self) -> Result<(), StorageError> {
-        if !self.exists() {
+    fn delete(&self) -> Result<(), StorageError> {
+        if !WalletStore::exists(self) {
             return Err(StorageError::NotFound);
         }
         fs::remove_file(&self.wallet_path)?;
         Ok(())
     }
 }
+
+/// Persists Advanced network settings under `{data_dir}/config.json`.
+pub struct AppConfigStore {
+    path: PathBuf,
+}
+
+impl AppConfigStore {
+    pub fn new(data_dir: impl AsRef<Path>) -> Self {
+        Self {
+            path: data_dir.as_ref().join(APP_SETTINGS_FILENAME),
+        }
+    }
+
+    pub fn load(&self) -> Result<AppSettings, StorageError> {
+        if !self.path.exists() {
+            return Ok(AppSettings::default());
+        }
+        let data = fs::read(&self.path)?;
+        Ok(serde_json::from_slice(&data)?)
+    }
+
+    pub fn save(&self, settings: &AppSettings) -> Result<(), StorageError> {
+        if let Some(parent) = self.path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let serialized = serde_json::to_vec_pretty(settings)?;
+        let temp_path = self.path.with_extension("json.tmp");
+        {
+            let mut file = fs::File::create(&temp_path)?;
+            file.write_all(&serialized)?;
+            file.sync_all()?;
+        }
+        fs::rename(temp_path, &self.path)?;
+        Ok(())
+    }
+}
+
+/// Backward-compatible alias used by existing call sites / docs.
+pub type WalletStorage = FileWalletStore;
 
 #[cfg(test)]
 mod tests {
@@ -91,7 +158,7 @@ mod tests {
     #[test]
     fn save_and_load_wallet() {
         let dir = tempfile::tempdir().unwrap();
-        let storage = WalletStorage::new(dir.path());
+        let storage = FileWalletStore::new(dir.path());
         let wallet = sample_wallet();
         storage.save(&wallet).unwrap();
         let loaded = storage.load().unwrap();
@@ -101,10 +168,23 @@ mod tests {
     #[test]
     fn delete_wallet() {
         let dir = tempfile::tempdir().unwrap();
-        let storage = WalletStorage::new(dir.path());
+        let storage = FileWalletStore::new(dir.path());
         storage.save(&sample_wallet()).unwrap();
         assert!(storage.exists());
         storage.delete().unwrap();
         assert!(!storage.exists());
+    }
+
+    #[test]
+    fn save_and_load_settings() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = AppConfigStore::new(dir.path());
+        let settings = AppSettings {
+            rpc_url: Some("https://example.rpc".into()),
+            jupiter_api_key: None,
+        };
+        store.save(&settings).unwrap();
+        let loaded = store.load().unwrap();
+        assert_eq!(loaded.rpc_url.as_deref(), Some("https://example.rpc"));
     }
 }
