@@ -8,35 +8,50 @@ import { ApiError, walletApi } from "@/lib/tauri";
 
 export function ShowSeedPage() {
   const navigate = useNavigate();
-  const [mnemonic, setMnemonic] = useState(
-    () => sessionStorage.getItem("aegis_onboarding_mnemonic") ?? "",
-  );
-  const [loading, setLoading] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const words = useMemo(() => mnemonic.split(/\s+/).filter(Boolean), [mnemonic]);
 
   useEffect(() => {
-    if (!mnemonic) {
-      navigate("/onboarding", { replace: true });
-    }
-  }, [mnemonic, navigate]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const draft = await walletApi.getOnboardingDraft();
+        if (cancelled) return;
+        if (!draft?.mnemonic || draft.mode !== "create") {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+        setMnemonic(draft.mnemonic);
+      } catch {
+        if (!cancelled) navigate("/onboarding", { replace: true });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
-  if (!mnemonic) {
+  if (loading || !mnemonic) {
     return null;
   }
 
   const handleRegenerate = async () => {
-    setLoading(true);
+    setRegenerating(true);
     setError(null);
     try {
       const phrase = await walletApi.generateMnemonic();
-      sessionStorage.setItem("aegis_onboarding_mnemonic", phrase);
+      await walletApi.setOnboardingDraft(phrase, "create");
       setMnemonic(phrase);
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message ?? "Failed to generate a new phrase");
     } finally {
-      setLoading(false);
+      setRegenerating(false);
     }
   };
 
@@ -57,10 +72,14 @@ export function ShowSeedPage() {
             <Button variant="outline" onClick={() => navigate("/onboarding")}>
               Back
             </Button>
-            <Button variant="secondary" disabled={loading} onClick={() => void handleRegenerate()}>
-              {loading ? "Generating..." : "Generate New Phrase"}
+            <Button
+              variant="secondary"
+              disabled={regenerating}
+              onClick={() => void handleRegenerate()}
+            >
+              {regenerating ? "Generating..." : "Generate New Phrase"}
             </Button>
-            <Button onClick={() => navigate("/onboarding/confirm")} disabled={loading}>
+            <Button onClick={() => navigate("/onboarding/confirm")} disabled={regenerating}>
               I wrote it down
             </Button>
           </div>

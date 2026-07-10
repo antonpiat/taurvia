@@ -1,8 +1,11 @@
 import { commands } from "@/bindings";
-import type { Result } from "@/bindings";
+import type { AppSettings, Result } from "@/bindings";
 export type {
   ActivityItem,
   ApiError,
+  AppSettings,
+  OnboardingDraft,
+  RuntimeConfig,
   SendPreview,
   SwapQuote,
   SwapResult,
@@ -65,4 +68,12 @@ export const walletApi = {
     amountUi: number,
     slippageBps: number,
   ) => unwrap(commands.executeSwap(password, inputMint, outputMint, amountUi, slippageBps)),
+  getAppSettings: () => unwrap(commands.getAppSettings()),
+  updateAppSettings: (settings: AppSettings) =>
+    unwrap(commands.updateAppSettings(settings)),
+  getManagedDefaultRpcUrl: () => commands.getManagedDefaultRpcUrl(),
+  setOnboardingDraft: (mnemonic: string, mode: string) =>
+    unwrap(commands.setOnboardingDraft(mnemonic, mode)),
+  getOnboardingDraft: () => unwrap(commands.getOnboardingDraft()),
+  clearOnboardingDraft: () => unwrap(commands.clearOnboardingDraft()),
 };

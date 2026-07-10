@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
+import { walletApi } from "@/lib/tauri";
 
 function pickQuizIndices(length: number): number[] {
   const indices = Array.from({ length }, (_, i) => i);
@@ -17,23 +18,40 @@ function pickQuizIndices(length: number): number[] {
 
 export function ConfirmSeedPage() {
   const navigate = useNavigate();
-  const mnemonic = sessionStorage.getItem("aegis_onboarding_mnemonic") ?? "";
+  const [mnemonic, setMnemonic] = useState("");
+  const [loading, setLoading] = useState(true);
   const words = useMemo(() => mnemonic.split(/\s+/).filter(Boolean), [mnemonic]);
   const [quizIndices, setQuizIndices] = useState<number[]>([]);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!mnemonic) {
-      navigate("/onboarding", { replace: true });
-      return;
-    }
-    setQuizIndices(pickQuizIndices(words.length || 12));
-    setAnswers({});
-    setError(null);
-  }, [mnemonic, words.length, navigate]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const draft = await walletApi.getOnboardingDraft();
+        if (cancelled) return;
+        if (!draft?.mnemonic || draft.mode !== "create") {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+        setMnemonic(draft.mnemonic);
+        const nextWords = draft.mnemonic.split(/\s+/).filter(Boolean);
+        setQuizIndices(pickQuizIndices(nextWords.length || 12));
+        setAnswers({});
+        setError(null);
+      } catch {
+        if (!cancelled) navigate("/onboarding", { replace: true });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
-  if (!mnemonic || quizIndices.length === 0) {
+  if (loading || !mnemonic || quizIndices.length === 0) {
     return null;
   }
 

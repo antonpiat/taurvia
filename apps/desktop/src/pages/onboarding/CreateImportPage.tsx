@@ -23,10 +23,10 @@ function CreateRedirect() {
     let cancelled = false;
     void (async () => {
       try {
-        sessionStorage.setItem("aegis_onboarding_mode", "create");
         const phrase = await walletApi.generateMnemonic();
         if (cancelled) return;
-        sessionStorage.setItem("aegis_onboarding_mnemonic", phrase);
+        await walletApi.setOnboardingDraft(phrase, "create");
+        if (cancelled) return;
         navigate("/onboarding/seed", { replace: true });
       } catch (err) {
         if (!cancelled) setError(String(err));
@@ -120,8 +120,7 @@ function ImportWalletForm() {
     setError(null);
     try {
       await walletApi.validateMnemonic(normalized);
-      sessionStorage.setItem("aegis_onboarding_mode", "import");
-      sessionStorage.setItem("aegis_onboarding_mnemonic", normalized);
+      await walletApi.setOnboardingDraft(normalized, "import");
       clearPhrase();
       navigate("/onboarding/password");
     } catch (err) {

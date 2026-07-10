@@ -1,10 +1,18 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Wallet } from "lucide-react";
+import { walletApi } from "@/lib/tauri";
 
 export function WelcomePage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void walletApi.clearOnboardingDraft().catch(() => {
+      // ignore — draft may already be empty
+    });
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -20,23 +28,14 @@ export function WelcomePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button
-            className="w-full"
-            onClick={() => {
-              sessionStorage.setItem("aegis_onboarding_mode", "create");
-              navigate("/onboarding/create");
-            }}
-          >
+          <Button className="w-full" onClick={() => navigate("/onboarding/create")}>
             <Wallet className="h-4 w-4" />
             Create a new wallet
           </Button>
           <Button
             className="w-full"
             variant="outline"
-            onClick={() => {
-              sessionStorage.setItem("aegis_onboarding_mode", "import");
-              navigate("/onboarding/import");
-            }}
+            onClick={() => navigate("/onboarding/import")}
           >
             Import existing wallet
           </Button>
