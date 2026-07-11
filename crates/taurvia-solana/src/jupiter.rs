@@ -33,7 +33,7 @@ pub fn http_client() -> &'static Client {
     CLIENT.get_or_init(|| {
         Client::builder()
             .timeout(Duration::from_secs(20))
-            .user_agent("aegis-wallet/0.1")
+            .user_agent("taurvia-wallet/0.1")
             .build()
             .expect("failed to build HTTP client")
     })

@@ -1,4 +1,4 @@
-use aegis_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
+use taurvia_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
 use models::{AppSettings, RuntimeConfig, WalletFile};
 use storage::{AppConfigStore, FileWalletStore};
 use std::path::Path;
@@ -32,7 +32,7 @@ impl WalletService {
         if let Some(url) = _legacy_rpc_url.filter(|u| !u.is_empty()) {
             // Tests pass localhost; honor when settings have no override.
             if settings.rpc_url.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true)
-                && std::env::var("AEGIS_RPC_URL").is_err()
+                && std::env::var("TAURVIA_RPC_URL").is_err()
             {
                 runtime.rpc_url = url.to_string();
             }

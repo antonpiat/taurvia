@@ -1,4 +1,4 @@
-use aegis_solana::{
+use taurvia_solana::{
     derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64,
     validate_mnemonic, Keypair, Signer,
 };

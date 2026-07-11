@@ -10,5 +10,5 @@ fn main() {
         std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
     }
 
-    aegis_desktop_lib::run()
+    taurvia_desktop_lib::run()
 }

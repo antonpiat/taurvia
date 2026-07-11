@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 /// Public / product default Solana RPC (no user setup required).
-/// Replace with a dedicated Aegis-managed endpoint when product infra is ready.
+/// Replace with a dedicated Taurvia-managed endpoint when product infra is ready.
 /// Never bake a personal developer `.env` URL into release builds.
 pub const MANAGED_DEFAULT_RPC_URL: &str = "https://api.mainnet-beta.solana.com";
 
@@ -28,7 +28,7 @@ impl RuntimeConfig {
             .as_ref()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
-        let rpc_from_env = std::env::var("AEGIS_RPC_URL")
+        let rpc_from_env = std::env::var("TAURVIA_RPC_URL")
             .ok()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
@@ -38,7 +38,7 @@ impl RuntimeConfig {
             .as_ref()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
-        let jupiter_from_env = std::env::var("AEGIS_JUPITER_API_KEY")
+        let jupiter_from_env = std::env::var("TAURVIA_JUPITER_API_KEY")
             .ok()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());

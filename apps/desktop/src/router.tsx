@@ -22,7 +22,7 @@ export function AppRouter() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Loading Aegis...
+        Loading Taurvia...
       </div>
     );
   }

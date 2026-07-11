@@ -163,7 +163,7 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Network</CardTitle>
           <CardDescription>
-            Solana mainnet. Works out of the box with Aegis managed defaults — no API key required.
+            Solana mainnet. Works out of the box with Taurvia managed defaults — no API key required.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
