@@ -21,6 +21,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::lock_wallet,
         commands::reveal_mnemonic,
         commands::remove_wallet,
+        commands::change_wallet_password,
+        commands::export_wallet,
+        commands::export_wallet_to_path,
         commands::get_wallet_snapshot,
         commands::get_sol_balance,
         commands::get_token_balances,
@@ -99,6 +102,8 @@ pub fn run() {
         .expect("failed to export TypeScript bindings");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             let data_dir = app

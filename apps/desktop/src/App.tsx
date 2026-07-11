@@ -1,14 +1,17 @@
 import { HashRouter } from "react-router-dom";
 import { WalletProvider } from "@/context/WalletContext";
+import { LayoutModeProvider } from "@/lib/appView";
 import { AppRouter } from "@/router";
 
 function App() {
   return (
-    <WalletProvider>
-      <HashRouter>
-        <AppRouter />
-      </HashRouter>
-    </WalletProvider>
+    <HashRouter>
+      <LayoutModeProvider>
+        <WalletProvider>
+          <AppRouter />
+        </WalletProvider>
+      </LayoutModeProvider>
+    </HashRouter>
   );
 }
 

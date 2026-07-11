@@ -73,3 +73,43 @@ pub fn remove_wallet(password: String, state: State<'_, AppState>) -> CommandRes
         .remove_wallet(&password)
         .map_err(map_wallet_error)
 }
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_wallet_password(
+    old_password: String,
+    new_password: String,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    state
+        .wallet
+        .change_password(&old_password, &new_password)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn export_wallet(password: String, state: State<'_, AppState>) -> CommandResult<String> {
+    state
+        .wallet
+        .export_wallet(&password)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn export_wallet_to_path(
+    password: String,
+    path: String,
+    state: State<'_, AppState>,
+) -> CommandResult<()> {
+    let json = state
+        .wallet
+        .export_wallet(&password)
+        .map_err(map_wallet_error)?;
+    std::fs::write(&path, json).map_err(|e| models::ApiError::new(
+        "io_error",
+        format!("failed to write wallet backup: {e}"),
+    ))?;
+    Ok(())
+}

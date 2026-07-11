@@ -150,7 +150,7 @@ flowchart LR
 |--------|----------------|
 | Hardware / USB cold storage | New `crates/device` or module under `wallet-core` |
 | Second chain | New `crates/<chain>` + `wallet-core` facade |
-| Explorer links | Tauri opener + allowlisted capability |
+| Explorer links | Activity / Send / Swap open Solscan or Solana Explorer (Settings) |
 | QR scan | Prefer native/Rust on Linux (not webview WebRTC) |
 
 ## Project structure
@@ -174,7 +174,7 @@ taurvia/
 
 ## Version
 
-Current release: **0.4.0** — see [Changelog](doc/CHANGELOG.md).
+Current release: **0.4.1** — see [Changelog](doc/CHANGELOG.md).
 
 ## License
 

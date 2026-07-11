@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, Badge } from "@/components/ui/misc";
@@ -10,13 +11,11 @@ export function ManageAccountsPage() {
   const { publicKey, solBalance, tokens } = useWallet();
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Manage accounts</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Advanced token account tools for power users.
-        </p>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Manage accounts"
+        description="Advanced token account tools for power users."
+      />
 
       <Card>
         <CardHeader>

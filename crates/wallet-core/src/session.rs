@@ -1,5 +1,5 @@
 use taurvia_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
-use models::{AppSettings, RuntimeConfig, WalletFile};
+use models::{AppSettings, Network, RuntimeConfig, WalletFile};
 use storage::{AppConfigStore, FileWalletStore};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -62,12 +62,29 @@ impl WalletService {
     }
 
     pub fn update_settings(&self, settings: AppSettings) -> Result<RuntimeConfig, WalletError> {
+        let prev = self.settings.lock().unwrap().clone();
         self.config_store.save(&settings)?;
         *self.settings.lock().unwrap() = settings.clone();
         let runtime = RuntimeConfig::resolve(&settings);
-        configure_jupiter_api_key(runtime.jupiter_api_key.clone());
-        *self.rpc.lock().unwrap() = SolanaRpc::new(Some(&runtime.rpc_url));
+        // Skip RPC / Jupiter rebuild for UI-only prefs (layout, auto-lock, explorer, …).
+        let connectivity_changed =
+            prev.rpc_url != settings.rpc_url || prev.jupiter_api_key != settings.jupiter_api_key;
+        if connectivity_changed {
+            configure_jupiter_api_key(runtime.jupiter_api_key.clone());
+            *self.rpc.lock().unwrap() = SolanaRpc::new(Some(&runtime.rpc_url));
+        }
         Ok(runtime)
+    }
+
+    /// Network id from the wallet file (`solana-mainnet`, …). Default when none exists.
+    pub fn wallet_network(&self) -> String {
+        if let Some(wallet) = self.cached_wallet.lock().unwrap().as_ref() {
+            return wallet.network.clone();
+        }
+        self.storage
+            .load()
+            .map(|w| w.network)
+            .unwrap_or_else(|_| Network::SolanaMainnet.as_str().to_string())
     }
 
     pub fn runtime_config(&self) -> RuntimeConfig {

@@ -4,11 +4,10 @@ export type {
   ActivityItem,
   ApiError,
   AppSettings,
-  OnboardingDraft,
+  ExplorerKind,
   RuntimeConfig,
   SendPreview,
   SwapQuote,
-  SwapResult,
   TokenBalance,
   TokenInfo,
 } from "@/bindings";
@@ -43,8 +42,10 @@ export const walletApi = {
   lockWallet: () => commands.lockWallet(),
   revealMnemonic: (password: string) => unwrap(commands.revealMnemonic(password)),
   removeWallet: (password: string) => unwrap(commands.removeWallet(password)),
-  getSolBalance: () => unwrap(commands.getSolBalance()),
-  getTokenBalances: () => unwrap(commands.getTokenBalances()),
+  changeWalletPassword: (oldPassword: string, newPassword: string) =>
+    unwrap(commands.changeWalletPassword(oldPassword, newPassword)),
+  exportWalletToPath: (password: string, path: string) =>
+    unwrap(commands.exportWalletToPath(password, path)),
   getActivity: (limit: number) => unwrap(commands.getActivity(limit)),
   previewSolSend: (to: string, amountSol: number) =>
     unwrap(commands.previewSolSend(to, amountSol)),

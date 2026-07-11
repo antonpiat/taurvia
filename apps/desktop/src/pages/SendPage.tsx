@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { TokenDropdown, type DropdownToken } from "@/components/TokenDropdown";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,13 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
+import { txExplorerUrl } from "@/lib/explorer";
 import { ApiError, SendPreview, walletApi } from "@/lib/tauri";
 import { shortenAddress } from "@/lib/utils";
 
 const SOL_MINT = "sol";
 
 export function SendPage() {
-  const { solBalance, tokens, refreshBalances } = useWallet();
+  const { solBalance, tokens, refreshBalances, explorer, network } = useWallet();
   const [selectedMint, setSelectedMint] = useState(SOL_MINT);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [to, setTo] = useState("");
@@ -30,6 +33,7 @@ export function SendPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [successSignature, setSuccessSignature] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -93,6 +97,7 @@ export function SendPage() {
         ? await walletApi.sendSol(password, to, amountNum)
         : await walletApi.sendSpl(password, selectedMint, to, amountNum);
       setSuccess(`Transaction confirmed: ${shortenAddress(result.signature, 8)}`);
+      setSuccessSignature(result.signature);
       setConfirmOpen(false);
       setPassword("");
       setConfirmError(null);
@@ -109,13 +114,8 @@ export function SendPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Send</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Transfer SOL or SPL tokens securely.
-        </p>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader title="Send" description="Transfer SOL or SPL tokens securely." />
 
       <Card>
         <CardHeader>
@@ -166,7 +166,20 @@ export function SendPage() {
             />
           </div>
           {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
-          {success && <Alert className="border-primary/40 text-primary">{success}</Alert>}
+          {success && (
+            <Alert className="border-primary/40 text-primary">
+              <p>{success}</p>
+              {successSignature && (
+                <button
+                  type="button"
+                  className="mt-1 font-mono text-xs underline-offset-2 hover:underline"
+                  onClick={() => void openUrl(txExplorerUrl(explorer, successSignature, { network }))}
+                >
+                  View on explorer
+                </button>
+              )}
+            </Alert>
+          )}
           <Button className="w-full" onClick={handlePreview} disabled={loading || !to || !amount}>
             Review transaction
           </Button>

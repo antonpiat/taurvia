@@ -9,16 +9,29 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Security
+
+---
+
+## [0.4.1] - 2026-07-11
+
+### Added
+
+- Settings: auto-lock timeout; Dashboard hide-balances toggle (default hidden)
+- Settings: change wallet password and export encrypted wallet backup
+- Settings: default swap slippage and block explorer preference (Solscan / Solana Explorer)
+- Settings: View layout preference (Desktop / Compact / Phone; tracks window size)
+- Explorer links on Activity, Send, and Swap confirmations
 - GitHub Actions desktop CI builds unsigned Linux, Windows, and macOS packages on `main` pushes (or manual dispatch)
 
 ### Changed
 
 - Track `Cargo.lock` for reproducible CI builds
 - Desktop CI uses Node.js 24
-
-### Fixed
-
-### Security
 
 ---
 
@@ -211,7 +224,8 @@ When cutting a new version:
 6. Create a GitHub Release tagged `vx.y.z` and attach binaries from `target/release/bundle/`.
 7. Copy the new section into the GitHub Release notes.
 
-[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/antonpiat/taurvia/releases/tag/v0.4.1
 [0.4.0]: https://github.com/antonpiat/taurvia/releases/tag/v0.4.0
 [0.3.2]: https://github.com/antonpiat/taurvia/releases/tag/v0.3.2
 [0.3.1]: https://github.com/antonpiat/taurvia/releases/tag/v0.3.1
@@ -222,4 +236,5 @@ When cutting a new version:
 [0.2.1]: https://github.com/antonpiat/taurvia/releases/tag/v0.2.1
 [0.2.0]: https://github.com/antonpiat/taurvia/releases/tag/v0.2.0
 [0.1.2]: https://github.com/antonpiat/taurvia/releases/tag/v0.1.2
+[0.1.0]: https://github.com/antonpiat/taurvia/releases/tag/v0.1.0
 [0.1.0]: https://github.com/antonpiat/taurvia/releases/tag/v0.1.0

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/misc";
+import { PageHeader } from "@/components/PageHeader";
 import { useWallet } from "@/context/WalletContext";
-import { formatSol, formatUsd, shortenAddress } from "@/lib/utils";
-import { Copy, RefreshCw } from "lucide-react";
+import { formatSol, formatUsdMaybeHidden, formatHiddenBalance, shortenAddress } from "@/lib/utils";
+import { Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
 
 function TokenAvatar({ symbol, logoUri }: { symbol: string; logoUri: string | null }) {
   if (logoUri) {
@@ -38,8 +39,11 @@ export function DashboardPage() {
     publicKey,
     refresh,
     balancesLoading,
+    hideBalances,
+    setHideBalances,
   } = useWallet();
   const [refreshing, setRefreshing] = useState(false);
+  const [togglingHide, setTogglingHide] = useState(false);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -51,32 +55,53 @@ export function DashboardPage() {
   const showSkeleton = balancesLoading && solBalance === null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold sm:text-3xl">Dashboard</h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            {balancesLoading
-              ? "Loading balances and token details…"
-              : "Portfolio value and token balances."}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={busy}
-          className="w-full shrink-0 sm:w-auto"
-        >
-          <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Dashboard"
+        description={
+          balancesLoading
+            ? "Loading balances and token details…"
+            : "Portfolio value and token balances."
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTogglingHide(true);
+                void setHideBalances(!hideBalances).finally(() => setTogglingHide(false));
+              }}
+              disabled={togglingHide}
+              className="flex-1 sm:flex-none"
+              aria-pressed={hideBalances}
+              aria-label={hideBalances ? "Show balances" : "Hide balances"}
+              title={hideBalances ? "Show balances" : "Hide balances"}
+            >
+              {hideBalances ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              {hideBalances ? "Show" : "Hide"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={busy}
+              className="flex-1 sm:flex-none"
+            >
+              <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="space-y-1">
           <CardDescription>Portfolio value</CardDescription>
           <CardTitle className="text-3xl sm:text-4xl">
-            {showSkeleton ? <Skeleton className="h-10 w-40" /> : formatUsd(totalPortfolioUsd)}
+            {showSkeleton ? (
+              <Skeleton className="h-10 w-40" />
+            ) : (
+              formatUsdMaybeHidden(hideBalances, totalPortfolioUsd)
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -92,7 +117,7 @@ export function DashboardPage() {
                   {showSkeleton
                     ? "Fetching price…"
                     : solPriceUsd !== null
-                      ? `${formatUsd(solPriceUsd)} / SOL`
+                      ? `${formatUsdMaybeHidden(hideBalances, solPriceUsd)} / SOL`
                       : "Price unavailable"}
                 </p>
               </div>
@@ -105,8 +130,14 @@ export function DashboardPage() {
                 </>
               ) : (
                 <>
-                  <p className="font-mono">{solBalance !== null ? formatSol(solBalance) : "—"}</p>
-                  <p className="text-sm text-muted-foreground">{formatUsd(solValueUsd)}</p>
+                  <p className="font-mono">
+                    {solBalance !== null
+                      ? formatHiddenBalance(hideBalances, formatSol(solBalance))
+                      : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatUsdMaybeHidden(hideBalances, solValueUsd)}
+                  </p>
                 </>
               )}
             </div>
@@ -171,10 +202,16 @@ export function DashboardPage() {
                   </div>
                 </div>
                 <div className="min-w-0 text-left sm:text-right">
-                  <p className="font-mono">{token.ui_amount}</p>
-                  <p className="text-sm text-muted-foreground">{formatUsd(token.value_usd)}</p>
+                  <p className="font-mono">
+                    {formatHiddenBalance(hideBalances, String(token.ui_amount))}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatUsdMaybeHidden(hideBalances, token.value_usd)}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {token.price_usd !== null ? `${formatUsd(token.price_usd)} / token` : "—"}
+                    {token.price_usd !== null
+                      ? `${formatUsdMaybeHidden(hideBalances, token.price_usd)} / token`
+                      : "—"}
                   </p>
                   <Badge className="mt-1">{shortenAddress(token.mint)}</Badge>
                 </div>

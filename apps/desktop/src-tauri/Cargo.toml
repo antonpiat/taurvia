@@ -1,6 +1,6 @@
 [package]
 name = "taurvia-desktop"
-version = "0.4.0"
+version = "0.4.1"
 description = "Taurvia Solana Desktop Wallet"
 authors = ["you"]
 edition.workspace = true
@@ -17,6 +17,8 @@ tauri-build = { version = "2.6.3", features = [] }
 wallet-core = { path = "../../../crates/wallet-core" }
 models = { path = "../../../crates/models" }
 tauri = { version = "2.11.5", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 tauri-specta = { version = "2.0.0-rc.21", features = ["typescript"] }
 specta = { version = "2.0.0-rc.22", features = ["derive", "function"] }
 specta-typescript = "0.0.9"

@@ -1,4 +1,5 @@
 import { QRCodeSVG } from "qrcode.react";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWallet } from "@/context/WalletContext";
@@ -17,13 +18,11 @@ export function ReceivePage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Receive</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Share your address to receive SOL or SPL tokens.
-        </p>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Receive"
+        description="Share your address to receive SOL or SPL tokens."
+      />
 
       <Card>
         <CardHeader>
