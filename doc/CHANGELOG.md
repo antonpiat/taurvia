@@ -9,7 +9,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- GitHub Actions desktop CI builds unsigned Linux, Windows, and macOS packages
+
 ### Changed
+
+- Track `Cargo.lock` for reproducible CI builds
 
 ### Fixed
 
