@@ -39,48 +39,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aegis-desktop"
-version = "0.3.2"
-dependencies = [
- "models",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-build",
- "tauri-specta",
- "wallet-core",
-]
-
-[[package]]
-name = "aegis-solana"
-version = "0.3.2"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "bincode",
- "bip39",
- "futures",
- "models",
- "moka",
- "rand 0.10.2",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "solana-account-decoder",
- "solana-client",
- "solana-commitment-config",
- "solana-derivation-path",
- "solana-native-token",
- "solana-program-pack",
- "solana-sdk",
- "solana-system-interface 3.2.0",
- "solana-transaction-status-client-types",
- "spl-associated-token-account-interface",
- "spl-token-interface 3.0.0",
- "tokio",
-]
-
-[[package]]
 name = "aes"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1160,7 +1118,7 @@ checksum = "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
 
 [[package]]
 name = "crypto"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -3126,7 +3084,7 @@ dependencies = [
 
 [[package]]
 name = "models"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "serde",
  "specta",
@@ -7118,7 +7076,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "storage"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "models",
  "serde_json",
@@ -7517,6 +7475,48 @@ dependencies = [
  "dunce",
  "embed-resource",
  "toml 1.1.2+spec-1.1.0",
+]
+
+[[package]]
+name = "taurvia-desktop"
+version = "0.4.0"
+dependencies = [
+ "models",
+ "specta",
+ "specta-typescript",
+ "tauri",
+ "tauri-build",
+ "tauri-specta",
+ "wallet-core",
+]
+
+[[package]]
+name = "taurvia-solana"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "bincode",
+ "bip39",
+ "futures",
+ "models",
+ "moka",
+ "rand 0.10.2",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "solana-account-decoder",
+ "solana-client",
+ "solana-commitment-config",
+ "solana-derivation-path",
+ "solana-native-token",
+ "solana-program-pack",
+ "solana-sdk",
+ "solana-system-interface 3.2.0",
+ "solana-transaction-status-client-types",
+ "spl-associated-token-account-interface",
+ "spl-token-interface 3.0.0",
+ "tokio",
 ]
 
 [[package]]
@@ -8183,9 +8183,8 @@ dependencies = [
 
 [[package]]
 name = "wallet-core"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
- "aegis-solana",
  "anyhow",
  "base64 0.22.1",
  "chrono",
@@ -8193,6 +8192,7 @@ dependencies = [
  "models",
  "serde_json",
  "storage",
+ "taurvia-solana",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
