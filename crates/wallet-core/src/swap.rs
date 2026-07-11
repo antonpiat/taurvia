@@ -1,4 +1,4 @@
-use aegis_solana::{normalize_mint, resolve_mint, ui_amount_to_raw};
+use taurvia_solana::{normalize_mint, resolve_mint, ui_amount_to_raw};
 use models::{SwapQuote, SwapResult, TokenInfo};
 
 use crate::session::WalletService;

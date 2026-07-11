@@ -1,4 +1,4 @@
-use aegis_solana::{get_metadata, get_prices, lamports_to_sol, WRAPPED_SOL_MINT};
+use taurvia_solana::{get_metadata, get_prices, lamports_to_sol, WRAPPED_SOL_MINT};
 use models::{ActivityItem, TokenBalance, TokenInfo, WalletSnapshot};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -141,7 +141,7 @@ async fn enrich_token_balances(tokens: &mut [TokenBalance]) {
 
 fn apply_local_metadata(tokens: &mut [TokenBalance]) {
     for token in tokens.iter_mut() {
-        if let Some(info) = aegis_solana::resolve_mint_local(&token.mint) {
+        if let Some(info) = taurvia_solana::resolve_mint_local(&token.mint) {
             token.symbol = info.symbol;
             token.name = info.name;
             if info.decimals > 0 {

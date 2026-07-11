@@ -64,7 +64,7 @@ export function ShowSeedPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className="border-amber-500/40 text-amber-200">
-            Never share your seed phrase. Aegis will never ask for it.
+            Never share your seed phrase. Taurvia will never ask for it.
           </Alert>
           <MaskedPhrase words={words} />
           {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}

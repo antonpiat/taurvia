@@ -10,8 +10,8 @@ import {
   LayoutDashboard,
   Lock,
   Settings,
-  Shield,
 } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/context/WalletContext";
 import { cn, formatUsd, shortenAddress } from "@/lib/utils";
@@ -47,9 +47,9 @@ export function MainLayout() {
       {/* Desktop / tablet sidebar — sticky height so Active wallet stays pinned */}
       <aside className="sticky top-0 hidden h-dvh w-20 shrink-0 flex-col border-r border-border bg-card/40 p-3 md:flex lg:w-64 lg:p-4">
         <div className="mb-6 flex shrink-0 items-center gap-2 px-1 lg:mb-8 lg:px-2">
-          <Shield className="h-6 w-6 shrink-0 text-primary" />
+          <BrandMark className="h-7 w-7" />
           <div className="hidden min-w-0 lg:block">
-            <p className="text-lg font-semibold">Aegis</p>
+            <p className="text-lg font-semibold">Taurvia</p>
             <p className="text-xs text-muted-foreground">Solana Wallet</p>
           </div>
         </div>
@@ -135,9 +135,9 @@ export function MainLayout() {
       {/* Mobile top bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-border bg-card/40 px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
+          <BrandMark className="h-6 w-6" />
           <div>
-            <p className="text-sm font-semibold leading-tight">Aegis</p>
+            <p className="text-sm font-semibold leading-tight">Taurvia</p>
             <p className="text-[11px] text-muted-foreground">
               {balancesLoading && totalPortfolioUsd === null
                 ? "Loading…"

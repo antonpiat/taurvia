@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { walletApi } from "@/lib/tauri";
 
 export function WelcomePage() {
@@ -18,9 +19,9 @@ export function WelcomePage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-xl">
         <CardHeader>
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <Shield className="h-6 w-6" />
-            <span className="text-xl font-semibold">Aegis</span>
+          <div className="mb-2 flex items-center gap-2">
+            <BrandMark className="h-7 w-7" />
+            <span className="text-xl font-semibold">Taurvia</span>
           </div>
           <CardTitle>Welcome to your Solana wallet</CardTitle>
           <CardDescription>
