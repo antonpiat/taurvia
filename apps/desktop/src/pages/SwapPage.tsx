@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { ArrowDownUp, ChevronDown, ChevronRight } from "lucide-react";
 import { TokenDropdown } from "@/components/TokenDropdown";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
+import { txExplorerUrl } from "@/lib/explorer";
 import { ApiError, SwapQuote, TokenInfo, walletApi } from "@/lib/tauri";
 
 const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
@@ -73,12 +76,16 @@ function looksLikeMintSymbol(symbol: string | null | undefined): boolean {
 }
 
 export function SwapPage() {
-  const { solBalance, tokens, refreshBalances } = useWallet();
+  const { solBalance, tokens, refreshBalances, settings, saveSettings, explorer, network } = useWallet();
   const [fromMint, setFromMint] = useState(WRAPPED_SOL);
   const [toMint, setToMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
   const [amount, setAmount] = useState("");
-  const [slippageBps, setSlippageBps] = useState(DEFAULT_SLIPPAGE_BPS);
-  const [slippageInput, setSlippageInput] = useState("0.5");
+  const [slippageBps, setSlippageBps] = useState(
+    settings.default_slippage_bps || DEFAULT_SLIPPAGE_BPS,
+  );
+  const [slippageInput, setSlippageInput] = useState(
+    ((settings.default_slippage_bps || DEFAULT_SLIPPAGE_BPS) / 100).toString(),
+  );
   const [pasteMint, setPasteMint] = useState("");
   const [extraTokens, setExtraTokens] = useState<TokenInfo[]>([]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -90,6 +97,12 @@ export function SwapPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
+
+  useEffect(() => {
+    const bps = settings.default_slippage_bps || DEFAULT_SLIPPAGE_BPS;
+    setSlippageBps(bps);
+    setSlippageInput((bps / 100).toString());
+  }, [settings.default_slippage_bps]);
 
   const selectable = useMemo(() => {
     const map = new Map<string, SelectableToken>();
@@ -204,8 +217,22 @@ export function SwapPage() {
     setSlippageInput(value);
     const pct = Number(value);
     if (!Number.isFinite(pct) || pct < 0) return;
-    setSlippageBps(Math.round(pct * 100));
+    const bps = Math.round(pct * 100);
+    setSlippageBps(bps);
     clearBoardFeedback();
+  };
+
+  const persistSlippage = () => {
+    const pct = Number(slippageInput);
+    if (!Number.isFinite(pct) || pct <= 0 || pct > 50) {
+      const fallback = settings.default_slippage_bps || DEFAULT_SLIPPAGE_BPS;
+      setSlippageBps(fallback);
+      setSlippageInput((fallback / 100).toString());
+      return;
+    }
+    const bps = Math.round(pct * 100);
+    setSlippageBps(bps);
+    void saveSettings({ ...settings, default_slippage_bps: bps });
   };
 
   const handleQuote = async () => {
@@ -273,13 +300,11 @@ export function SwapPage() {
   )}%`;
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Swap</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Exchange tokens at the current estimated rate.
-        </p>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Swap"
+        description="Exchange tokens at the current estimated rate."
+      />
 
       <Card>
         <CardHeader>
@@ -383,6 +408,7 @@ export function SwapPage() {
                     id="slippage-pct"
                     value={slippageInput}
                     onChange={(e) => handleSlippagePercentChange(e.target.value)}
+                    onBlur={persistSlippage}
                     inputMode="decimal"
                     placeholder="0.5"
                   />
@@ -443,7 +469,13 @@ export function SwapPage() {
           {signature && (
             <Alert>
               <p className="text-sm font-medium">Swap confirmed</p>
-              <p className="break-all font-mono text-xs text-muted-foreground">{signature}</p>
+              <button
+                type="button"
+                className="break-all font-mono text-xs text-primary underline-offset-2 hover:underline"
+                onClick={() => void openUrl(txExplorerUrl(explorer, signature, { network }))}
+              >
+                {signature}
+              </button>
             </Alert>
           )}
 

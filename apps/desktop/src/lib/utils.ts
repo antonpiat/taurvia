@@ -24,3 +24,16 @@ export function formatUsd(amount: number | null | undefined): string {
     maximumFractionDigits: amount >= 1 ? 2 : 4,
   }).format(amount);
 }
+
+export function formatHiddenBalance(hidden: boolean, value: string): string {
+  return hidden ? "••••" : value;
+}
+
+export function formatUsdMaybeHidden(
+  hidden: boolean,
+  amount: number | null | undefined,
+): string {
+  if (hidden) return "••••";
+  return formatUsd(amount);
+}
+

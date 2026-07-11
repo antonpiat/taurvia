@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/misc";
+import { useWallet } from "@/context/WalletContext";
+import { txExplorerUrl } from "@/lib/explorer";
 import { ActivityItem, ApiError, walletApi } from "@/lib/tauri";
 import { shortenAddress } from "@/lib/utils";
 
 export function ActivityPage() {
+  const { explorer, network } = useWallet();
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,13 +29,11 @@ export function ActivityPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold sm:text-3xl">Activity</h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          Recent on-chain transactions for your wallet.
-        </p>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Activity"
+        description="Recent on-chain transactions for your wallet."
+      />
 
       <Card>
         <CardHeader>
@@ -50,9 +53,13 @@ export function ActivityPage() {
             >
               <div className="min-w-0">
                 <p className="font-medium">{item.description}</p>
-                <p className="font-mono text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  className="font-mono text-xs text-primary underline-offset-2 hover:underline"
+                  onClick={() => void openUrl(txExplorerUrl(explorer, item.signature, { network }))}
+                >
                   {shortenAddress(item.signature, 8)}
-                </p>
+                </button>
                 {item.timestamp && (
                   <p className="text-xs text-muted-foreground">
                     {new Date(item.timestamp * 1000).toLocaleString()}

@@ -11,10 +11,12 @@ const MARKET_DATA_BUDGET: Duration = Duration::from_secs(4);
 impl WalletService {
     pub async fn get_snapshot(&self) -> Result<WalletSnapshot, WalletError> {
         let exists = self.wallet_exists();
+        let network = self.wallet_network();
         if !exists {
             return Ok(WalletSnapshot {
                 exists: false,
                 unlocked: false,
+                network,
                 public_key: None,
                 sol_balance: None,
                 sol_price_usd: None,
@@ -31,6 +33,7 @@ impl WalletService {
             return Ok(WalletSnapshot {
                 exists: true,
                 unlocked: false,
+                network,
                 public_key,
                 sol_balance: None,
                 sol_price_usd: None,
@@ -81,6 +84,7 @@ impl WalletService {
         Ok(WalletSnapshot {
             exists: true,
             unlocked: true,
+            network,
             public_key,
             sol_balance: Some(sol_balance),
             sol_price_usd,

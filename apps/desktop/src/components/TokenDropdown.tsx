@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { cn, shortenAddress } from "@/lib/utils";
+import { cn, formatHiddenBalance, shortenAddress } from "@/lib/utils";
+import { useWallet } from "@/context/WalletContext";
 
 export type DropdownToken = {
   mint: string;
@@ -48,6 +49,7 @@ export function TokenDropdown({
   onOpenChange: (open: boolean) => void;
   onSelect: (mint: string) => void;
 }) {
+  const { hideBalances } = useWallet();
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,7 +137,9 @@ export function TokenDropdown({
                     </span>
                     <span className="text-right text-xs text-muted-foreground">
                       {option.balanceUi !== undefined ? (
-                        <span className="block font-mono text-foreground">{option.balanceUi}</span>
+                        <span className="block font-mono text-foreground">
+                          {formatHiddenBalance(hideBalances, String(option.balanceUi))}
+                        </span>
                       ) : null}
                       <span className="font-mono">{shortenAddress(option.mint)}</span>
                     </span>

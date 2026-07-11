@@ -44,7 +44,15 @@ mod tests {
         assert!(!pubkey.is_empty());
         let revealed = service.reveal_mnemonic("password123").unwrap();
         assert_eq!(revealed, mnemonic);
+        service
+            .change_password("password123", "password456")
+            .unwrap();
         service.lock();
         assert!(!service.is_unlocked());
+        let pubkey2 = service.unlock("password456").unwrap();
+        assert_eq!(pubkey, pubkey2);
+        let exported = service.export_wallet("password456").unwrap();
+        assert!(exported.contains("crypto"));
+        assert!(!exported.contains(&mnemonic));
     }
 }

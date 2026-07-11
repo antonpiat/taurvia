@@ -7,6 +7,8 @@ use crate::TokenBalance;
 pub struct WalletSnapshot {
     pub exists: bool,
     pub unlocked: bool,
+    /// Wallet file network id (e.g. `solana-mainnet`). Empty wallet → default mainnet.
+    pub network: String,
     pub public_key: Option<String>,
     pub sol_balance: Option<f64>,
     pub sol_price_usd: Option<f64>,

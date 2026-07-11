@@ -182,6 +182,7 @@ mod tests {
         let settings = AppSettings {
             rpc_url: Some("https://example.rpc".into()),
             jupiter_api_key: None,
+            ..Default::default()
         };
         store.save(&settings).unwrap();
         let loaded = store.load().unwrap();

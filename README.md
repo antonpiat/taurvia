@@ -113,7 +113,7 @@ pnpm tauri build
 
 Output lands in `target/release/bundle/`.
 
-Windows (`.msi` / NSIS) and macOS (`.dmg` / `.app`) are built unsigned by the [Desktop build](.github/workflows/desktop-build.yml) GitHub Actions workflow on `main` pushes, PRs, or manual dispatch. Download the `taurvia-*-unsigned` artifacts from the workflow run. These builds are not code-signed or notarized.
+Windows (`.msi` / NSIS) and macOS (`.dmg` / `.app`) are built unsigned by the [Desktop build](.github/workflows/desktop-build.yml) GitHub Actions workflow on `main` pushes or manual dispatch (not on PRs). Download the `taurvia-*-unsigned` artifacts from the workflow run. These builds are not code-signed or notarized.
 ### Test the Rust workspace
 
 ```bash
@@ -150,7 +150,7 @@ flowchart LR
 |--------|----------------|
 | Hardware / USB cold storage | New `crates/device` or module under `wallet-core` |
 | Second chain | New `crates/<chain>` + `wallet-core` facade |
-| Explorer links | Tauri opener + allowlisted capability |
+| Explorer links | Activity / Send / Swap open Solscan or Solana Explorer (Settings) |
 | QR scan | Prefer native/Rust on Linux (not webview WebRTC) |
 
 ## Project structure
@@ -174,7 +174,7 @@ taurvia/
 
 ## Version
 
-Current release: **0.4.0** — see [Changelog](doc/CHANGELOG.md).
+Current release: **0.4.1** — see [Changelog](doc/CHANGELOG.md).
 
 ## License
 

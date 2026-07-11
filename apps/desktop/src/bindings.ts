@@ -64,6 +64,30 @@ async removeWallet(password: string) : Promise<Result<null, ApiError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async changeWalletPassword(oldPassword: string, newPassword: string) : Promise<Result<null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_wallet_password", { oldPassword, newPassword }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async exportWallet(password: string) : Promise<Result<string, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_wallet", { password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async exportWalletToPath(password: string, path: string) : Promise<Result<null, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_wallet_to_path", { password, path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getWalletSnapshot() : Promise<Result<WalletSnapshot, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_wallet_snapshot") };
@@ -217,8 +241,33 @@ rpc_url: string | null;
 /**
  * Optional Jupiter portal key (Advanced). None = keyless.
  */
-jupiter_api_key: string | null }
+jupiter_api_key: string | null; 
+/**
+ * Minutes of idle time before auto-lock. Defaults to 5. `0` disables.
+ */
+auto_lock_minutes?: number | null; 
+/**
+ * When true, mask balances in the UI. Defaults to hidden.
+ */
+hide_balances?: boolean; explorer?: ExplorerKind; default_slippage_bps?: number; 
+/**
+ * Desktop / compact / phone chrome (tracks window size).
+ */
+app_view?: AppViewKind; 
+/**
+ * Last window width in logical pixels. Restored on launch when set.
+ */
+window_width?: number | null; 
+/**
+ * Last window height in logical pixels. Restored on launch when set.
+ */
+window_height?: number | null }
+/**
+ * App chrome layout preference (synced from window size).
+ */
+export type AppViewKind = "desktop" | "compact" | "phone"
 export type CryptoEnvelope = { kdf: string; salt: string; cipher: string; nonce: string; ciphertext: string }
+export type ExplorerKind = "solscan" | "solanaExplorer"
 export type OnboardingDraft = { mnemonic: string; mode: string }
 export type RuntimeConfig = { rpc_url: string; jupiter_api_key: string | null }
 export type SendPreview = { from: string; to: string; token: string; amount: string; estimated_fee_lamports: number; estimated_fee_sol: number; 
@@ -232,7 +281,11 @@ export type SwapResult = { signature: string; status: string }
 export type TokenBalance = { mint: string; symbol: string; name: string; amount: string; decimals: number; ui_amount: number; logo_uri: string | null; price_usd: number | null; value_usd: number | null }
 export type TokenInfo = { mint: string; symbol: string; name: string; decimals: number; logo_uri: string | null }
 export type WalletFile = { version: number; wallet_id: string; network: string; public_key: string; created_at: string; crypto: CryptoEnvelope }
-export type WalletSnapshot = { exists: boolean; unlocked: boolean; public_key: string | null; sol_balance: number | null; sol_price_usd: number | null; sol_value_usd: number | null; total_portfolio_usd: number | null; tokens: TokenBalance[] | null }
+export type WalletSnapshot = { exists: boolean; unlocked: boolean; 
+/**
+ * Wallet file network id (e.g. `solana-mainnet`). Empty wallet → default mainnet.
+ */
+network: string; public_key: string | null; sol_balance: number | null; sol_price_usd: number | null; sol_value_usd: number | null; total_portfolio_usd: number | null; tokens: TokenBalance[] | null }
 
 /** tauri-specta globals **/
 

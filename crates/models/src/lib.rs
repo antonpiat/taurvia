@@ -9,7 +9,8 @@ pub mod wallet;
 
 pub use activity::ActivityItem;
 pub use config::{
-    AppSettings, OnboardingDraft, RuntimeConfig, MANAGED_DEFAULT_RPC_URL,
+    AppSettings, AppViewKind, ExplorerKind, OnboardingDraft, RuntimeConfig,
+    DEFAULT_AUTO_LOCK_MINUTES, DEFAULT_SLIPPAGE_BPS, MANAGED_DEFAULT_RPC_URL,
 };
 pub use error::ApiError;
 pub use send::{SendPreview, SendResult};

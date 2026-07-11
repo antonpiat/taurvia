@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useWallet } from "@/context/WalletContext";
+import { DEFAULT_SETTINGS_SECTION } from "@/lib/settingsNav";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { ManageAccountsPage } from "@/pages/ManageAccountsPage";
@@ -57,7 +58,8 @@ export function AppRouter() {
           <Route path="/receive" element={<ReceivePage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/accounts" element={<ManageAccountsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={<Navigate to={`/settings/${DEFAULT_SETTINGS_SECTION}`} replace />} />
+          <Route path="/settings/:section" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       )}

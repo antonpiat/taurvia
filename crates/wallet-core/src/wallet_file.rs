@@ -66,6 +66,42 @@ impl WalletService {
         Ok(())
     }
 
+    pub fn change_password(&self, old_password: &str, new_password: &str) -> Result<(), WalletError> {
+        if new_password.len() < 8 {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "password must be at least 8 characters"
+            )));
+        }
+        let wallet = self
+            .cached_wallet
+            .lock()
+            .unwrap()
+            .clone()
+            .or_else(|| self.storage.load().ok())
+            .ok_or(WalletError::NotFound)?;
+        let payload = self.decrypt_payload(&wallet, old_password)?;
+        let keypair =
+            keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
+        let updated = self.reencrypt_wallet_file(&wallet, &keypair, &payload, new_password)?;
+        self.storage.save(&updated)?;
+        *self.cached_wallet.lock().unwrap() = Some(updated);
+        Ok(())
+    }
+
+    pub fn export_wallet(&self, password: &str) -> Result<String, WalletError> {
+        let wallet = self
+            .cached_wallet
+            .lock()
+            .unwrap()
+            .clone()
+            .or_else(|| self.storage.load().ok())
+            .ok_or(WalletError::NotFound)?;
+        self.decrypt_payload(&wallet, password)?;
+        serde_json::to_string_pretty(&wallet).map_err(|e| {
+            WalletError::Operation(anyhow::anyhow!("failed to serialize wallet file: {e}"))
+        })
+    }
+
     fn save_wallet_from_mnemonic(
         &self,
         mnemonic: &str,
@@ -90,6 +126,34 @@ impl WalletService {
         payload: &EncryptedPayload,
         password: &str,
     ) -> Result<WalletFile, WalletError> {
+        self.reencrypt_wallet_file(
+            &WalletFile {
+                version: WALLET_FILE_VERSION,
+                wallet_id: Uuid::new_v4().to_string(),
+                network: Network::SolanaMainnet.as_str().to_string(),
+                public_key: keypair.pubkey().to_string(),
+                created_at: Utc::now().to_rfc3339(),
+                crypto: CryptoEnvelope {
+                    kdf: KDF_NAME.into(),
+                    salt: String::new(),
+                    cipher: CIPHER_NAME.into(),
+                    nonce: String::new(),
+                    ciphertext: String::new(),
+                },
+            },
+            keypair,
+            payload,
+            password,
+        )
+    }
+
+    fn reencrypt_wallet_file(
+        &self,
+        existing: &WalletFile,
+        keypair: &Keypair,
+        payload: &EncryptedPayload,
+        password: &str,
+    ) -> Result<WalletFile, WalletError> {
         let salt = generate_salt();
         let derived = derive_key(password, &salt)?;
         let plaintext = serde_json::to_vec(payload).map_err(|e| {
@@ -99,10 +163,10 @@ impl WalletService {
 
         Ok(WalletFile {
             version: WALLET_FILE_VERSION,
-            wallet_id: Uuid::new_v4().to_string(),
-            network: Network::SolanaMainnet.as_str().to_string(),
+            wallet_id: existing.wallet_id.clone(),
+            network: existing.network.clone(),
             public_key: keypair.pubkey().to_string(),
-            created_at: Utc::now().to_rfc3339(),
+            created_at: existing.created_at.clone(),
             crypto: CryptoEnvelope {
                 kdf: KDF_NAME.into(),
                 salt: BASE64.encode(salt),
