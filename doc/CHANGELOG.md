@@ -35,7 +35,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
-## [0.4.0] - 2026-07-11
+## [0.4.0] - 2026-07-10
 
 ### Changed
 
