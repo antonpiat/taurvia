@@ -113,7 +113,7 @@ pnpm tauri build
 
 Output lands in `target/release/bundle/`.
 
-Windows (`.msi` / NSIS) and macOS (`.dmg` / `.app`) are built unsigned by the [Desktop build](.github/workflows/desktop-build.yml) GitHub Actions workflow on `main` pushes, PRs, or manual dispatch. Download the `taurvia-*-unsigned` artifacts from the workflow run. These builds are not code-signed or notarized.
+Windows (`.msi` / NSIS) and macOS (`.dmg` / `.app`) are built unsigned by the [Desktop build](.github/workflows/desktop-build.yml) GitHub Actions workflow on `main` pushes or manual dispatch (not on PRs). Download the `taurvia-*-unsigned` artifacts from the workflow run. These builds are not code-signed or notarized.
 ### Test the Rust workspace
 
 ```bash

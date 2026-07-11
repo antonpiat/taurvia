@@ -9,11 +9,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
-- GitHub Actions desktop CI builds unsigned Linux, Windows, and macOS packages
+- GitHub Actions desktop CI builds unsigned Linux, Windows, and macOS packages on `main` pushes (or manual dispatch)
 
 ### Changed
 
 - Track `Cargo.lock` for reproducible CI builds
+- Desktop CI uses Node.js 24
 
 ### Fixed
 
