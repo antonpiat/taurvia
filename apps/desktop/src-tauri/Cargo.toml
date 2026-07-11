@@ -1,13 +1,13 @@
 [package]
-name = "aegis-desktop"
-version = "0.3.2"
-description = "Aegis Solana Desktop Wallet"
+name = "taurvia-desktop"
+version = "0.4.0"
+description = "Taurvia Solana Desktop Wallet"
 authors = ["you"]
 edition.workspace = true
 license.workspace = true
 
 [lib]
-name = "aegis_desktop_lib"
+name = "taurvia_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

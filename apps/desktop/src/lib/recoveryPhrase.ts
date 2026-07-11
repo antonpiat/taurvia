@@ -4,7 +4,7 @@ export function normalizeRecoveryPhrase(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function isAegisWalletFile(value: unknown): boolean {
+function isTaurviaWalletFile(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const crypto = (value as { crypto?: unknown }).crypto;
   if (!crypto || typeof crypto !== "object") return false;
@@ -27,9 +27,9 @@ function extractFromJson(value: unknown): string {
     throw new Error("Unsupported JSON recovery format");
   }
 
-  if (isAegisWalletFile(value)) {
+  if (isTaurviaWalletFile(value)) {
     throw new Error(
-      "This looks like an Aegis wallet file, not a recovery phrase. Use Import with your seed phrase instead.",
+      "This looks like a Taurvia wallet file, not a recovery phrase. Use Import with your seed phrase instead.",
     );
   }
 

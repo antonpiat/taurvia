@@ -3,7 +3,7 @@ members = [
     "crates/models",
     "crates/crypto",
     "crates/storage",
-    "crates/aegis-solana",
+    "crates/taurvia-solana",
     "crates/wallet-core",
     "apps/desktop/src-tauri",
 ]

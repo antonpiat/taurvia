@@ -5,9 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
+import { BrandMark } from "@/components/BrandMark";
 import { useWallet } from "@/context/WalletContext";
 import { ApiError } from "@/lib/tauri";
-import { Shield } from "lucide-react";
 
 export function UnlockPage() {
   const navigate = useNavigate();
@@ -35,9 +35,9 @@ export function UnlockPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4 sm:p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <Shield className="h-5 w-5" />
-            <span className="font-semibold">Aegis</span>
+          <div className="mb-2 flex items-center gap-2">
+            <BrandMark className="h-6 w-6" />
+            <span className="font-semibold">Taurvia</span>
           </div>
           <CardTitle>Unlock wallet</CardTitle>
           <CardDescription>Enter your password to access your Solana wallet.</CardDescription>

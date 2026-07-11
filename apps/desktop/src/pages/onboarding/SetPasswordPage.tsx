@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,31 @@ export function SetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
+  const [mode, setMode] = useState<"create" | "import">("create");
+  const [ready, setReady] = useState(false);
 
-  const mnemonic = sessionStorage.getItem("aegis_onboarding_mnemonic") ?? "";
-  const mode = sessionStorage.getItem("aegis_onboarding_mode") ?? "create";
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const draft = await walletApi.getOnboardingDraft();
+        if (cancelled) return;
+        if (!draft?.mnemonic) {
+          navigate("/onboarding", { replace: true });
+          return;
+        }
+        setMnemonic(draft.mnemonic);
+        setMode(draft.mode === "import" ? "import" : "create");
+        setReady(true);
+      } catch {
+        if (!cancelled) navigate("/onboarding", { replace: true });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -38,8 +60,7 @@ export function SetPasswordPage() {
       } else {
         await walletApi.createWallet(mnemonic, password);
       }
-      sessionStorage.removeItem("aegis_onboarding_mnemonic");
-      sessionStorage.removeItem("aegis_onboarding_mode");
+      await walletApi.clearOnboardingDraft();
       await unlock(password);
       navigate("/onboarding/ready");
     } catch (err) {
@@ -49,6 +70,10 @@ export function SetPasswordPage() {
       setLoading(false);
     }
   };
+
+  if (!ready) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">

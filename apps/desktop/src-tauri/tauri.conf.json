@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Aegis",
-  "version": "0.3.2",
-  "identifier": "com.aegis.wallet",
+  "productName": "Taurvia",
+  "version": "0.4.0",
+  "identifier": "com.taurvia.wallet",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Aegis",
+        "title": "Taurvia",
         "width": 1100,
         "height": 720,
         "minWidth": 420,
@@ -45,6 +45,21 @@
         "bundleMediaFramework": false,
         "files": {}
       }
-    }
+    },
+    "shortDescription": "Non-custodial Solana desktop wallet",
+    "longDescription": "Taurvia is a non-custodial Solana wallet. Keys stay encrypted on your device.",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "category": "Finance"
   }
 }

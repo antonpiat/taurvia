@@ -1,4 +1,4 @@
-# Aegis desktop app
+# Taurvia desktop app
 
 Version **0.3.2**. See the [root README](../../README.md) for architecture, setup, and security docs.
 
