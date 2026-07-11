@@ -27,6 +27,12 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::resolve_token,
         commands::preview_swap_quote,
         commands::execute_swap,
+        commands::get_app_settings,
+        commands::update_app_settings,
+        commands::get_managed_default_rpc_url,
+        commands::set_onboarding_draft,
+        commands::get_onboarding_draft,
+        commands::clear_onboarding_draft,
     ])
 }
 
@@ -53,8 +59,8 @@ pub fn run() {
                 .app_data_dir()
                 .expect("failed to resolve app data directory");
             std::fs::create_dir_all(&data_dir).ok();
-            let rpc_url = std::env::var("AEGIS_RPC_URL").ok();
-            let wallet = wallet_core::WalletService::new(&data_dir, rpc_url.as_deref());
+            // Managed product default comes from RuntimeConfig; env is dev-only overlay.
+            let wallet = wallet_core::WalletService::new(&data_dir, None);
             app.manage(AppState::new(wallet));
             Ok(())
         })

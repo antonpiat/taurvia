@@ -6,7 +6,8 @@ mod swap;
 mod token_metadata;
 mod transfer;
 
-pub use jupiter::{shorten_mint, WRAPPED_SOL_MINT};
+pub use jupiter::{configure_jupiter_api_key, shorten_mint, WRAPPED_SOL_MINT};
+pub use models::MANAGED_DEFAULT_RPC_URL;
 pub use keypair::{
     derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64,
     validate_mnemonic,

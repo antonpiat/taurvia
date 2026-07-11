@@ -28,7 +28,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-const DEFAULT_RPC_URL: &str = "https://api.mainnet-beta.solana.com";
 const DEFAULT_HISTORY_LIMIT: usize = 20;
 const RPC_TIMEOUT: Duration = Duration::from_secs(30);
 const ACTIVITY_CONCURRENCY: usize = 5;
@@ -37,11 +36,19 @@ pub struct SolanaRpc {
     client: Arc<RpcClient>,
 }
 
+impl Clone for SolanaRpc {
+    fn clone(&self) -> Self {
+        Self {
+            client: Arc::clone(&self.client),
+        }
+    }
+}
+
 impl SolanaRpc {
     pub fn new(rpc_url: Option<&str>) -> Self {
         let url = rpc_url
             .filter(|u| !u.is_empty())
-            .unwrap_or(DEFAULT_RPC_URL)
+            .unwrap_or(crate::MANAGED_DEFAULT_RPC_URL)
             .to_string();
         let client = Arc::new(RpcClient::new_with_timeout_and_commitment(
             url,

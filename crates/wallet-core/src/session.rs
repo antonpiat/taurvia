@@ -1,6 +1,6 @@
-use aegis_solana::{Keypair, Pubkey, Signer, SolanaRpc};
-use models::WalletFile;
-use storage::WalletStorage;
+use aegis_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
+use models::{AppSettings, RuntimeConfig, WalletFile};
+use storage::{AppConfigStore, FileWalletStore};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -12,20 +12,70 @@ pub(crate) struct WalletSession {
 }
 
 pub struct WalletService {
-    pub(crate) storage: WalletStorage,
+    pub(crate) storage: FileWalletStore,
+    pub(crate) config_store: AppConfigStore,
+    pub(crate) settings: Mutex<AppSettings>,
     pub(crate) session: Arc<Mutex<Option<WalletSession>>>,
     pub(crate) cached_wallet: Mutex<Option<WalletFile>>,
-    pub(crate) rpc: SolanaRpc,
+    pub(crate) rpc: Mutex<SolanaRpc>,
 }
 
 impl WalletService {
-    pub fn new(data_dir: impl AsRef<Path>, rpc_url: Option<&str>) -> Self {
+    /// Desktop/mobile convenience: filesystem wallet store + resolved RuntimeConfig.
+    pub fn new(data_dir: impl AsRef<Path>, _legacy_rpc_url: Option<&str>) -> Self {
+        let data_dir = data_dir.as_ref().to_path_buf();
+        let config_store = AppConfigStore::new(&data_dir);
+        let settings = config_store.load().unwrap_or_default();
+        // Prefer explicit constructor arg only if settings/env did not resolve a custom URL
+        // and caller passed a URL (tests). Otherwise RuntimeConfig::resolve handles defaults.
+        let mut runtime = RuntimeConfig::resolve(&settings);
+        if let Some(url) = _legacy_rpc_url.filter(|u| !u.is_empty()) {
+            // Tests pass localhost; honor when settings have no override.
+            if settings.rpc_url.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true)
+                && std::env::var("AEGIS_RPC_URL").is_err()
+            {
+                runtime.rpc_url = url.to_string();
+            }
+        }
+        Self::from_parts(settings, runtime, config_store, FileWalletStore::new(&data_dir))
+    }
+
+    pub fn from_parts(
+        settings: AppSettings,
+        runtime: RuntimeConfig,
+        config_store: AppConfigStore,
+        storage: FileWalletStore,
+    ) -> Self {
+        configure_jupiter_api_key(runtime.jupiter_api_key.clone());
         Self {
-            storage: WalletStorage::new(data_dir),
+            storage,
+            config_store,
+            settings: Mutex::new(settings),
             session: Arc::new(Mutex::new(None)),
             cached_wallet: Mutex::new(None),
-            rpc: SolanaRpc::new(rpc_url),
+            rpc: Mutex::new(SolanaRpc::new(Some(&runtime.rpc_url))),
         }
+    }
+
+    pub fn get_settings(&self) -> AppSettings {
+        self.settings.lock().unwrap().clone()
+    }
+
+    pub fn update_settings(&self, settings: AppSettings) -> Result<RuntimeConfig, WalletError> {
+        self.config_store.save(&settings)?;
+        *self.settings.lock().unwrap() = settings.clone();
+        let runtime = RuntimeConfig::resolve(&settings);
+        configure_jupiter_api_key(runtime.jupiter_api_key.clone());
+        *self.rpc.lock().unwrap() = SolanaRpc::new(Some(&runtime.rpc_url));
+        Ok(runtime)
+    }
+
+    pub fn runtime_config(&self) -> RuntimeConfig {
+        RuntimeConfig::resolve(&self.settings.lock().unwrap())
+    }
+
+    pub(crate) fn rpc_handle(&self) -> SolanaRpc {
+        self.rpc.lock().unwrap().clone()
     }
 
     pub fn wallet_exists(&self) -> bool {
