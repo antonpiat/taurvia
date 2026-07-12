@@ -29,6 +29,7 @@ impl WalletService {
         if self.storage.exists() {
             return Err(WalletError::AlreadyExists);
         }
+        Self::require_password_strength(password)?;
         self.save_wallet_from_mnemonic(mnemonic, password)
     }
 
@@ -36,6 +37,7 @@ impl WalletService {
         if self.storage.exists() {
             return Err(WalletError::AlreadyExists);
         }
+        Self::require_password_strength(password)?;
         self.save_wallet_from_mnemonic(mnemonic, password)
     }
 
@@ -76,11 +78,7 @@ impl WalletService {
     }
 
     pub fn change_password(&self, old_password: &str, new_password: &str) -> Result<(), WalletError> {
-        if new_password.len() < 8 {
-            return Err(WalletError::Operation(anyhow::anyhow!(
-                "password must be at least 8 characters"
-            )));
-        }
+        Self::require_password_strength(new_password)?;
         let wallet = self
             .cached_wallet
             .lock()
@@ -128,6 +126,15 @@ impl WalletService {
         self.storage.save(&wallet)?;
         *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
         Ok(wallet)
+    }
+
+    fn require_password_strength(password: &str) -> Result<(), WalletError> {
+        if password.len() < 8 {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "password must be at least 8 characters"
+            )));
+        }
+        Ok(())
     }
 
     fn encrypt_wallet_file(
@@ -193,6 +200,18 @@ impl WalletService {
         wallet: &WalletFile,
         password: &str,
     ) -> Result<EncryptedPayload, WalletError> {
+        if wallet.version != WALLET_FILE_VERSION {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "unsupported wallet file version: {}",
+                wallet.version
+            )));
+        }
+        if wallet.crypto.kdf != KDF_NAME || wallet.crypto.cipher != CIPHER_NAME {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "unsupported wallet encryption algorithm"
+            )));
+        }
+
         let salt = BASE64
             .decode(&wallet.crypto.salt)
             .map_err(|_| WalletError::InvalidPassword)?;

@@ -73,7 +73,7 @@ pub fn decrypt(
     let cipher =
         Aes256Gcm::new_from_slice(key).map_err(|e| CryptoError::DecryptionFailed(e.to_string()))?;
     let nonce =
-        Nonce::try_from(&nonce[..]).map_err(|e| CryptoError::EncryptionFailed(e.to_string()))?;
+        Nonce::try_from(&nonce[..]).map_err(|e| CryptoError::DecryptionFailed(e.to_string()))?;
     cipher
         .decrypt(&nonce, ciphertext)
         .map_err(|_| CryptoError::InvalidPassword)

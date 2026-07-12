@@ -63,6 +63,12 @@ impl WalletService {
 
     pub fn update_settings(&self, settings: AppSettings) -> Result<RuntimeConfig, WalletError> {
         let prev = self.settings.lock().unwrap().clone();
+        let mut settings = settings;
+        // Wallet file is authoritative for cluster once a wallet exists.
+        // Cluster switches must go through `change_network` so UI label and RPC stay aligned.
+        if self.storage.exists() {
+            settings.network = Network::parse(&self.wallet_network());
+        }
         self.config_store.save(&settings)?;
         *self.settings.lock().unwrap() = settings.clone();
         let runtime = RuntimeConfig::resolve(&settings);
@@ -108,10 +114,6 @@ impl WalletService {
         settings.network = network;
         settings.rpc_url = None;
         self.update_settings(settings)
-    }
-
-    pub fn runtime_config(&self) -> RuntimeConfig {
-        RuntimeConfig::resolve(&self.settings.lock().unwrap())
     }
 
     pub(crate) fn rpc_handle(&self) -> SolanaRpc {

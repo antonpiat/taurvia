@@ -54,7 +54,7 @@ React UI  →  Tauri IPC  →  wallet-core (Rust)  →  crypto / storage / taurv
 - Private keys and mnemonics are encrypted at rest on disk.
 - Signing happens only in Rust after password verification.
 - The frontend does not receive raw secrets.
-- Switching Mainnet ↔ Devnet updates wallet metadata + RPC only (no password); the keypair is unchanged. Devnet is not real funds; Swap remains Mainnet-only.
+- Switching Mainnet ↔ Devnet updates wallet metadata + RPC only (no password); the keypair is unchanged. Devnet is not real funds; Swap is Mainnet-only (enforced in Rust, not only in the UI).
 
 See the [README](../README.md#security) for the full architecture diagram.
 

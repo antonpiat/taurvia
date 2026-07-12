@@ -38,11 +38,6 @@ export function networkShortLabel(id: unknown): string {
   }
 }
 
-/** Settings / status row id (kebab-case). */
-export function networkDisplayId(id: unknown): string {
-  return normalizeNetworkId(id);
-}
-
 /**
  * Solana explorer cluster query value.
  * Returns null for non-Solana ids (future EVM) so callers skip cluster params.

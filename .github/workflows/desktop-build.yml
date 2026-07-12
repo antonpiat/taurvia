@@ -3,7 +3,7 @@ name: Desktop build
 # Matrix build only when Taurvia product version in tauri.conf.json increases on main.
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
       - "apps/desktop/src-tauri/tauri.conf.json"
 
@@ -61,6 +61,7 @@ jobs:
             patchelf \
             libssl-dev
 
+      # pnpm must be set up before setup-node when using cache: pnpm
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
