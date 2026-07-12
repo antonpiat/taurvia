@@ -49,7 +49,16 @@ impl WalletService {
             public_key: public_key.clone(),
             keypair,
         });
-        *self.cached_wallet.lock().unwrap() = Some(wallet);
+        *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
+
+        // Keep settings.network aligned with the wallet file.
+        let network = Network::parse(&wallet.network);
+        let mut settings = self.get_settings();
+        if settings.network != network {
+            settings.network = network;
+            let _ = self.update_settings(settings);
+        }
+
         Ok(public_key)
     }
 
@@ -114,7 +123,8 @@ impl WalletService {
             private_key: keypair_to_base64(&keypair),
             derivation_path: DEFAULT_DERIVATION_PATH.to_string(),
         };
-        let wallet = self.encrypt_wallet_file(&keypair, &payload, password)?;
+        let network = self.get_settings().network;
+        let wallet = self.encrypt_wallet_file(&keypair, &payload, password, network)?;
         self.storage.save(&wallet)?;
         *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
         Ok(wallet)
@@ -125,12 +135,13 @@ impl WalletService {
         keypair: &Keypair,
         payload: &EncryptedPayload,
         password: &str,
+        network: Network,
     ) -> Result<WalletFile, WalletError> {
         self.reencrypt_wallet_file(
             &WalletFile {
                 version: WALLET_FILE_VERSION,
                 wallet_id: Uuid::new_v4().to_string(),
-                network: Network::SolanaMainnet.as_str().to_string(),
+                network: network.as_str().to_string(),
                 public_key: keypair.pubkey().to_string(),
                 created_at: Utc::now().to_rfc3339(),
                 crypto: CryptoEnvelope {

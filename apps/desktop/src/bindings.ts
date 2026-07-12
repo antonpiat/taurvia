@@ -88,6 +88,14 @@ async exportWalletToPath(password: string, path: string) : Promise<Result<null, 
     else return { status: "error", error: e  as any };
 }
 },
+async changeWalletNetwork(network: Network) : Promise<Result<RuntimeConfig, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_wallet_network", { network }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getWalletSnapshot() : Promise<Result<WalletSnapshot, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_wallet_snapshot") };
@@ -192,8 +200,8 @@ async updateAppSettings(settings: AppSettings) : Promise<Result<RuntimeConfig, A
     else return { status: "error", error: e  as any };
 }
 },
-async getManagedDefaultRpcUrl() : Promise<string> {
-    return await TAURI_INVOKE("get_managed_default_rpc_url");
+async getManagedDefaultRpcUrl(network: Network | null) : Promise<string> {
+    return await TAURI_INVOKE("get_managed_default_rpc_url", { network });
 },
 async setOnboardingDraft(mnemonic: string, mode: string) : Promise<Result<null, ApiError>> {
     try {
@@ -235,13 +243,17 @@ export type ActivityItem = { signature: string; timestamp: number | null; status
 export type ApiError = { code: string; message: string }
 export type AppSettings = { 
 /**
- * Optional user override (Advanced). Empty / None = managed default.
+ * Optional user override (Advanced). Empty / None = managed default for `network`.
  */
 rpc_url: string | null; 
 /**
  * Optional Jupiter portal key (Advanced). None = keyless.
  */
 jupiter_api_key: string | null; 
+/**
+ * Active Solana cluster. Synced with `WalletFile.network` on switch.
+ */
+network?: Network; 
 /**
  * Minutes of idle time before auto-lock. Defaults to 5. `0` disables.
  */
@@ -268,6 +280,7 @@ window_height?: number | null }
 export type AppViewKind = "desktop" | "compact" | "phone"
 export type CryptoEnvelope = { kdf: string; salt: string; cipher: string; nonce: string; ciphertext: string }
 export type ExplorerKind = "solscan" | "solanaExplorer"
+export type Network = "solana-mainnet" | "solana-devnet"
 export type OnboardingDraft = { mnemonic: string; mode: string }
 export type RuntimeConfig = { rpc_url: string; jupiter_api_key: string | null }
 export type SendPreview = { from: string; to: string; token: string; amount: string; estimated_fee_lamports: number; estimated_fee_sol: number; 

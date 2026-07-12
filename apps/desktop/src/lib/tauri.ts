@@ -1,10 +1,11 @@
 import { commands } from "@/bindings";
-import type { AppSettings, Result } from "@/bindings";
+import type { AppSettings, Network, Result } from "@/bindings";
 export type {
   ActivityItem,
   ApiError,
   AppSettings,
   ExplorerKind,
+  Network,
   RuntimeConfig,
   SendPreview,
   SwapQuote,
@@ -46,6 +47,8 @@ export const walletApi = {
     unwrap(commands.changeWalletPassword(oldPassword, newPassword)),
   exportWalletToPath: (password: string, path: string) =>
     unwrap(commands.exportWalletToPath(password, path)),
+  changeWalletNetwork: (network: Network) =>
+    unwrap(commands.changeWalletNetwork(network)),
   getActivity: (limit: number) => unwrap(commands.getActivity(limit)),
   previewSolSend: (to: string, amountSol: number) =>
     unwrap(commands.previewSolSend(to, amountSol)),
@@ -72,7 +75,8 @@ export const walletApi = {
   getAppSettings: () => unwrap(commands.getAppSettings()),
   updateAppSettings: (settings: AppSettings) =>
     unwrap(commands.updateAppSettings(settings)),
-  getManagedDefaultRpcUrl: () => commands.getManagedDefaultRpcUrl(),
+  getManagedDefaultRpcUrl: (network?: Network | null) =>
+    commands.getManagedDefaultRpcUrl(network ?? null),
   setOnboardingDraft: (mnemonic: string, mode: string) =>
     unwrap(commands.setOnboardingDraft(mnemonic, mode)),
   getOnboardingDraft: () => unwrap(commands.getOnboardingDraft()),

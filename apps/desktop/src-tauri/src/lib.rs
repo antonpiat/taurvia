@@ -24,6 +24,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::change_wallet_password,
         commands::export_wallet,
         commands::export_wallet_to_path,
+        commands::change_wallet_network,
         commands::get_wallet_snapshot,
         commands::get_sol_balance,
         commands::get_token_balances,

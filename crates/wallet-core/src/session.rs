@@ -67,8 +67,9 @@ impl WalletService {
         *self.settings.lock().unwrap() = settings.clone();
         let runtime = RuntimeConfig::resolve(&settings);
         // Skip RPC / Jupiter rebuild for UI-only prefs (layout, auto-lock, explorer, …).
-        let connectivity_changed =
-            prev.rpc_url != settings.rpc_url || prev.jupiter_api_key != settings.jupiter_api_key;
+        let connectivity_changed = prev.rpc_url != settings.rpc_url
+            || prev.jupiter_api_key != settings.jupiter_api_key
+            || prev.network != settings.network;
         if connectivity_changed {
             configure_jupiter_api_key(runtime.jupiter_api_key.clone());
             *self.rpc.lock().unwrap() = SolanaRpc::new(Some(&runtime.rpc_url));
@@ -85,6 +86,28 @@ impl WalletService {
             .load()
             .map(|w| w.network)
             .unwrap_or_else(|_| Network::SolanaMainnet.as_str().to_string())
+    }
+
+    /// Switch Solana cluster. Updates wallet metadata + settings, clears custom RPC
+    /// override, rebuilds RPC client. No password — does not expose keys or sign.
+    pub fn change_network(&self, network: Network) -> Result<RuntimeConfig, WalletError> {
+        let wallet = self
+            .cached_wallet
+            .lock()
+            .unwrap()
+            .clone()
+            .or_else(|| self.storage.load().ok())
+            .ok_or(WalletError::NotFound)?;
+
+        let mut updated = wallet;
+        updated.network = network.as_str().to_string();
+        self.storage.save(&updated)?;
+        *self.cached_wallet.lock().unwrap() = Some(updated);
+
+        let mut settings = self.get_settings();
+        settings.network = network;
+        settings.rpc_url = None;
+        self.update_settings(settings)
     }
 
     pub fn runtime_config(&self) -> RuntimeConfig {

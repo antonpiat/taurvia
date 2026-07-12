@@ -9,7 +9,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Settings → Network: switch Solana Mainnet ↔ Devnet (same address; no password)
+- Managed Devnet RPC default (`https://api.devnet.solana.com`)
+
 ### Changed
+
+- RPC resolution is network-aware (managed default follows active cluster)
+- Swap is Mainnet-only (hidden/disabled on Devnet; Jupiter has no Devnet path here)
 
 ### Fixed
 

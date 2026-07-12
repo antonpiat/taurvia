@@ -94,7 +94,7 @@ pnpm tauri dev
 
 ### Optional: custom RPC and Jupiter
 
-By default Taurvia uses the public Solana mainnet RPC and keyless Jupiter APIs. For better reliability or higher rate limits:
+By default Taurvia uses a **managed public RPC for the active cluster** (Mainnet or Devnet, chosen in Settings → Network) and keyless Jupiter APIs on Mainnet. Swap is Mainnet-only. For better reliability or higher rate limits:
 
 ```bash
 cp ../../.env.example ../../.env
@@ -102,6 +102,7 @@ cp ../../.env.example ../../.env
 # TAURVIA_JUPITER_API_KEY=YOUR_PORTAL_KEY   # free at https://portal.jup.ag
 ```
 
+`TAURVIA_RPC_URL` overrides the managed default for whichever cluster is selected.
 ### Build
 
 Local builds produce packages for the **host OS only**. On Linux that means `.deb`, `.rpm`, and `.AppImage`:

@@ -1,6 +1,6 @@
 use crate::error::{map_wallet_error, CommandResult};
 use crate::state::AppState;
-use models::WalletFile;
+use models::{Network, RuntimeConfig, WalletFile};
 use tauri::State;
 
 #[tauri::command]
@@ -112,4 +112,16 @@ pub fn export_wallet_to_path(
         format!("failed to write wallet backup: {e}"),
     ))?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_wallet_network(
+    network: Network,
+    state: State<'_, AppState>,
+) -> CommandResult<RuntimeConfig> {
+    state
+        .wallet
+        .change_network(network)
+        .map_err(map_wallet_error)
 }

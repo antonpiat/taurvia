@@ -1,16 +1,29 @@
 /**
  * Network identity helpers.
- * Today: Solana mainnet/devnet. Keep labels/URLs here so EVM can plug in later
- * without scattering hardcoded "Mainnet" / "solana-mainnet" across the UI.
+ * Solana mainnet/devnet today; keep labels/URLs here so EVM can plug in later.
  */
 
-export const DEFAULT_NETWORK_ID = "solana-mainnet";
+import type { Network } from "@/bindings";
+
+export const DEFAULT_NETWORK_ID: Network = "solana-mainnet";
 
 export function normalizeNetworkId(value: unknown): string {
+  if (value === "solana-devnet" || value === "devnet") return "solana-devnet";
+  if (value === "solana-mainnet" || value === "mainnet") return "solana-mainnet";
   if (typeof value === "string" && value.trim() !== "") {
     return value.trim();
   }
   return DEFAULT_NETWORK_ID;
+}
+
+export function toNetwork(value: unknown): Network {
+  return normalizeNetworkId(value) === "solana-devnet"
+    ? "solana-devnet"
+    : "solana-mainnet";
+}
+
+export function isMainnet(id: unknown): boolean {
+  return toNetwork(id) === "solana-mainnet";
 }
 
 /** Short chip label: Mainnet / Devnet / raw id for unknown chains. */
