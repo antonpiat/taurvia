@@ -61,11 +61,13 @@ jobs:
             patchelf \
             libssl-dev
 
-      # pnpm must be set up before setup-node when using cache: pnpm
+      # Standalone install avoids the broken runner npm self-installer (Node 24).
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v6.0.5
         with:
-          version: 11
+          version: 11.12.0
+          standalone: true
+          package_json_file: apps/desktop/package.json
 
       - name: Setup Node
         uses: actions/setup-node@v6
