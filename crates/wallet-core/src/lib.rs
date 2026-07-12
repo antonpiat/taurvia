@@ -55,4 +55,45 @@ mod tests {
         assert!(exported.contains("crypto"));
         assert!(!exported.contains(&mnemonic));
     }
+
+    #[tokio::test]
+    async fn update_settings_cannot_desync_network_from_wallet_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service.create_wallet(&mnemonic, "password123").unwrap();
+        service
+            .change_network(models::Network::SolanaDevnet)
+            .unwrap();
+
+        let mut settings = service.get_settings();
+        settings.network = models::Network::SolanaMainnet;
+        let _ = service.update_settings(settings).unwrap();
+
+        assert_eq!(service.get_settings().network, models::Network::SolanaDevnet);
+        assert_eq!(service.wallet_network(), "solana-devnet");
+    }
+
+    #[tokio::test]
+    async fn swap_rejected_on_devnet() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service.create_wallet(&mnemonic, "password123").unwrap();
+        service.unlock("password123").unwrap();
+        service
+            .change_network(models::Network::SolanaDevnet)
+            .unwrap();
+
+        let err = service
+            .preview_swap(
+                "So11111111111111111111111111111111111111112",
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                0.01,
+                50,
+            )
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("Mainnet"));
+    }
 }

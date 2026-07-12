@@ -1,18 +1,40 @@
 name: Desktop build
 
+# Matrix build only when Taurvia product version in tauri.conf.json increases on main.
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
-      - "apps/desktop/**"
-      - "crates/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - ".github/workflows/desktop-build.yml"
-  workflow_dispatch:
+      - "apps/desktop/src-tauri/tauri.conf.json"
 
 jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect version upgrade
+        id: check
+        run: |
+          FILE=apps/desktop/src-tauri/tauri.conf.json
+          CURRENT=$(jq -r .version "$FILE")
+          PREV=$(git show "${{ github.event.before }}:$FILE" 2>/dev/null | jq -r .version || echo "0.0.0")
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "$CURRENT" != "$PREV" ] && [ "$(printf '%s\n%s\n' "$PREV" "$CURRENT" | sort -V | tail -n1)" = "$CURRENT" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    needs: version-check
+    if: needs.version-check.outputs.should_build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -23,9 +45,7 @@ jobs:
             platform: windows
           - os: macos-latest
             platform: macos
-
     runs-on: ${{ matrix.os }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -74,7 +94,7 @@ jobs:
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v7
         with:
-          name: taurvia-linux-unsigned
+          name: taurvia-linux-unsigned-${{ needs.version-check.outputs.version }}
           path: |
             target/release/bundle/appimage/*.AppImage
             target/release/bundle/deb/*.deb
@@ -86,7 +106,7 @@ jobs:
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v7
         with:
-          name: taurvia-windows-unsigned
+          name: taurvia-windows-unsigned-${{ needs.version-check.outputs.version }}
           path: |
             target/release/bundle/msi/*.msi
             target/release/bundle/nsis/*.exe
@@ -97,7 +117,7 @@ jobs:
         if: matrix.platform == 'macos'
         uses: actions/upload-artifact@v7
         with:
-          name: taurvia-macos-unsigned
+          name: taurvia-macos-unsigned-${{ needs.version-check.outputs.version }}
           path: |
             target/release/bundle/dmg/*.dmg
             target/release/bundle/macos/*.app

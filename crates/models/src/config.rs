@@ -1,13 +1,26 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-/// Public / product default Solana RPC (no user setup required).
+use crate::Network;
+
+/// Public / product default Solana mainnet RPC (no user setup required).
 /// Replace with a dedicated Taurvia-managed endpoint when product infra is ready.
 /// Never bake a personal developer `.env` URL into release builds.
 pub const MANAGED_DEFAULT_RPC_URL: &str = "https://api.mainnet-beta.solana.com";
 
+/// Public Solana devnet RPC used when `AppSettings.network` is Devnet.
+pub const MANAGED_DEVNET_RPC_URL: &str = "https://api.devnet.solana.com";
+
 pub const DEFAULT_AUTO_LOCK_MINUTES: u32 = 5;
 pub const DEFAULT_SLIPPAGE_BPS: u16 = 50;
+
+/// Managed RPC for a Solana cluster (before user/env overrides).
+pub fn managed_rpc_url(network: Network) -> &'static str {
+    match network {
+        Network::SolanaDevnet => MANAGED_DEVNET_RPC_URL,
+        Network::SolanaMainnet => MANAGED_DEFAULT_RPC_URL,
+    }
+}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Type, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -65,10 +78,13 @@ fn default_hide_balances() -> bool {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct AppSettings {
-    /// Optional user override (Advanced). Empty / None = managed default.
+    /// Optional user override (Advanced). Empty / None = managed default for `network`.
     pub rpc_url: Option<String>,
     /// Optional Jupiter portal key (Advanced). None = keyless.
     pub jupiter_api_key: Option<String>,
+    /// Active Solana cluster. Synced with `WalletFile.network` on switch.
+    #[serde(default)]
+    pub network: Network,
     /// Minutes of idle time before auto-lock. Defaults to 5. `0` disables.
     #[serde(
         default = "default_auto_lock_minutes",
@@ -98,6 +114,7 @@ impl Default for AppSettings {
         Self {
             rpc_url: None,
             jupiter_api_key: None,
+            network: Network::SolanaMainnet,
             auto_lock_minutes: default_auto_lock_minutes(),
             hide_balances: default_hide_balances(),
             explorer: ExplorerKind::Solscan,
@@ -116,7 +133,7 @@ pub struct RuntimeConfig {
 }
 
 impl RuntimeConfig {
-    /// Resolution: user Advanced settings → process env (dev) → managed default.
+    /// Resolution: user Advanced settings → process env (dev) → managed default for `network`.
     pub fn resolve(settings: &AppSettings) -> Self {
         let rpc_from_settings = settings
             .rpc_url
@@ -138,10 +155,10 @@ impl RuntimeConfig {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let managed = managed_rpc_url(settings.network).to_string();
+
         Self {
-            rpc_url: rpc_from_settings
-                .or(rpc_from_env)
-                .unwrap_or_else(|| MANAGED_DEFAULT_RPC_URL.to_string()),
+            rpc_url: rpc_from_settings.or(rpc_from_env).unwrap_or(managed),
             jupiter_api_key: jupiter_from_settings.or(jupiter_from_env),
         }
     }

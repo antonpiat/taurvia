@@ -1,6 +1,6 @@
 use crate::error::{map_wallet_error, CommandResult};
 use crate::state::AppState;
-use models::WalletFile;
+use models::{Network, RuntimeConfig, WalletFile};
 use tauri::State;
 
 #[tauri::command]
@@ -103,13 +103,55 @@ pub fn export_wallet_to_path(
     path: String,
     state: State<'_, AppState>,
 ) -> CommandResult<()> {
+    let path = std::path::PathBuf::from(path.trim());
+    if path.as_os_str().is_empty() {
+        return Err(models::ApiError::new(
+            "io_error",
+            "backup path is required",
+        ));
+    }
+    if !path.is_absolute() {
+        return Err(models::ApiError::new(
+            "io_error",
+            "backup path must be absolute",
+        ));
+    }
+    let Some(parent) = path.parent() else {
+        return Err(models::ApiError::new(
+            "io_error",
+            "backup path has no parent directory",
+        ));
+    };
+    if !parent.exists() {
+        return Err(models::ApiError::new(
+            "io_error",
+            "backup directory does not exist",
+        ));
+    }
+
     let json = state
         .wallet
         .export_wallet(&password)
         .map_err(map_wallet_error)?;
-    std::fs::write(&path, json).map_err(|e| models::ApiError::new(
-        "io_error",
-        format!("failed to write wallet backup: {e}"),
-    ))?;
+    std::fs::write(&path, json).map_err(|e| {
+        models::ApiError::new("io_error", format!("failed to write wallet backup: {e}"))
+    })?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_wallet_network(
+    network: Network,
+    state: State<'_, AppState>,
+) -> CommandResult<RuntimeConfig> {
+    state
+        .wallet
+        .change_network(network)
+        .map_err(map_wallet_error)
 }

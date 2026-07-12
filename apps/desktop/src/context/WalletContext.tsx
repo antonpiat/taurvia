@@ -11,13 +11,14 @@ import { useNavigate } from "react-router-dom";
 import { normalizeExplorer } from "@/lib/explorer";
 import { normalizeAppView, restoreSavedWindowSize } from "@/lib/appView";
 import { DEFAULT_AUTO_LOCK_MINUTES, normalizeAutoLockMinutes } from "@/lib/autoLock";
-import { DEFAULT_NETWORK_ID, normalizeNetworkId } from "@/lib/network";
-import type { AppSettings, ExplorerKind, RuntimeConfig } from "@/lib/tauri";
+import { DEFAULT_NETWORK_ID, toNetwork } from "@/lib/network";
+import type { AppSettings, ExplorerKind, Network, RuntimeConfig } from "@/lib/tauri";
 import { TokenBalance, walletApi } from "@/lib/tauri";
 
 const DEFAULT_SETTINGS: AppSettings = {
   rpc_url: null,
   jupiter_api_key: null,
+  network: DEFAULT_NETWORK_ID,
   auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,
   hide_balances: true,
   explorer: "solscan",
@@ -50,6 +51,7 @@ interface WalletContextValue {
   reloadSettings: () => Promise<AppSettings>;
   saveSettings: (next: AppSettings) => Promise<RuntimeConfig>;
   setHideBalances: (hidden: boolean) => Promise<void>;
+  changeNetwork: (network: Network) => Promise<RuntimeConfig>;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -90,7 +92,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setWalletExists(snapshot.exists);
       setUnlocked(snapshot.unlocked);
       setPublicKey(snapshot.public_key);
-      setNetwork(normalizeNetworkId(snapshot.network));
+      setNetwork(toNetwork(snapshot.network));
       setSolBalance(snapshot.sol_balance);
       setSolPriceUsd(snapshot.sol_price_usd);
       setSolValueUsd(snapshot.sol_value_usd);
@@ -140,6 +142,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             : Boolean(next.hide_balances),
         default_slippage_bps: next.default_slippage_bps ?? DEFAULT_SETTINGS.default_slippage_bps,
         auto_lock_minutes: normalizeAutoLockMinutes(next.auto_lock_minutes),
+        network: toNetwork(next.network ?? DEFAULT_SETTINGS.network),
       };
       setSettings(merged);
       return merged;
@@ -155,6 +158,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       explorer: normalizeExplorer(next.explorer),
       app_view: normalizeAppView(next.app_view),
       auto_lock_minutes: normalizeAutoLockMinutes(next.auto_lock_minutes),
+      network: toNetwork(next.network),
     };
     const runtime = await walletApi.updateAppSettings(payload);
     setSettings(payload);
@@ -166,6 +170,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       await saveSettings({ ...settingsRef.current, hide_balances: hidden });
     },
     [saveSettings],
+  );
+
+  const changeNetwork = useCallback(
+    async (nextNetwork: Network) => {
+      const runtime = await walletApi.changeWalletNetwork(nextNetwork);
+      setNetwork(nextNetwork);
+      // Settings reload is local; balances hit RPC — refresh in background.
+      void reloadSettings();
+      void refresh();
+      return runtime;
+    },
+    [refresh, reloadSettings],
   );
 
   const lock = useCallback(async () => {
@@ -285,6 +301,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       reloadSettings,
       saveSettings,
       setHideBalances,
+      changeNetwork,
     }),
     [
       loading,
@@ -306,6 +323,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       reloadSettings,
       saveSettings,
       setHideBalances,
+      changeNetwork,
     ],
   );
 

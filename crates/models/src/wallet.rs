@@ -19,6 +19,26 @@ impl Network {
             Self::SolanaDevnet => "solana-devnet",
         }
     }
+
+    /// Parse wallet-file / settings id. Unknown values → mainnet.
+    pub fn parse(value: &str) -> Self {
+        match value.trim() {
+            "solana-devnet" | "devnet" => Self::SolanaDevnet,
+            _ => Self::SolanaMainnet,
+        }
+    }
+
+    pub fn is_mainnet(self) -> bool {
+        matches!(self, Self::SolanaMainnet)
+    }
+}
+
+impl std::str::FromStr for Network {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::parse(s))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]

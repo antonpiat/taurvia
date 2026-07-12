@@ -26,14 +26,17 @@ import {
 } from "@/lib/appView";
 import { DEFAULT_AUTO_LOCK_MINUTES, normalizeAutoLockMinutes } from "@/lib/autoLock";
 import { explorerLabel, normalizeExplorer } from "@/lib/explorer";
-import { networkDisplayId } from "@/lib/network";
+import {
+  networkShortLabel,
+  toNetwork,
+} from "@/lib/network";
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_SECTIONS,
   isSettingsSectionId,
   type SettingsSectionId,
 } from "@/lib/settingsNav";
-import { ApiError, AppSettings, ExplorerKind, walletApi } from "@/lib/tauri";
+import { ApiError, AppSettings, ExplorerKind, Network, walletApi } from "@/lib/tauri";
 
 const APP_VIEW_OPTIONS: Array<{
   value: AppViewKind;
@@ -76,6 +79,23 @@ const AUTO_LOCK_OPTIONS: Array<{
   { value: "60", label: "60 minutes", description: "Lock after 60 minutes idle", minutes: 60 },
 ];
 
+const NETWORK_OPTIONS: Array<{
+  value: Network;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "solana-mainnet",
+    label: "Mainnet",
+    description: "Real funds · Swap available",
+  },
+  {
+    value: "solana-devnet",
+    label: "Devnet",
+    description: "Test cluster · not real funds · Swap disabled",
+  },
+];
+
 const SECTION_COPY: Record<SettingsSectionId, string> = {
   view: "Layout and window size. Manual sizes are kept across restarts.",
   wallet: "Session preferences for this device.",
@@ -86,17 +106,20 @@ const SECTION_COPY: Record<SettingsSectionId, string> = {
   danger: "Remove this wallet from the device.",
 };
 
-type OpenMenu = "section" | "app-view" | "auto-lock" | "explorer" | null;
+type OpenMenu = "app-view" | "auto-lock" | "explorer" | "network" | null;
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const { section: sectionParam } = useParams<{ section: string }>();
-  const { refresh, refreshBalances, settings, saveSettings, network } = useWallet();
+  const { refresh, refreshBalances, settings, saveSettings, network, changeNetwork } =
+    useWallet();
   const layout = useLayoutMode();
   const [seedOpen, setSeedOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [networkError, setNetworkError] = useState<string | null>(null);
+  const [switchingNetwork, setSwitchingNetwork] = useState(false);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [password, setPassword] = useState("");
   const [removePassword, setRemovePassword] = useState("");
@@ -119,11 +142,11 @@ export function SettingsPage() {
   const [jupiterKey, setJupiterKey] = useState(settings.jupiter_api_key ?? "");
   const [managedDefault, setManagedDefault] = useState("");
   const [activeRpc, setActiveRpc] = useState(settings.rpc_url?.trim() || "");
-  const [configMessage, setConfigMessage] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
-  const [prefsError, setPrefsError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(
+    null,
+  );
   const [slippageInput, setSlippageInput] = useState(
     ((settings.default_slippage_bps ?? 50) / 100).toString(),
   );
@@ -131,7 +154,15 @@ export function SettingsPage() {
 
   useEffect(() => {
     setOpenMenu(null);
+    setNetworkError(null);
+    setConfigError(null);
   }, [sectionParam]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 1400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     setRpcUrl(settings.rpc_url ?? "");
@@ -142,31 +173,41 @@ export function SettingsPage() {
   useEffect(() => {
     void (async () => {
       try {
-        const defaultUrl = await walletApi.getManagedDefaultRpcUrl();
+        const defaultUrl = await walletApi.getManagedDefaultRpcUrl(toNetwork(network));
         setManagedDefault(defaultUrl);
         setActiveRpc(settings.rpc_url?.trim() || defaultUrl);
       } catch {
         // ignore initial load errors
       }
     })();
-  }, [settings.rpc_url]);
+  }, [settings.rpc_url, network]);
 
   const patchSettings = async (patch: Partial<AppSettings>) => {
-    setPrefsError(null);
-    setPrefsMessage(null);
-    setSavingPrefs(true);
     const next: AppSettings = {
       ...settings,
       ...patch,
       explorer: normalizeExplorer(patch.explorer ?? settings.explorer),
       app_view: normalizeAppView(patch.app_view ?? settings.app_view),
     };
+    const unchanged =
+      next.app_view === normalizeAppView(settings.app_view) &&
+      next.auto_lock_minutes === normalizeAutoLockMinutes(settings.auto_lock_minutes) &&
+      next.explorer === normalizeExplorer(settings.explorer) &&
+      next.default_slippage_bps === (settings.default_slippage_bps ?? 50) &&
+      next.hide_balances === settings.hide_balances &&
+      (next.window_width ?? null) === (settings.window_width ?? null) &&
+      (next.window_height ?? null) === (settings.window_height ?? null);
+    if (unchanged) return;
+
+    setSavingPrefs(true);
     try {
       await saveSettings(next);
-      setPrefsMessage("Preferences saved.");
     } catch (err) {
       const apiError = err as ApiError;
-      setPrefsError(apiError.message ?? "Failed to save preferences");
+      setToast({
+        message: apiError.message ?? "Failed to save preferences",
+        tone: "error",
+      });
     } finally {
       setSavingPrefs(false);
     }
@@ -257,7 +298,6 @@ export function SettingsPage() {
   const handleSaveNetwork = async () => {
     setSavingConfig(true);
     setConfigError(null);
-    setConfigMessage(null);
     try {
       const next: AppSettings = {
         ...settings,
@@ -266,11 +306,13 @@ export function SettingsPage() {
       };
       const runtime = await saveSettings(next);
       setActiveRpc(runtime.rpc_url);
-      setConfigMessage("Network settings saved. Refreshing balances…");
-      await refreshBalances();
+      setToast({ message: "RPC settings saved.", tone: "success" });
+      void refreshBalances();
     } catch (err) {
       const apiError = err as ApiError;
-      setConfigError(apiError.message ?? "Failed to save network settings");
+      const message = apiError.message ?? "Failed to save RPC settings";
+      setConfigError(message);
+      setToast({ message, tone: "error" });
     } finally {
       setSavingConfig(false);
     }
@@ -281,7 +323,6 @@ export function SettingsPage() {
     setJupiterKey("");
     setSavingConfig(true);
     setConfigError(null);
-    setConfigMessage(null);
     try {
       const next: AppSettings = {
         ...settings,
@@ -290,13 +331,43 @@ export function SettingsPage() {
       };
       const runtime = await saveSettings(next);
       setActiveRpc(runtime.rpc_url);
-      setConfigMessage("Reset to managed default RPC.");
-      await refreshBalances();
+      setManagedDefault(runtime.rpc_url);
+      setToast({ message: "Reset to managed default RPC.", tone: "success" });
+      void refreshBalances();
     } catch (err) {
       const apiError = err as ApiError;
-      setConfigError(apiError.message ?? "Failed to reset network settings");
+      const message = apiError.message ?? "Failed to reset RPC settings";
+      setConfigError(message);
+      setToast({ message, tone: "error" });
     } finally {
       setSavingConfig(false);
+    }
+  };
+
+  const handleNetworkSwitch = async (next: Network) => {
+    if (next === toNetwork(network) || switchingNetwork) return;
+    setSwitchingNetwork(true);
+    setNetworkError(null);
+    try {
+      const runtime = await changeNetwork(next);
+      setActiveRpc(runtime.rpc_url);
+      setRpcUrl("");
+      // Override is cleared on switch; resolved RPC is the managed default.
+      setManagedDefault(runtime.rpc_url);
+      setToast({
+        message:
+          next === "solana-devnet"
+            ? "Switched to Devnet. Swap is disabled on this cluster."
+            : "Switched to Mainnet.",
+        tone: "success",
+      });
+    } catch (err) {
+      const apiError = err as ApiError;
+      const message = apiError.message ?? "Failed to switch network";
+      setNetworkError(message);
+      setToast({ message, tone: "error" });
+    } finally {
+      setSwitchingNetwork(false);
     }
   };
 
@@ -313,8 +384,51 @@ export function SettingsPage() {
 
   const words = mnemonic?.split(/\s+/).filter(Boolean) ?? [];
 
+  // Desktop lands on a section via the sidebar; phone/compact use /settings as an index.
+  if (!sectionParam) {
+    if (layout === "desktop") {
+      return <Navigate to={`/settings/${DEFAULT_SETTINGS_SECTION}`} replace />;
+    }
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <PageHeader
+          title="Settings"
+          description="Choose a section to manage your wallet preferences."
+        />
+        <Card>
+          <CardContent className="divide-y divide-border p-0">
+            {SETTINGS_SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => navigate(`/settings/${item.id}`)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-accent/40"
+              >
+                <span className="min-w-0">
+                  <span
+                    className={
+                      item.id === "danger"
+                        ? "block font-medium text-destructive"
+                        : "block font-medium"
+                    }
+                  >
+                    {item.label}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">{item.hint}</span>
+                </span>
+                <span className="text-muted-foreground" aria-hidden>
+                  ›
+                </span>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!isSettingsSectionId(sectionParam)) {
-    return <Navigate to={`/settings/${DEFAULT_SETTINGS_SECTION}`} replace />;
+    return <Navigate to={layout === "desktop" ? `/settings/${DEFAULT_SETTINGS_SECTION}` : "/settings"} replace />;
   }
 
   const section = sectionParam;
@@ -322,32 +436,16 @@ export function SettingsPage() {
   const autoLockValue = String(normalizeAutoLockMinutes(settings.auto_lock_minutes));
   const explorerValue = normalizeExplorer(settings.explorer);
   const appViewValue = layout;
+  const settingsParentTo = layout === "desktop" ? undefined : "/settings";
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         parent="Settings"
+        parentTo={settingsParentTo}
         title={active.label}
         description={SECTION_COPY[section]}
       />
-
-      {prefsMessage && <Alert>{prefsMessage}</Alert>}
-      {prefsError && <Alert className="border-destructive/40 text-destructive">{prefsError}</Alert>}
-
-      {layout !== "desktop" && (
-        <SelectDropdown
-          label="Section"
-          value={section}
-          options={SETTINGS_SECTIONS.map((item) => ({
-            value: item.id,
-            label: item.label,
-            description: item.hint,
-          }))}
-          open={openMenu === "section"}
-          onOpenChange={(open) => setOpenMenu(open ? "section" : null)}
-          onChange={(next) => navigate(`/settings/${next}`)}
-        />
-      )}
 
       <div className="min-w-0 space-y-3">
         {section === "view" && (
@@ -362,6 +460,10 @@ export function SettingsPage() {
                 onOpenChange={(open) => setOpenMenu(open ? "app-view" : null)}
                 onChange={(next) => {
                   const view = normalizeAppView(next);
+                  if (view === normalizeAppView(settings.app_view)) {
+                    setOpenMenu(null);
+                    return;
+                  }
                   const size = APP_VIEW_WINDOW_SIZES[view];
                   void (async () => {
                     await patchSettings({
@@ -478,18 +580,27 @@ export function SettingsPage() {
 
         {section === "network" && (
           <Card>
-            <CardContent className="space-y-3 pt-6 text-sm">
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">Network</span>
-                <span>{networkDisplayId(network)}</span>
-              </div>
-              <div className="flex justify-between gap-3">
+            <CardContent className="space-y-4 pt-6">
+              <SelectDropdown
+                label="Cluster"
+                value={toNetwork(network)}
+                options={NETWORK_OPTIONS}
+                open={openMenu === "network"}
+                disabled={switchingNetwork}
+                onOpenChange={(open) => setOpenMenu(open ? "network" : null)}
+                onChange={(next) => void handleNetworkSwitch(next)}
+              />
+              <div className="flex justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">Active RPC</span>
                 <span className="max-w-[60%] truncate font-mono text-xs">{activeRpc || "—"}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Works out of the box with Taurvia managed defaults — no API key required.
+                Same address on Mainnet and Devnet. Switching clears a custom Advanced RPC
+                override and uses the managed endpoint for that cluster.
               </p>
+              {networkError && (
+                <Alert className="border-destructive/40 text-destructive">{networkError}</Alert>
+              )}
             </CardContent>
           </Card>
         )}
@@ -498,8 +609,9 @@ export function SettingsPage() {
           <Card>
             <CardContent className="space-y-4 pt-6">
               <p className="text-xs text-muted-foreground">
-                Default RPC: {managedDefault || "managed public mainnet"}. Leave fields empty to
-                use Taurvia defaults. Developer <code className="font-mono">.env</code> is
+                Default RPC for {networkShortLabel(network)}:{" "}
+                {managedDefault || "managed public endpoint"}. Leave fields empty to use
+                Taurvia defaults. Developer <code className="font-mono">.env</code> is
                 local-only and never ships in releases.
               </p>
               <div className="space-y-2">
@@ -527,7 +639,6 @@ export function SettingsPage() {
               {configError && (
                 <Alert className="border-destructive/40 text-destructive">{configError}</Alert>
               )}
-              {configMessage && <Alert>{configMessage}</Alert>}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button onClick={() => void handleSaveNetwork()} disabled={savingConfig}>
                   {savingConfig ? "Saving..." : "Save overrides"}
@@ -741,6 +852,24 @@ export function SettingsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed right-4 top-4 z-50 sm:right-6 sm:top-6"
+        >
+          <Alert
+            className={
+              toast.tone === "error"
+                ? "pointer-events-auto max-w-sm border-destructive/40 bg-card shadow-lg text-destructive"
+                : "pointer-events-auto max-w-sm border-emerald-500/40 bg-emerald-500/10 text-emerald-700 shadow-lg dark:text-emerald-300"
+            }
+          >
+            {toast.message}
+          </Alert>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,6 +29,7 @@ impl WalletService {
         if self.storage.exists() {
             return Err(WalletError::AlreadyExists);
         }
+        Self::require_password_strength(password)?;
         self.save_wallet_from_mnemonic(mnemonic, password)
     }
 
@@ -36,6 +37,7 @@ impl WalletService {
         if self.storage.exists() {
             return Err(WalletError::AlreadyExists);
         }
+        Self::require_password_strength(password)?;
         self.save_wallet_from_mnemonic(mnemonic, password)
     }
 
@@ -49,7 +51,16 @@ impl WalletService {
             public_key: public_key.clone(),
             keypair,
         });
-        *self.cached_wallet.lock().unwrap() = Some(wallet);
+        *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
+
+        // Keep settings.network aligned with the wallet file.
+        let network = Network::parse(&wallet.network);
+        let mut settings = self.get_settings();
+        if settings.network != network {
+            settings.network = network;
+            let _ = self.update_settings(settings);
+        }
+
         Ok(public_key)
     }
 
@@ -67,11 +78,7 @@ impl WalletService {
     }
 
     pub fn change_password(&self, old_password: &str, new_password: &str) -> Result<(), WalletError> {
-        if new_password.len() < 8 {
-            return Err(WalletError::Operation(anyhow::anyhow!(
-                "password must be at least 8 characters"
-            )));
-        }
+        Self::require_password_strength(new_password)?;
         let wallet = self
             .cached_wallet
             .lock()
@@ -114,10 +121,20 @@ impl WalletService {
             private_key: keypair_to_base64(&keypair),
             derivation_path: DEFAULT_DERIVATION_PATH.to_string(),
         };
-        let wallet = self.encrypt_wallet_file(&keypair, &payload, password)?;
+        let network = self.get_settings().network;
+        let wallet = self.encrypt_wallet_file(&keypair, &payload, password, network)?;
         self.storage.save(&wallet)?;
         *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
         Ok(wallet)
+    }
+
+    fn require_password_strength(password: &str) -> Result<(), WalletError> {
+        if password.len() < 8 {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "password must be at least 8 characters"
+            )));
+        }
+        Ok(())
     }
 
     fn encrypt_wallet_file(
@@ -125,12 +142,13 @@ impl WalletService {
         keypair: &Keypair,
         payload: &EncryptedPayload,
         password: &str,
+        network: Network,
     ) -> Result<WalletFile, WalletError> {
         self.reencrypt_wallet_file(
             &WalletFile {
                 version: WALLET_FILE_VERSION,
                 wallet_id: Uuid::new_v4().to_string(),
-                network: Network::SolanaMainnet.as_str().to_string(),
+                network: network.as_str().to_string(),
                 public_key: keypair.pubkey().to_string(),
                 created_at: Utc::now().to_rfc3339(),
                 crypto: CryptoEnvelope {
@@ -182,6 +200,18 @@ impl WalletService {
         wallet: &WalletFile,
         password: &str,
     ) -> Result<EncryptedPayload, WalletError> {
+        if wallet.version != WALLET_FILE_VERSION {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "unsupported wallet file version: {}",
+                wallet.version
+            )));
+        }
+        if wallet.crypto.kdf != KDF_NAME || wallet.crypto.cipher != CIPHER_NAME {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "unsupported wallet encryption algorithm"
+            )));
+        }
+
         let salt = BASE64
             .decode(&wallet.crypto.salt)
             .map_err(|_| WalletError::InvalidPassword)?;

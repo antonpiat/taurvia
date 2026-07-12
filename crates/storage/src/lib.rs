@@ -25,6 +25,37 @@ pub trait WalletStore: Send + Sync {
     fn delete(&self) -> Result<(), StorageError>;
 }
 
+/// Restrict owner read/write only (best-effort; no-op on non-Unix).
+fn restrict_owner_rw(path: &Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+    Ok(())
+}
+
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), StorageError> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let temp_path = path.with_extension("json.tmp");
+    {
+        let mut file = fs::File::create(&temp_path)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+    }
+    restrict_owner_rw(&temp_path)?;
+    fs::rename(&temp_path, path)?;
+    // Re-apply after rename in case the destination fs dropped mode bits.
+    restrict_owner_rw(path)?;
+    Ok(())
+}
+
 /// Filesystem-backed store: `{data_dir}/wallets/default.json`.
 pub struct FileWalletStore {
     wallet_path: PathBuf,
@@ -62,19 +93,8 @@ impl WalletStore for FileWalletStore {
     }
 
     fn save(&self, wallet: &WalletFile) -> Result<(), StorageError> {
-        if let Some(parent) = self.wallet_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
         let serialized = serde_json::to_vec(wallet)?;
-        let temp_path = self.wallet_path.with_extension("json.tmp");
-        {
-            let mut file = fs::File::create(&temp_path)?;
-            file.write_all(&serialized)?;
-            file.sync_all()?;
-        }
-        fs::rename(temp_path, &self.wallet_path)?;
-        Ok(())
+        atomic_write(&self.wallet_path, &serialized)
     }
 
     fn load(&self) -> Result<WalletFile, StorageError> {
@@ -115,23 +135,10 @@ impl AppConfigStore {
     }
 
     pub fn save(&self, settings: &AppSettings) -> Result<(), StorageError> {
-        if let Some(parent) = self.path.parent() {
-            fs::create_dir_all(parent)?;
-        }
         let serialized = serde_json::to_vec_pretty(settings)?;
-        let temp_path = self.path.with_extension("json.tmp");
-        {
-            let mut file = fs::File::create(&temp_path)?;
-            file.write_all(&serialized)?;
-            file.sync_all()?;
-        }
-        fs::rename(temp_path, &self.path)?;
-        Ok(())
+        atomic_write(&self.path, &serialized)
     }
 }
-
-/// Backward-compatible alias used by existing call sites / docs.
-pub type WalletStorage = FileWalletStore;
 
 #[cfg(test)]
 mod tests {
@@ -163,6 +170,21 @@ mod tests {
         storage.save(&wallet).unwrap();
         let loaded = storage.load().unwrap();
         assert_eq!(loaded.wallet_id, wallet.wallet_id);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn wallet_file_is_owner_rw_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let storage = FileWalletStore::new(dir.path());
+        storage.save(&sample_wallet()).unwrap();
+        let mode = fs::metadata(dir.path().join("wallets").join(DEFAULT_WALLET_FILENAME))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o600);
     }
 
     #[test]

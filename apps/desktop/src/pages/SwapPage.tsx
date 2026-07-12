@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useNavigate } from "react-router-dom";
 import { ArrowDownUp, ChevronDown, ChevronRight } from "lucide-react";
 import { TokenDropdown } from "@/components/TokenDropdown";
 import { PageHeader } from "@/components/PageHeader";
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
+import { isMainnet } from "@/lib/network";
 import { ApiError, SwapQuote, TokenInfo, walletApi } from "@/lib/tauri";
 
 const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
@@ -76,6 +78,7 @@ function looksLikeMintSymbol(symbol: string | null | undefined): boolean {
 }
 
 export function SwapPage() {
+  const navigate = useNavigate();
   const { solBalance, tokens, refreshBalances, settings, saveSettings, explorer, network } = useWallet();
   const [fromMint, setFromMint] = useState(WRAPPED_SOL);
   const [toMint, setToMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -298,6 +301,28 @@ export function SwapPage() {
   const slippagePercentLabel = `${(slippageBps / 100).toFixed(
     slippageBps % 100 === 0 ? 1 : 2,
   )}%`;
+
+  if (!isMainnet(network)) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <PageHeader
+          title="Swap"
+          description="Jupiter swaps are available on Solana Mainnet only."
+        />
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <p className="text-sm text-muted-foreground">
+              You are on Devnet. Switch to Mainnet in Settings → Network to use Swap.
+              Send and Receive still work on Devnet.
+            </p>
+            <Button variant="outline" onClick={() => navigate("/settings/network")}>
+              Open Network settings
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">

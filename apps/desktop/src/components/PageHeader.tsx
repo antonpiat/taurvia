@@ -1,17 +1,21 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({
   title,
   description,
   parent,
+  parentTo,
   actions,
   className,
 }: {
   title: string;
   description?: ReactNode;
-  /** When set, renders `Parent > Title` (e.g. Settings > View). */
+  /** When set, renders `Parent › Title` (e.g. Settings › View). */
   parent?: string;
+  /** Makes the parent segment a link (back to settings index). */
+  parentTo?: string;
   actions?: ReactNode;
   className?: string;
 }) {
@@ -26,7 +30,16 @@ export function PageHeader({
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           {parent ? (
             <span className="inline-flex flex-wrap items-baseline gap-x-2">
-              <span className="text-muted-foreground">{parent}</span>
+              {parentTo ? (
+                <Link
+                  to={parentTo}
+                  className="text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {parent}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">{parent}</span>
+              )}
               <span className="select-none text-border" aria-hidden>
                 ›
               </span>

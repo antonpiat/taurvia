@@ -17,7 +17,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/context/WalletContext";
 import { normalizeAppView, useLayoutMode, useSyncAppViewOnResize } from "@/lib/appView";
-import { networkShortLabel, productChainLabel } from "@/lib/network";
+import { networkShortLabel, productChainLabel, isMainnet } from "@/lib/network";
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_SECTIONS,
@@ -26,7 +26,7 @@ import { cn, formatUsd, shortenAddress } from "@/lib/utils";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/swap", label: "Swap", icon: ArrowLeftRight },
+  { to: "/swap", label: "Swap", icon: ArrowLeftRight, mainnetOnly: true },
   { to: "/send", label: "Send", icon: ArrowUpRight },
   { to: "/receive", label: "Receive", icon: ArrowDownLeft },
   { to: "/activity", label: "Activity", icon: Activity },
@@ -51,6 +51,7 @@ export function MainLayout() {
   const isDesktop = layout === "desktop";
   const networkLabel = networkShortLabel(network);
   const chainLabel = productChainLabel(network);
+  const visibleNav = navItems.filter((item) => !item.mainnetOnly || isMainnet(network));
   const [copied, setCopied] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const wasOnSettings = useRef(false);
@@ -73,7 +74,10 @@ export function MainLayout() {
   );
 
   const settingsActive = location.pathname.startsWith("/settings");
-  const settingsPath = `/settings/${DEFAULT_SETTINGS_SECTION}`;
+  // Desktop uses sidebar section links; phone/compact land on the settings index.
+  const settingsPath = isDesktop
+    ? `/settings/${DEFAULT_SETTINGS_SECTION}`
+    : "/settings";
 
   useEffect(() => {
     if (settingsActive && !wasOnSettings.current) {
@@ -136,7 +140,7 @@ export function MainLayout() {
           </div>
 
           <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-            {navItems.map(({ to, label, icon: Icon }) => (
+            {visibleNav.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -367,8 +371,13 @@ export function MainLayout() {
 
       {isPhone && (
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur">
-          <div className="mx-auto grid max-w-lg grid-cols-6 gap-0.5 px-1 py-1.5">
-            {navItems.map(({ to, label, icon: Icon }) => (
+          <div
+            className="mx-auto grid max-w-lg gap-0.5 px-1 py-1.5"
+            style={{
+              gridTemplateColumns: `repeat(${visibleNav.length + 1}, minmax(0, 1fr))`,
+            }}
+          >
+            {visibleNav.map(({ to, label, icon: Icon }) => (
               <NavLink
                 key={to}
                 to={to}
