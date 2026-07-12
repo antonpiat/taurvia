@@ -48,9 +48,9 @@ async unlockWallet(password: string) : Promise<Result<string, ApiError>> {
 async lockWallet() : Promise<void> {
     await TAURI_INVOKE("lock_wallet");
 },
-async revealMnemonic(password: string) : Promise<Result<string, ApiError>> {
+async revealMnemonic() : Promise<Result<string, ApiError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("reveal_mnemonic", { password }) };
+    return { status: "ok", data: await TAURI_INVOKE("reveal_mnemonic") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

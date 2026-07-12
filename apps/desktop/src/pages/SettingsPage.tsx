@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { SelectDropdown } from "@/components/SelectDropdown";
 import { MaskedPhrase } from "@/components/MaskedPhrase";
 import { PageHeader } from "@/components/PageHeader";
+import { PasswordRequirements } from "@/components/PasswordRequirements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ import {
   networkShortLabel,
   toNetwork,
 } from "@/lib/network";
+import { isPasswordStrong, passwordStrengthError } from "@/lib/password";
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_SECTIONS,
@@ -121,20 +123,19 @@ export function SettingsPage() {
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [switchingNetwork, setSwitchingNetwork] = useState(false);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
-  const [password, setPassword] = useState("");
   const [removePassword, setRemovePassword] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [exportPassword, setExportPassword] = useState("");
   const [mnemonic, setMnemonic] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [seedError, setSeedError] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportMessage, setExportMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [seedLoading, setSeedLoading] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -151,6 +152,30 @@ export function SettingsPage() {
     ((settings.default_slippage_bps ?? 50) / 100).toString(),
   );
   const [savingPrefs, setSavingPrefs] = useState(false);
+
+  useEffect(() => {
+    if (!seedOpen) return;
+    let cancelled = false;
+    setSeedLoading(true);
+    setSeedError(null);
+    setMnemonic(null);
+    void (async () => {
+      try {
+        const phrase = await walletApi.revealMnemonic();
+        if (!cancelled) setMnemonic(phrase);
+      } catch (err) {
+        if (!cancelled) {
+          const apiError = err as ApiError;
+          setSeedError(apiError.message ?? "Failed to load recovery phrase");
+        }
+      } finally {
+        if (!cancelled) setSeedLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [seedOpen]);
 
   useEffect(() => {
     setOpenMenu(null);
@@ -213,25 +238,12 @@ export function SettingsPage() {
     }
   };
 
-  const handleRevealSeed = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const phrase = await walletApi.revealMnemonic(password);
-      setMnemonic(phrase);
-    } catch (err) {
-      const apiError = err as ApiError;
-      setError(apiError.message ?? "Failed to reveal seed phrase");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleChangePassword = async () => {
     setPasswordError(null);
     setPasswordMessage(null);
-    if (newPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters");
+    const strengthError = passwordStrengthError(newPassword);
+    if (strengthError) {
+      setPasswordError(strengthError);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -678,32 +690,28 @@ export function SettingsPage() {
         onOpenChange={(open) => {
           setSeedOpen(open);
           if (!open) {
-            setPassword("");
             setMnemonic(null);
-            setError(null);
+            setSeedError(null);
+            setSeedLoading(false);
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reveal recovery phrase</DialogTitle>
-            <DialogDescription>Enter your password to view the seed phrase.</DialogDescription>
+            <DialogTitle>Recovery phrase</DialogTitle>
+            <DialogDescription>
+              Anyone with these words can control your funds. Hover or focus the phrase to
+              unblur it.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="reveal-password">Password</Label>
-              <Input
-                id="reveal-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
+            {seedLoading && (
+              <p className="text-sm text-muted-foreground">Loading recovery phrase…</p>
+            )}
+            {seedError && (
+              <Alert className="border-destructive/40 text-destructive">{seedError}</Alert>
+            )}
             {mnemonic && <MaskedPhrase words={words} />}
-            <Button onClick={() => void handleRevealSeed()} disabled={loading || !password}>
-              {loading ? "Verifying..." : "Reveal"}
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -725,7 +733,8 @@ export function SettingsPage() {
           <DialogHeader>
             <DialogTitle>Change wallet password</DialogTitle>
             <DialogDescription>
-              Re-encrypts your wallet file with a new password. Minimum 8 characters.
+              Re-encrypts your wallet file with a new password. Use a strong password with
+              letters, numbers, and a special character.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -734,6 +743,7 @@ export function SettingsPage() {
               <Input
                 id="old-password"
                 type="password"
+                autoComplete="current-password"
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
               />
@@ -743,18 +753,34 @@ export function SettingsPage() {
               <Input
                 id="new-password"
                 type="password"
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
+              <PasswordRequirements password={newPassword} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm new password</Label>
               <Input
                 id="confirm-password"
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
+              {confirmPassword.length > 0 && (
+                <p
+                  className={
+                    newPassword === confirmPassword
+                      ? "text-xs text-emerald-600 dark:text-emerald-400"
+                      : "text-xs text-destructive"
+                  }
+                >
+                  {newPassword === confirmPassword
+                    ? "Passwords match"
+                    : "Passwords do not match"}
+                </p>
+              )}
             </div>
             {passwordError && (
               <Alert className="border-destructive/40 text-destructive">{passwordError}</Alert>
@@ -762,7 +788,12 @@ export function SettingsPage() {
             {passwordMessage && <Alert>{passwordMessage}</Alert>}
             <Button
               onClick={() => void handleChangePassword()}
-              disabled={changingPassword || !oldPassword || !newPassword || !confirmPassword}
+              disabled={
+                changingPassword ||
+                !oldPassword ||
+                !isPasswordStrong(newPassword) ||
+                newPassword !== confirmPassword
+              }
             >
               {changingPassword ? "Updating..." : "Update password"}
             </Button>

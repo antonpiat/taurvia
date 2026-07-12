@@ -58,11 +58,8 @@ pub fn lock_wallet(state: State<'_, AppState>) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn reveal_mnemonic(password: String, state: State<'_, AppState>) -> CommandResult<String> {
-    state
-        .wallet
-        .reveal_mnemonic(&password)
-        .map_err(map_wallet_error)
+pub fn reveal_mnemonic(state: State<'_, AppState>) -> CommandResult<String> {
+    state.wallet.reveal_mnemonic().map_err(map_wallet_error)
 }
 
 #[tauri::command]

@@ -50,6 +50,7 @@ impl WalletService {
         *session = Some(WalletSession {
             public_key: public_key.clone(),
             keypair,
+            mnemonic: payload.mnemonic.clone(),
         });
         *self.cached_wallet.lock().unwrap() = Some(wallet.clone());
 
@@ -64,10 +65,11 @@ impl WalletService {
         Ok(public_key)
     }
 
-    pub fn reveal_mnemonic(&self, password: &str) -> Result<String, WalletError> {
-        let wallet = self.storage.load()?;
-        let payload = self.decrypt_payload(&wallet, password)?;
-        Ok(payload.mnemonic)
+    /// Returns the recovery phrase for the unlocked session. Requires unlock (no password re-prompt).
+    pub fn reveal_mnemonic(&self) -> Result<String, WalletError> {
+        let session = self.session.lock().unwrap();
+        let session = session.as_ref().ok_or(WalletError::Locked)?;
+        Ok(session.mnemonic.clone())
     }
 
     pub fn remove_wallet(&self, password: &str) -> Result<(), WalletError> {
@@ -128,10 +130,15 @@ impl WalletService {
         Ok(wallet)
     }
 
+    /// Phantom-style: 8+ chars with upper, lower, digit, and special character.
     fn require_password_strength(password: &str) -> Result<(), WalletError> {
-        if password.len() < 8 {
+        let has_upper = password.chars().any(|c| c.is_ascii_uppercase());
+        let has_lower = password.chars().any(|c| c.is_ascii_lowercase());
+        let has_digit = password.chars().any(|c| c.is_ascii_digit());
+        let has_special = password.chars().any(|c| !c.is_ascii_alphanumeric());
+        if password.len() < 8 || !has_upper || !has_lower || !has_digit || !has_special {
             return Err(WalletError::Operation(anyhow::anyhow!(
-                "password must be at least 8 characters"
+                "password must contain at least 8 characters including 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character"
             )));
         }
         Ok(())
