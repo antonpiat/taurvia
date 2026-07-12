@@ -76,6 +76,10 @@ fn default_hide_balances() -> bool {
     true
 }
 
+fn default_swap_favorite_tokens() -> Vec<crate::TokenInfo> {
+    Vec::new()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct AppSettings {
     /// Optional user override (Advanced). Empty / None = managed default for `network`.
@@ -107,6 +111,9 @@ pub struct AppSettings {
     /// Last window height in logical pixels. Restored on launch when set.
     #[serde(default)]
     pub window_height: Option<u32>,
+    /// User-added Swap tokens (keyword search selections). Instant on reopen.
+    #[serde(default = "default_swap_favorite_tokens")]
+    pub swap_favorite_tokens: Vec<crate::TokenInfo>,
 }
 
 impl Default for AppSettings {
@@ -122,6 +129,7 @@ impl Default for AppSettings {
             app_view: AppViewKind::Desktop,
             window_width: None,
             window_height: None,
+            swap_favorite_tokens: default_swap_favorite_tokens(),
         }
     }
 }

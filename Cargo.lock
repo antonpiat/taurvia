@@ -1240,7 +1240,7 @@ checksum = "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
 
 [[package]]
 name = "crypto"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -3265,7 +3265,7 @@ dependencies = [
 
 [[package]]
 name = "models"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "serde",
  "specta",
@@ -7328,7 +7328,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "storage"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "models",
  "serde_json",
@@ -7811,7 +7811,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-desktop"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "models",
  "specta",
@@ -7826,7 +7826,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-solana"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -8540,7 +8540,7 @@ dependencies = [
 
 [[package]]
 name = "wallet-core"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

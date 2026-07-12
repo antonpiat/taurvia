@@ -41,7 +41,7 @@ export const walletApi = {
     unwrap(commands.importWallet(mnemonic, password)),
   unlockWallet: (password: string) => unwrap(commands.unlockWallet(password)),
   lockWallet: () => commands.lockWallet(),
-  revealMnemonic: (password: string) => unwrap(commands.revealMnemonic(password)),
+  revealMnemonic: () => unwrap(commands.revealMnemonic()),
   removeWallet: (password: string) => unwrap(commands.removeWallet(password)),
   changeWalletPassword: (oldPassword: string, newPassword: string) =>
     unwrap(commands.changeWalletPassword(oldPassword, newPassword)),
@@ -59,6 +59,7 @@ export const walletApi = {
   sendSpl: (password: string, mint: string, to: string, amount: number) =>
     unwrap(commands.sendSpl(password, mint, to, amount)),
   resolveToken: (mint: string) => unwrap(commands.resolveToken(mint)),
+  searchTokens: (query: string) => unwrap(commands.searchTokens(query)),
   previewSwapQuote: (
     inputMint: string,
     outputMint: string,

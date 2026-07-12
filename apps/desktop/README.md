@@ -1,6 +1,6 @@
 # Taurvia desktop app
 
-Version **0.4.1**. See the [root README](../../README.md) for architecture, setup, and security docs.
+Version **0.4.2**. See the [root README](../../README.md) for architecture, setup, and security docs.
 
 Includes dashboard portfolio USD, token logos/prices, and a Jupiter-backed Swap page (`/swap`).
 

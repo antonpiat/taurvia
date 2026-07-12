@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/misc";
 import { PageHeader } from "@/components/PageHeader";
 import { useWallet } from "@/context/WalletContext";
+import { localLogoForMint, withLocalLogo, WRAPPED_SOL } from "@/lib/tokenCatalog";
 import { formatSol, formatUsdMaybeHidden, formatHiddenBalance, shortenAddress } from "@/lib/utils";
 import { Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
 
@@ -14,7 +15,8 @@ function TokenAvatar({ symbol, logoUri }: { symbol: string; logoUri: string | nu
         src={logoUri}
         alt={symbol}
         className="h-9 w-9 shrink-0 rounded-full border border-border bg-background object-cover"
-        loading="lazy"
+        loading="eager"
+        decoding="async"
       />
     );
   }
@@ -109,7 +111,7 @@ export function DashboardPage() {
             <div className="flex min-w-0 items-center gap-3">
               <TokenAvatar
                 symbol="SOL"
-                logoUri="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                logoUri={localLogoForMint(WRAPPED_SOL)}
               />
               <div className="min-w-0">
                 <p className="font-medium">SOL</p>
@@ -195,7 +197,10 @@ export function DashboardPage() {
                 className="flex flex-col gap-3 rounded-lg border border-border bg-background/50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <TokenAvatar symbol={token.symbol} logoUri={token.logo_uri} />
+                  <TokenAvatar
+                    symbol={token.symbol}
+                    logoUri={withLocalLogo(token).logo_uri}
+                  />
                   <div className="min-w-0">
                     <p className="font-medium">{token.symbol}</p>
                     <p className="truncate text-xs text-muted-foreground">{token.name}</p>

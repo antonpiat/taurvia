@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   app_view: "desktop",
   window_width: null,
   window_height: null,
+  swap_favorite_tokens: [],
 };
 
 interface WalletContextValue {
@@ -143,6 +144,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         default_slippage_bps: next.default_slippage_bps ?? DEFAULT_SETTINGS.default_slippage_bps,
         auto_lock_minutes: normalizeAutoLockMinutes(next.auto_lock_minutes),
         network: toNetwork(next.network ?? DEFAULT_SETTINGS.network),
+        swap_favorite_tokens: next.swap_favorite_tokens ?? [],
       };
       setSettings(merged);
       return merged;

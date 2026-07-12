@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PasswordRequirements } from "@/components/PasswordRequirements";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
+import { isPasswordStrong, passwordStrengthError } from "@/lib/password";
 import { ApiError, walletApi } from "@/lib/tauri";
 
 export function SetPasswordPage() {
@@ -41,10 +43,14 @@ export function SetPasswordPage() {
     };
   }, [navigate]);
 
+  const passwordsMatch = confirm.length > 0 && password === confirm;
+  const canSubmit = isPasswordStrong(password) && passwordsMatch && !loading;
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    const strengthError = passwordStrengthError(password);
+    if (strengthError) {
+      setError(strengthError);
       return;
     }
     if (password !== confirm) {
@@ -89,21 +95,35 @@ export function SetPasswordPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <PasswordRequirements password={password} className="pt-1" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm">Confirm password</Label>
               <Input
                 id="confirm"
                 type="password"
+                autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
               />
+              {confirm.length > 0 && (
+                <p
+                  className={
+                    passwordsMatch
+                      ? "text-xs text-emerald-600 dark:text-emerald-400"
+                      : "text-xs text-destructive"
+                  }
+                >
+                  {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                </p>
+              )}
             </div>
             {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
-            <Button className="w-full" type="submit" disabled={loading}>
+            <Button className="w-full" type="submit" disabled={!canSubmit}>
               {loading ? "Securing wallet..." : mode === "import" ? "Import wallet" : "Create wallet"}
             </Button>
           </form>

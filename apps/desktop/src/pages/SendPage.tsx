@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
 import { ApiError, SendPreview, walletApi } from "@/lib/tauri";
+import { localLogoForMint, withLocalLogo, WRAPPED_SOL } from "@/lib/tokenCatalog";
 import { shortenAddress } from "@/lib/utils";
 
 const SOL_MINT = "sol";
@@ -43,18 +44,18 @@ export function SendPage() {
         mint: SOL_MINT,
         symbol: "SOL",
         name: "Solana",
-        logo_uri:
-          "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+        logo_uri: localLogoForMint(WRAPPED_SOL),
         balanceUi: solBalance ?? 0,
       },
     ];
     for (const token of tokens) {
+      const branded = withLocalLogo(token);
       options.push({
-        mint: token.mint,
-        symbol: token.symbol,
-        name: token.name,
-        logo_uri: token.logo_uri,
-        balanceUi: token.ui_amount,
+        mint: branded.mint,
+        symbol: branded.symbol,
+        name: branded.name,
+        logo_uri: branded.logo_uri,
+        balanceUi: branded.ui_amount,
       });
     }
     return options;

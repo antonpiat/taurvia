@@ -9,6 +9,8 @@ use crate::WalletError;
 pub(crate) struct WalletSession {
     pub public_key: String,
     pub keypair: Keypair,
+    /// Cleared with the session on lock. Used for recovery-phrase reveal while unlocked.
+    pub mnemonic: String,
 }
 
 pub struct WalletService {

@@ -38,22 +38,34 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "password123").unwrap();
+        service.create_wallet(&mnemonic, "Password123!").unwrap();
         assert!(service.wallet_exists());
-        let pubkey = service.unlock("password123").unwrap();
+        let pubkey = service.unlock("Password123!").unwrap();
         assert!(!pubkey.is_empty());
-        let revealed = service.reveal_mnemonic("password123").unwrap();
+        let mut revealed = service.reveal_mnemonic().unwrap();
         assert_eq!(revealed, mnemonic);
         service
-            .change_password("password123", "password456")
+            .change_password("Password123!", "Password456!")
             .unwrap();
         service.lock();
         assert!(!service.is_unlocked());
-        let pubkey2 = service.unlock("password456").unwrap();
+        assert!(service.reveal_mnemonic().is_err());
+        let pubkey2 = service.unlock("Password456!").unwrap();
         assert_eq!(pubkey, pubkey2);
-        let exported = service.export_wallet("password456").unwrap();
+        revealed = service.reveal_mnemonic().unwrap();
+        assert_eq!(revealed, mnemonic);
+        let exported = service.export_wallet("Password456!").unwrap();
         assert!(exported.contains("crypto"));
         assert!(!exported.contains(&mnemonic));
+    }
+
+    #[tokio::test]
+    async fn weak_password_rejected_on_create() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
+        let mnemonic = service.generate_mnemonic().unwrap();
+        let err = service.create_wallet(&mnemonic, "password123").unwrap_err();
+        assert!(err.to_string().contains("uppercase"));
     }
 
     #[tokio::test]
@@ -61,7 +73,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "password123").unwrap();
+        service.create_wallet(&mnemonic, "Password123!").unwrap();
         service
             .change_network(models::Network::SolanaDevnet)
             .unwrap();
@@ -79,13 +91,13 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = WalletService::new(dir.path(), Some("http://localhost:8899"));
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "password123").unwrap();
-        service.unlock("password123").unwrap();
+        service.create_wallet(&mnemonic, "Password123!").unwrap();
+        service.unlock("Password123!").unwrap();
         service
             .change_network(models::Network::SolanaDevnet)
             .unwrap();
 
-        let err = service
+        let preview_err = service
             .preview_swap(
                 "So11111111111111111111111111111111111111112",
                 "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -94,6 +106,15 @@ mod tests {
             )
             .await
             .unwrap_err();
-        assert!(err.to_string().contains("Mainnet"));
+        assert!(preview_err.to_string().contains("Mainnet"));
+
+        let search_err = service.search_tokens("ray").await.unwrap_err();
+        assert!(search_err.to_string().contains("Mainnet"));
+
+        let resolve_err = service
+            .resolve_token("So11111111111111111111111111111111111111112")
+            .await
+            .unwrap_err();
+        assert!(resolve_err.to_string().contains("Mainnet"));
     }
 }

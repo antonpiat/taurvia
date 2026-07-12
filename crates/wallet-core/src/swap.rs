@@ -1,4 +1,4 @@
-use taurvia_solana::{normalize_mint, resolve_mint, ui_amount_to_raw};
+use taurvia_solana::{normalize_mint, resolve_mint, search_tokens, ui_amount_to_raw};
 use models::{Network, SwapQuote, SwapResult, TokenInfo};
 
 use crate::session::WalletService;
@@ -16,8 +16,14 @@ impl WalletService {
     }
 
     pub async fn resolve_token(&self, mint: &str) -> Result<TokenInfo, WalletError> {
+        self.require_mainnet_for_swap()?;
         let mint = normalize_mint(mint).map_err(WalletError::Operation)?;
         resolve_mint(&mint).await.map_err(WalletError::Operation)
+    }
+
+    pub async fn search_tokens(&self, query: &str) -> Result<Vec<TokenInfo>, WalletError> {
+        self.require_mainnet_for_swap()?;
+        search_tokens(query).await.map_err(WalletError::Operation)
     }
 
     pub async fn preview_swap(

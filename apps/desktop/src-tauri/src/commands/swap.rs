@@ -18,6 +18,19 @@ pub async fn resolve_token(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn search_tokens(
+    query: String,
+    state: State<'_, AppState>,
+) -> CommandResult<Vec<TokenInfo>> {
+    state
+        .wallet
+        .search_tokens(&query)
+        .await
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn preview_swap_quote(
     input_mint: String,
     output_mint: String,

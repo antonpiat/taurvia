@@ -9,17 +9,43 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
-- Settings → Network: switch Solana Mainnet ↔ Devnet (same address; no password)
-- Managed Devnet RPC default (`https://api.devnet.solana.com`)
-
 ### Changed
-
-- RPC resolution is network-aware (managed default follows active cluster)
-- Swap is Mainnet-only (hidden/disabled on Devnet; Jupiter has no Devnet path here)
 
 ### Fixed
 
 ### Security
+
+---
+
+## [0.4.2] - 2026-07-12
+
+### Added
+
+- Settings → Network: switch Solana Mainnet ↔ Devnet (same address; no password)
+- Managed Devnet RPC default (`https://api.devnet.solana.com`)
+- Phantom-style password strength checks on create/change (upper, lower, number, special)
+- Bundled icons for curated Swap tokens (SOL, USDC, USDT, JUP, BONK) for instant paint
+- Keyword token search in Swap picker (local filter + debounced Jupiter search)
+- Persist Swap favorite tokens in app settings
+- Settings → Wallet: manage (remove) user-added Swap tokens
+
+### Changed
+
+- RPC resolution is network-aware (managed default follows active cluster)
+- Swap is Mainnet-only (UI + Rust enforcement; Jupiter has no Devnet path here)
+- Recovery phrase modal shows seed only while unlocked (no password re-prompt)
+- Desktop CI builds only when `tauri.conf.json` product version increases on `main`
+- Swap mint paste moved under Advanced; search-in-picker is the primary add path
+
+### Fixed
+
+- `update_app_settings` can no longer desync cluster from the wallet file
+
+### Security
+
+- Wallet/config/backup files written with owner-only permissions on Unix (`0600`)
+- Export backup requires an absolute path with an existing parent directory
+- Wallet decrypt rejects unknown file version / KDF / cipher metadata
 
 ---
 
@@ -230,7 +256,8 @@ When cutting a new version:
 6. Create a GitHub Release tagged `vx.y.z` and attach binaries from `target/release/bundle/`.
 7. Copy the new section into the GitHub Release notes.
 
-[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/antonpiat/taurvia/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/antonpiat/taurvia/releases/tag/v0.4.1
 [0.4.0]: https://github.com/antonpiat/taurvia/releases/tag/v0.4.0
 [0.3.2]: https://github.com/antonpiat/taurvia/releases/tag/v0.3.2

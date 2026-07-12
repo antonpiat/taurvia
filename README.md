@@ -175,7 +175,7 @@ taurvia/
 
 ## Version
 
-Current release: **0.4.1** — see [Changelog](doc/CHANGELOG.md).
+Current release: **0.4.2** — see [Changelog](doc/CHANGELOG.md).
 
 ## License
 
