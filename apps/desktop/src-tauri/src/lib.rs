@@ -34,6 +34,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::send_sol,
         commands::send_spl,
         commands::resolve_token,
+        commands::search_tokens,
         commands::preview_swap_quote,
         commands::execute_swap,
         commands::get_app_settings,

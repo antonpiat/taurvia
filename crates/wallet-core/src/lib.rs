@@ -97,7 +97,7 @@ mod tests {
             .change_network(models::Network::SolanaDevnet)
             .unwrap();
 
-        let err = service
+        let preview_err = service
             .preview_swap(
                 "So11111111111111111111111111111111111111112",
                 "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -106,6 +106,15 @@ mod tests {
             )
             .await
             .unwrap_err();
-        assert!(err.to_string().contains("Mainnet"));
+        assert!(preview_err.to_string().contains("Mainnet"));
+
+        let search_err = service.search_tokens("ray").await.unwrap_err();
+        assert!(search_err.to_string().contains("Mainnet"));
+
+        let resolve_err = service
+            .resolve_token("So11111111111111111111111111111111111111112")
+            .await
+            .unwrap_err();
+        assert!(resolve_err.to_string().contains("Mainnet"));
     }
 }

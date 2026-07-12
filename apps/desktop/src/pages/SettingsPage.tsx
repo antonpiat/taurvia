@@ -38,7 +38,9 @@ import {
   isSettingsSectionId,
   type SettingsSectionId,
 } from "@/lib/settingsNav";
+import { withLocalLogo } from "@/lib/tokenCatalog";
 import { ApiError, AppSettings, ExplorerKind, Network, walletApi } from "@/lib/tauri";
+import { shortenAddress } from "@/lib/utils";
 
 const APP_VIEW_OPTIONS: Array<{
   value: AppViewKind;
@@ -100,7 +102,7 @@ const NETWORK_OPTIONS: Array<{
 
 const SECTION_COPY: Record<SettingsSectionId, string> = {
   view: "Layout and window size. Manual sizes are kept across restarts.",
-  wallet: "Session preferences for this device.",
+  wallet: "Session preferences and tokens you added for Swap.",
   security: "Protect access to your wallet on this device.",
   transactions: "Swap slippage and Solana explorer links.",
   network: "Active cluster and RPC endpoint.",
@@ -214,6 +216,9 @@ export function SettingsPage() {
       explorer: normalizeExplorer(patch.explorer ?? settings.explorer),
       app_view: normalizeAppView(patch.app_view ?? settings.app_view),
     };
+    const favoritesUnchanged =
+      JSON.stringify(next.swap_favorite_tokens ?? []) ===
+      JSON.stringify(settings.swap_favorite_tokens ?? []);
     const unchanged =
       next.app_view === normalizeAppView(settings.app_view) &&
       next.auto_lock_minutes === normalizeAutoLockMinutes(settings.auto_lock_minutes) &&
@@ -221,7 +226,8 @@ export function SettingsPage() {
       next.default_slippage_bps === (settings.default_slippage_bps ?? 50) &&
       next.hide_balances === settings.hide_balances &&
       (next.window_width ?? null) === (settings.window_width ?? null) &&
-      (next.window_height ?? null) === (settings.window_height ?? null);
+      (next.window_height ?? null) === (settings.window_height ?? null) &&
+      favoritesUnchanged;
     if (unchanged) return;
 
     setSavingPrefs(true);
@@ -496,30 +502,109 @@ export function SettingsPage() {
         )}
 
         {section === "wallet" && (
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <SelectDropdown
-                label="Auto-lock timeout"
-                value={autoLockValue}
-                options={AUTO_LOCK_OPTIONS.map((option) => ({
-                  value: option.value,
-                  label: option.label,
-                  description: option.description,
-                }))}
-                open={openMenu === "auto-lock"}
-                disabled={savingPrefs}
-                onOpenChange={(open) => setOpenMenu(open ? "auto-lock" : null)}
-                onChange={(next) => {
-                  const option = AUTO_LOCK_OPTIONS.find((item) => item.value === next);
-                  void patchSettings({
-                    auto_lock_minutes: normalizeAutoLockMinutes(
-                      option?.minutes ?? DEFAULT_AUTO_LOCK_MINUTES,
-                    ),
-                  });
-                }}
-              />
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardContent className="space-y-4 pt-6">
+                <SelectDropdown
+                  label="Auto-lock timeout"
+                  value={autoLockValue}
+                  options={AUTO_LOCK_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                    description: option.description,
+                  }))}
+                  open={openMenu === "auto-lock"}
+                  disabled={savingPrefs}
+                  onOpenChange={(open) => setOpenMenu(open ? "auto-lock" : null)}
+                  onChange={(next) => {
+                    const option = AUTO_LOCK_OPTIONS.find((item) => item.value === next);
+                    void patchSettings({
+                      auto_lock_minutes: normalizeAutoLockMinutes(
+                        option?.minutes ?? DEFAULT_AUTO_LOCK_MINUTES,
+                      ),
+                    });
+                  }}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-3 pt-6">
+                <div>
+                  <p className="text-sm font-medium">Added Swap tokens</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Only tokens you add via Swap search are saved on this device (up to 50).
+                    Default tokens (SOL, USDC, USDT, JUP, BONK) are built in and not stored.
+                  </p>
+                </div>
+                {(settings.swap_favorite_tokens ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No custom tokens yet. Search and select one on the Swap page.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(settings.swap_favorite_tokens ?? []).map((token) => {
+                      const row = withLocalLogo(token);
+                      return (
+                        <li
+                          key={row.mint}
+                          className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            {row.logo_uri ? (
+                              <img
+                                src={row.logo_uri}
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded-full border border-border object-cover"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-secondary text-xs font-semibold">
+                                {row.symbol.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">{row.symbol}</p>
+                              <p className="truncate font-mono text-xs text-muted-foreground">
+                                {shortenAddress(row.mint)}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={savingPrefs}
+                            onClick={() =>
+                              void patchSettings({
+                                swap_favorite_tokens: (
+                                  settings.swap_favorite_tokens ?? []
+                                ).filter((t) => t.mint !== row.mint),
+                              })
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {(settings.swap_favorite_tokens ?? []).length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={savingPrefs}
+                    onClick={() => void patchSettings({ swap_favorite_tokens: [] })}
+                  >
+                    Remove all
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {section === "security" && (

@@ -19,52 +19,18 @@ import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
 import { isMainnet } from "@/lib/network";
+import {
+  MAJOR_TOKENS,
+  MAX_SWAP_FAVORITES,
+  WRAPPED_SOL,
+  isCuratedMint,
+  toStoredFavorite,
+  withLocalLogo,
+} from "@/lib/tokenCatalog";
 import { ApiError, SwapQuote, TokenInfo, walletApi } from "@/lib/tauri";
 
-const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
 const DEFAULT_SLIPPAGE_BPS = 50;
 const SAME_TOKEN_ERROR = "Choose two different tokens to continue.";
-
-const MAJOR_TOKENS: TokenInfo[] = [
-  {
-    mint: WRAPPED_SOL,
-    symbol: "SOL",
-    name: "Solana",
-    decimals: 9,
-    logo_uri:
-      "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
-  },
-  {
-    mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    symbol: "USDC",
-    name: "USD Coin",
-    decimals: 6,
-    logo_uri:
-      "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
-  },
-  {
-    mint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-    symbol: "USDT",
-    name: "Tether USD",
-    decimals: 6,
-    logo_uri:
-      "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg",
-  },
-  {
-    mint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-    symbol: "JUP",
-    name: "Jupiter",
-    decimals: 6,
-    logo_uri: "https://static.jup.ag/jup/icon.png",
-  },
-  {
-    mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-    symbol: "BONK",
-    name: "Bonk",
-    decimals: 5,
-    logo_uri: "https://arweave.net/hQiPZOsRZXGXBJd_82PhVdlM_hACsT_q6wqwf5cSY7I",
-  },
-];
 
 type SelectableToken = TokenInfo & { balanceUi?: number };
 
@@ -90,7 +56,11 @@ export function SwapPage() {
     ((settings.default_slippage_bps || DEFAULT_SLIPPAGE_BPS) / 100).toString(),
   );
   const [pasteMint, setPasteMint] = useState("");
-  const [extraTokens, setExtraTokens] = useState<TokenInfo[]>([]);
+  const [extraTokens, setExtraTokens] = useState<TokenInfo[]>(() =>
+    (settings.swap_favorite_tokens ?? [])
+      .filter((t) => !isCuratedMint(t.mint))
+      .map(withLocalLogo),
+  );
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pickerSide, setPickerSide] = useState<"from" | "to" | null>(null);
   const [quote, setQuote] = useState<SwapQuote | null>(null);
@@ -107,6 +77,20 @@ export function SwapPage() {
     setSlippageInput((bps / 100).toString());
   }, [settings.default_slippage_bps]);
 
+  useEffect(() => {
+    const favorites = (settings.swap_favorite_tokens ?? [])
+      .filter((t) => !isCuratedMint(t.mint))
+      .map(withLocalLogo);
+    setExtraTokens((prev) => {
+      const map = new Map<string, TokenInfo>();
+      for (const t of favorites) map.set(t.mint, t);
+      for (const t of prev) {
+        if (!map.has(t.mint) && !isCuratedMint(t.mint)) map.set(t.mint, withLocalLogo(t));
+      }
+      return Array.from(map.values());
+    });
+  }, [settings.swap_favorite_tokens]);
+
   const selectable = useMemo(() => {
     const map = new Map<string, SelectableToken>();
     map.set(WRAPPED_SOL, {
@@ -114,20 +98,20 @@ export function SwapPage() {
       balanceUi: solBalance ?? 0,
     });
     for (const token of tokens) {
-      map.set(token.mint, {
+      map.set(token.mint, withLocalLogo({
         mint: token.mint,
         symbol: token.symbol,
         name: token.name,
         decimals: token.decimals,
         logo_uri: token.logo_uri,
         balanceUi: token.ui_amount,
-      });
+      }));
     }
     for (const major of MAJOR_TOKENS) {
       if (!map.has(major.mint)) map.set(major.mint, major);
     }
     for (const extra of extraTokens) {
-      if (!map.has(extra.mint)) map.set(extra.mint, extra);
+      if (!map.has(extra.mint)) map.set(extra.mint, withLocalLogo(extra));
     }
     return Array.from(map.values());
   }, [extraTokens, solBalance, tokens]);
@@ -186,6 +170,20 @@ export function SwapPage() {
     setPickerSide(null);
   };
 
+  const persistFavorite = (info: TokenInfo) => {
+    const stored = toStoredFavorite(info);
+    const display = withLocalLogo(info);
+    setExtraTokens((prev) =>
+      prev.some((t) => t.mint === display.mint) ? prev : [...prev, display],
+    );
+    // Curated majors are always in the picker — do not write them to config.
+    if (!stored) return;
+    const existing = settings.swap_favorite_tokens ?? [];
+    if (existing.some((t) => t.mint === stored.mint)) return;
+    const favorites = [stored, ...existing].slice(0, MAX_SWAP_FAVORITES);
+    void saveSettings({ ...settings, swap_favorite_tokens: favorites });
+  };
+
   const handleResolveMint = async () => {
     setError(null);
     const mint = pasteMint.trim();
@@ -196,9 +194,7 @@ export function SwapPage() {
     setLoading(true);
     try {
       const info = await walletApi.resolveToken(mint);
-      setExtraTokens((prev) =>
-        prev.some((token) => token.mint === info.mint) ? prev : [...prev, info],
-      );
+      persistFavorite(info);
       setToMint(info.mint);
       setPasteMint("");
       setQuote(null);
@@ -346,6 +342,8 @@ export function SwapPage() {
             open={pickerSide === "from"}
             onOpenChange={(open) => setPickerSide(open ? "from" : null)}
             onSelect={(mint) => handleSelectToken("from", mint)}
+            onAddToken={persistFavorite}
+            enableRemoteSearch
           />
 
           <div className="flex justify-center">
@@ -364,6 +362,8 @@ export function SwapPage() {
             open={pickerSide === "to"}
             onOpenChange={(open) => setPickerSide(open ? "to" : null)}
             onSelect={(mint) => handleSelectToken("to", mint)}
+            onAddToken={persistFavorite}
+            enableRemoteSearch
           />
 
           <div className="space-y-2">
@@ -445,7 +445,7 @@ export function SwapPage() {
                 <div className="space-y-2">
                   <Label htmlFor="paste-mint">Custom token mint address</Label>
                   <p className="text-xs text-muted-foreground">
-                    Use this only if your token does not appear in the list.
+                    Prefer search in the token picker. Paste a mint only if search cannot find it.
                   </p>
                   <div className="flex gap-2">
                     <Input

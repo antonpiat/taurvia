@@ -168,6 +168,14 @@ async resolveToken(mint: string) : Promise<Result<TokenInfo, ApiError>> {
     else return { status: "error", error: e  as any };
 }
 },
+async searchTokens(query: string) : Promise<Result<TokenInfo[], ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("search_tokens", { query }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async previewSwapQuote(inputMint: string, outputMint: string, amountUi: number, slippageBps: number) : Promise<Result<SwapQuote, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("preview_swap_quote", { inputMint, outputMint, amountUi, slippageBps }) };
@@ -273,7 +281,11 @@ window_width?: number | null;
 /**
  * Last window height in logical pixels. Restored on launch when set.
  */
-window_height?: number | null }
+window_height?: number | null; 
+/**
+ * User-added Swap tokens (keyword search selections). Instant on reopen.
+ */
+swap_favorite_tokens?: TokenInfo[] }
 /**
  * App chrome layout preference (synced from window size).
  */

@@ -221,6 +221,78 @@ async fn fetch_mints_metadata(mints: &[String]) -> Result<HashMap<String, TokenI
     Ok(result)
 }
 
+fn search_cache() -> &'static Cache<String, Vec<TokenInfo>> {
+    static CACHE: OnceLock<Cache<String, Vec<TokenInfo>>> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        Cache::builder()
+            .time_to_live(Duration::from_secs(30 * 60))
+            .max_capacity(256)
+            .build()
+    })
+}
+
+const SEARCH_RESULT_LIMIT: usize = 20;
+
+/// Keyword / mint search via Jupiter Tokens v2. Cached per lowercased query.
+pub async fn search_tokens(query: &str) -> Result<Vec<TokenInfo>> {
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+    let key = trimmed.to_ascii_lowercase();
+    if let Some(cached) = search_cache().get(&key).await {
+        return Ok(cached);
+    }
+
+    let encoded = urlencoding_encode(trimmed);
+    let response = jupiter_get_timeout(
+        &format!("/tokens/v2/search?query={encoded}"),
+        JUPITER_MARKET_DATA_TIMEOUT,
+    )
+    .await?;
+    let tokens: Vec<JupiterToken> = response
+        .json()
+        .await
+        .context("failed to decode Jupiter token search")?;
+
+    let mut results = Vec::new();
+    let mut seen = HashMap::new();
+    for token in tokens {
+        let Some(id) = token_id(&token).map(str::to_string) else {
+            continue;
+        };
+        if seen.contains_key(&id) {
+            continue;
+        }
+        seen.insert(id.clone(), ());
+        let info = map_jupiter_token(&id, token);
+        // Warm mint metadata cache for later resolve/quote.
+        metadata_cache().insert(id, info.clone()).await;
+        results.push(info);
+        if results.len() >= SEARCH_RESULT_LIMIT {
+            break;
+        }
+    }
+
+    search_cache().insert(key, results.clone()).await;
+    Ok(results)
+}
+
+/// Minimal URL-encode for Jupiter query (spaces + reserved chars).
+fn urlencoding_encode(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() * 3);
+    for b in value.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char);
+            }
+            b' ' => out.push_str("%20"),
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 pub fn curated_major_mints() -> Vec<&'static str> {
     vec![
         WRAPPED_SOL_MINT,

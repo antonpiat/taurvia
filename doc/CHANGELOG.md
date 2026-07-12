@@ -24,6 +24,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Settings → Network: switch Solana Mainnet ↔ Devnet (same address; no password)
 - Managed Devnet RPC default (`https://api.devnet.solana.com`)
 - Phantom-style password strength checks on create/change (upper, lower, number, special)
+- Bundled icons for curated Swap tokens (SOL, USDC, USDT, JUP, BONK) for instant paint
+- Keyword token search in Swap picker (local filter + debounced Jupiter search)
+- Persist Swap favorite tokens in app settings
+- Settings → Wallet: manage (remove) user-added Swap tokens
 
 ### Changed
 
@@ -31,6 +35,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Swap is Mainnet-only (UI + Rust enforcement; Jupiter has no Devnet path here)
 - Recovery phrase modal shows seed only while unlocked (no password re-prompt)
 - Desktop CI builds only when `tauri.conf.json` product version increases on `main`
+- Swap mint paste moved under Advanced; search-in-picker is the primary add path
 
 ### Fixed
 
