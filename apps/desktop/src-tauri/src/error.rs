@@ -8,6 +8,7 @@ pub fn map_wallet_error(err: WalletError) -> ApiError {
         WalletError::Locked => ApiError::new("wallet_locked", "Wallet is locked"),
         WalletError::InvalidPassword => ApiError::new("invalid_password", "Invalid password"),
         WalletError::InvalidMnemonic => ApiError::new("invalid_mnemonic", "Invalid seed phrase"),
+        WalletError::DeviceSecretMissing => ApiError::new("device_secret_missing", err.to_string()),
         WalletError::Storage(e) => ApiError::new("storage_error", e.to_string()),
         WalletError::Crypto(e) => ApiError::new("crypto_error", e.to_string()),
         WalletError::Operation(e) => ApiError::new("operation_error", e.to_string()),

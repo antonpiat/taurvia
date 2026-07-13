@@ -33,7 +33,7 @@ Built with **Tauri v2** for a small footprint and **Solana SDK 4** for mainnet-r
 
 | | |
 |---|---|
-| **Create & import** | New wallet or recover from a 12/24-word seed phrase |
+| **Create & import** | New wallet, import from backup JSON, or recover from a 12/24-word seed |
 | **Balances** | SOL and SPL holdings with USD prices and portfolio total |
 | **Swap** | Any-to-any quote and execute via Jupiter (password-gated) |
 | **Send** | SOL and SPL transfers with fee preview and confirmation |
@@ -59,10 +59,11 @@ flowchart TB
   WC --> STORE
 ```
 
-- **At rest:** Argon2id key derivation + AES-256-GCM encryption
-- **In memory:** keys exist only while the wallet is unlocked
+- **At rest:** Argon2id (+ optional OS keychain device binding) + AES-256-GCM encryption
+- **In memory:** keypair only while unlocked — recovery phrase is not kept in session RAM
 - **At sign time:** transactions are built and signed in Rust, not JavaScript
-- **Seed reveal:** requires password verification every time
+- **Seed reveal:** re-decrypts from disk with password every time
+- **Details:** see [`doc/SECURITY.md`](doc/SECURITY.md) (device protection, backup vs seed restore)
 
 ## Stack
 

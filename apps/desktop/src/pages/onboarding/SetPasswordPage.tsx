@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useWallet } from "@/context/WalletContext";
 import { isPasswordStrong, passwordStrengthError } from "@/lib/password";
 import { ApiError, walletApi } from "@/lib/tauri";
 
 export function SetPasswordPage() {
   const navigate = useNavigate();
-  const { unlock } = useWallet();
+  const { unlock, refresh } = useWallet();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +21,7 @@ export function SetPasswordPage() {
   const [mnemonic, setMnemonic] = useState("");
   const [mode, setMode] = useState<"create" | "import">("create");
   const [ready, setReady] = useState(false);
+  const [enableDeviceProtection, setEnableDeviceProtection] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,11 +69,38 @@ export function SetPasswordPage() {
         await walletApi.createWallet(mnemonic, password);
       }
       await walletApi.clearOnboardingDraft();
+
+      // Bind before unlock so a protection failure stays visible (unlock remounts into the app).
+      if (enableDeviceProtection) {
+        try {
+          await walletApi.enableDeviceProtection(password);
+        } catch (protErr) {
+          const apiError = protErr as ApiError;
+          await unlock(password);
+          navigate("/settings/security", {
+            replace: true,
+            state: {
+              notice:
+                apiError.message ??
+                "Wallet is ready, but Enhanced device protection could not be enabled. Turn it on below.",
+            },
+          });
+          return;
+        }
+      }
+
       await unlock(password);
       navigate("/onboarding/ready");
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message ?? "Failed to create wallet");
+      // File may already exist after a mid-flow failure — sync so the user can unlock.
+      try {
+        const snap = await walletApi.getWalletSnapshot();
+        if (snap.exists) await refresh();
+      } catch {
+        // ignore snapshot errors
+      }
     } finally {
       setLoading(false);
     }
@@ -122,6 +151,21 @@ export function SetPasswordPage() {
                 </p>
               )}
             </div>
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <Checkbox
+                checked={enableDeviceProtection}
+                onCheckedChange={setEnableDeviceProtection}
+                aria-label="Enable Enhanced device protection"
+              />
+              <span>
+                Enable Enhanced device protection
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Binds decryption to this device’s credential store. OS reinstall, keychain reset,
+                  or replacing the device can make the local wallet file unrecoverable without your
+                  recovery phrase. Confirm you have (or will back up) that phrase before enabling.
+                </span>
+              </span>
+            </label>
             {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
             <Button className="w-full" type="submit" disabled={!canSubmit}>
               {loading ? "Securing wallet..." : mode === "import" ? "Import wallet" : "Create wallet"}

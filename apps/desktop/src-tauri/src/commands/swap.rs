@@ -5,10 +5,7 @@ use tauri::State;
 
 #[tauri::command]
 #[specta::specta]
-pub async fn resolve_token(
-    mint: String,
-    state: State<'_, AppState>,
-) -> CommandResult<TokenInfo> {
+pub async fn resolve_token(mint: String, state: State<'_, AppState>) -> CommandResult<TokenInfo> {
     state
         .wallet
         .resolve_token(&mint)
@@ -57,7 +54,13 @@ pub async fn execute_swap(
 ) -> CommandResult<SwapResult> {
     state
         .wallet
-        .execute_swap(&password, &input_mint, &output_mint, amount_ui, slippage_bps)
+        .execute_swap(
+            &password,
+            &input_mint,
+            &output_mint,
+            amount_ui,
+            slippage_bps,
+        )
         .await
         .map_err(map_wallet_error)
 }

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Wallet } from "lucide-react";
+import { FileKey2, Wallet } from "lucide-react";
 import { walletApi } from "@/lib/tauri";
 
 export function WelcomePage() {
@@ -36,10 +36,22 @@ export function WelcomePage() {
           <Button
             className="w-full"
             variant="outline"
+            onClick={() => navigate("/onboarding/import-backup")}
+          >
+            <FileKey2 className="h-4 w-4" />
+            Import from backup
+          </Button>
+          <Button
+            className="w-full"
+            variant="destructive"
             onClick={() => navigate("/onboarding/import")}
           >
-            Import existing wallet
+            Import from recovery phrase
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Prefer a wallet backup file when you have one. Recovery phrase import is for seed
+            restore only — treat those words as highly sensitive.
+          </p>
         </CardContent>
       </Card>
     </div>

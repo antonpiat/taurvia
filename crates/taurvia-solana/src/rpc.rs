@@ -18,12 +18,11 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use solana_transaction_status_client_types::{
-    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiMessage,
-    UiTransactionEncoding,
+    EncodedConfirmedTransactionWithStatusMeta, EncodedTransaction, UiMessage, UiTransactionEncoding,
 };
 use spl_associated_token_account_interface::address::get_associated_token_address;
 use spl_token_interface::state::{Account as TokenAccount, Mint};
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -79,7 +78,9 @@ impl SolanaRpc {
             .client
             .get_token_accounts_by_owner(
                 owner,
-                solana_client::rpc_request::TokenAccountsFilter::ProgramId(spl_token_interface::id()),
+                solana_client::rpc_request::TokenAccountsFilter::ProgramId(
+                    spl_token_interface::id(),
+                ),
             )
             .await
             .context("failed to fetch token accounts")?;
@@ -102,8 +103,8 @@ impl SolanaRpc {
                 continue;
             }
 
-            if !seen_mints.contains_key(&token_account.mint) {
-                seen_mints.insert(token_account.mint, ());
+            if let Entry::Vacant(entry) = seen_mints.entry(token_account.mint) {
+                entry.insert(());
                 unique_mints.push(token_account.mint);
             }
 
@@ -305,7 +306,10 @@ impl SolanaRpc {
             .get_multiple_accounts(&[*pubkey])
             .await
             .context("failed to check account existence")?;
-        Ok(accounts.first().and_then(|account| account.as_ref()).is_some())
+        Ok(accounts
+            .first()
+            .and_then(|account| account.as_ref())
+            .is_some())
     }
 
     async fn estimate_fee(&self, tx: &Transaction) -> Result<u64> {
@@ -335,11 +339,7 @@ impl SolanaRpc {
             .context("failed to send transaction")?;
 
         self.client
-            .confirm_transaction_with_spinner(
-                &signature,
-                &blockhash,
-                CommitmentConfig::confirmed(),
-            )
+            .confirm_transaction_with_spinner(&signature, &blockhash, CommitmentConfig::confirmed())
             .await
             .context("failed to confirm transaction")?;
 

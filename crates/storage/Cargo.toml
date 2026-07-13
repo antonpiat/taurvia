@@ -8,6 +8,8 @@ license.workspace = true
 models = { path = "../models" }
 serde_json.workspace = true
 thiserror.workspace = true
+base64.workspace = true
+keyring.workspace = true
 
 [dev-dependencies]
 tempfile = "3.27.0"

@@ -7,11 +7,11 @@ mod token_metadata;
 mod transfer;
 
 pub use jupiter::{configure_jupiter_api_key, shorten_mint, WRAPPED_SOL_MINT};
-pub use models::MANAGED_DEFAULT_RPC_URL;
 pub use keypair::{
     derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64,
     validate_mnemonic,
 };
+pub use models::MANAGED_DEFAULT_RPC_URL;
 pub use price::{get_prices, get_sol_price};
 pub use rpc::SolanaRpc;
 pub use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer};
