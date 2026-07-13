@@ -82,12 +82,14 @@ export function TokenDropdown({
   const [query, setQuery] = useState("");
   const [remote, setRemote] = useState<TokenInfo[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       setRemote([]);
       setSearching(false);
+      setSearchError(null);
     }
   }, [open]);
 
@@ -120,11 +122,13 @@ export function TokenDropdown({
     if (!q) {
       setRemote([]);
       setSearching(false);
+      setSearchError(null);
       return;
     }
 
     let cancelled = false;
     setSearching(true);
+    setSearchError(null);
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
@@ -132,8 +136,16 @@ export function TokenDropdown({
           if (cancelled) return;
           const localMints = new Set(tokens.map((t) => t.mint));
           setRemote(results.filter((r) => !localMints.has(r.mint)).map(withLocalLogo));
-        } catch {
-          if (!cancelled) setRemote([]);
+          setSearchError(null);
+        } catch (err) {
+          if (!cancelled) {
+            setRemote([]);
+            const message =
+              err && typeof err === "object" && "message" in err
+                ? String((err as { message?: unknown }).message ?? "")
+                : "";
+            setSearchError(message || "Token search failed");
+          }
         } finally {
           if (!cancelled) setSearching(false);
         }
@@ -209,9 +221,17 @@ export function TokenDropdown({
               </div>
             )}
 
+            {searchError && (
+              <p className="px-2.5 py-2 text-sm text-destructive">{searchError}</p>
+            )}
+
             {localHits.length === 0 && remote.length === 0 && !searching ? (
               <p className="px-2.5 py-3 text-sm text-muted-foreground">
-                {query.trim() ? "No tokens found." : "No tokens available."}
+                {query.trim()
+                  ? searchError
+                    ? "Could not load remote results."
+                    : "No tokens found."
+                  : "No tokens available."}
               </p>
             ) : (
               <>

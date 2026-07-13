@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Swap token search: restore HTTPS for Jupiter by enabling `reqwest` `rustls` (0.13 drop of TLS features broke remote search)
+- Token picker shows an error when remote search fails instead of a silent empty list
+
 ---
 
 ## [0.4.3] - 2026-07-13
