@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+---
+
+## [0.4.3] - 2026-07-13
+
 ### Added
 
 - Enhanced device protection (optional): OS keychain–bound wallet encryption so JSON + password alone cannot decrypt off-device
@@ -21,8 +25,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Settings → Security: device-protection toggle; Reveal is last and destructive-styled
 - Export copy points at Import from backup; portable export needs protection off first when device-bound
 - Danger zone remove wallet: warning + agreement checkbox (no password); same local wipe as unlock reset
-
-### Fixed
 
 ### Security
 
@@ -270,7 +272,8 @@ When cutting a new version:
 6. Create a GitHub Release tagged `vx.y.z` and attach binaries from `target/release/bundle/`.
 7. Copy the new section into the GitHub Release notes.
 
-[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/antonpiat/taurvia/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/antonpiat/taurvia/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/antonpiat/taurvia/releases/tag/v0.4.1
 [0.4.0]: https://github.com/antonpiat/taurvia/releases/tag/v0.4.0
