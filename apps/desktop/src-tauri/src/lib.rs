@@ -25,6 +25,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
         commands::enable_device_protection,
         commands::disable_device_protection,
         commands::remove_wallet,
+        commands::reset_local_wallet,
         commands::change_wallet_password,
         commands::export_wallet,
         commands::export_wallet_to_path,

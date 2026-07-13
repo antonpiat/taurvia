@@ -1,5 +1,5 @@
-use taurvia_solana::{normalize_mint, resolve_mint, search_tokens, ui_amount_to_raw};
 use models::{Network, SwapQuote, SwapResult, TokenInfo};
+use taurvia_solana::{normalize_mint, resolve_mint, search_tokens, ui_amount_to_raw};
 
 use crate::session::WalletService;
 use crate::WalletError;
@@ -63,7 +63,13 @@ impl WalletService {
             .await
             .map_err(WalletError::Operation)?;
         self.rpc_handle()
-            .execute_swap(&keypair, &input_mint, &output_mint, amount_raw, slippage_bps)
+            .execute_swap(
+                &keypair,
+                &input_mint,
+                &output_mint,
+                amount_raw,
+                slippage_bps,
+            )
             .await
             .map_err(WalletError::Operation)
     }

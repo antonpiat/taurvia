@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useWallet } from "@/context/WalletContext";
 import { isPasswordStrong, passwordStrengthError } from "@/lib/password";
 import { ApiError, walletApi } from "@/lib/tauri";
 
 export function SetPasswordPage() {
   const navigate = useNavigate();
-  const { unlock } = useWallet();
+  const { unlock, refresh } = useWallet();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -68,14 +69,38 @@ export function SetPasswordPage() {
         await walletApi.createWallet(mnemonic, password);
       }
       await walletApi.clearOnboardingDraft();
-      await unlock(password);
+
+      // Bind before unlock so a protection failure stays visible (unlock remounts into the app).
       if (enableDeviceProtection) {
-        await walletApi.enableDeviceProtection(password);
+        try {
+          await walletApi.enableDeviceProtection(password);
+        } catch (protErr) {
+          const apiError = protErr as ApiError;
+          await unlock(password);
+          navigate("/settings/security", {
+            replace: true,
+            state: {
+              notice:
+                apiError.message ??
+                "Wallet is ready, but Enhanced device protection could not be enabled. Turn it on below.",
+            },
+          });
+          return;
+        }
       }
+
+      await unlock(password);
       navigate("/onboarding/ready");
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message ?? "Failed to create wallet");
+      // File may already exist after a mid-flow failure — sync so the user can unlock.
+      try {
+        const snap = await walletApi.getWalletSnapshot();
+        if (snap.exists) await refresh();
+      } catch {
+        // ignore snapshot errors
+      }
     } finally {
       setLoading(false);
     }
@@ -126,12 +151,11 @@ export function SetPasswordPage() {
                 </p>
               )}
             </div>
-            <label className="flex cursor-pointer items-start gap-2 text-sm">
-              <input
-                type="checkbox"
-                className="mt-1"
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <Checkbox
                 checked={enableDeviceProtection}
-                onChange={(e) => setEnableDeviceProtection(e.target.checked)}
+                onCheckedChange={setEnableDeviceProtection}
+                aria-label="Enable Enhanced device protection"
               />
               <span>
                 Enable Enhanced device protection

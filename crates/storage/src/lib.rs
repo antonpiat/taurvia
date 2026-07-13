@@ -224,9 +224,6 @@ mod tests {
         store.set("wid", &secret).unwrap();
         assert_eq!(store.get("wid").unwrap(), secret);
         store.delete("wid").unwrap();
-        assert!(matches!(
-            store.get("wid"),
-            Err(DeviceSecretError::NotFound)
-        ));
+        assert!(matches!(store.get("wid"), Err(DeviceSecretError::NotFound)));
     }
 }

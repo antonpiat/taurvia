@@ -1,7 +1,3 @@
-use taurvia_solana::{
-    derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64,
-    validate_mnemonic, Keypair, Signer,
-};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use chrono::Utc;
 use crypto::{
@@ -13,6 +9,10 @@ use models::{
     DEFAULT_DERIVATION_PATH, WALLET_FILE_VERSION,
 };
 use storage::DeviceSecretError;
+use taurvia_solana::{
+    derive_keypair_from_mnemonic, generate_mnemonic, keypair_from_base64, keypair_to_base64,
+    validate_mnemonic, Keypair, Signer,
+};
 use uuid::Uuid;
 use zeroize::Zeroize;
 
@@ -113,14 +113,34 @@ impl WalletService {
             .or_else(|| self.storage.load().ok())
             .ok_or(WalletError::NotFound)?;
         self.decrypt_payload(&wallet, password)?;
-        let wallet_id = wallet.wallet_id.clone();
+        self.wipe_local_wallet(&wallet.wallet_id)
+    }
+
+    /// Delete the local wallet without the password (forgot-password / factory reset).
+    /// Funds are only recoverable via recovery phrase or a portable backup.
+    pub fn reset_local_wallet(&self) -> Result<(), WalletError> {
+        let wallet = self
+            .cached_wallet
+            .lock()
+            .unwrap()
+            .clone()
+            .or_else(|| self.storage.load().ok())
+            .ok_or(WalletError::NotFound)?;
+        self.wipe_local_wallet(&wallet.wallet_id)
+    }
+
+    fn wipe_local_wallet(&self, wallet_id: &str) -> Result<(), WalletError> {
         self.lock();
         self.storage.delete()?;
-        let _ = self.device_secrets.delete(&wallet_id);
+        let _ = self.device_secrets.delete(wallet_id);
         Ok(())
     }
 
-    pub fn change_password(&self, old_password: &str, new_password: &str) -> Result<(), WalletError> {
+    pub fn change_password(
+        &self,
+        old_password: &str,
+        new_password: &str,
+    ) -> Result<(), WalletError> {
         Self::require_password_strength(new_password)?;
         let wallet = self
             .cached_wallet
@@ -130,8 +150,7 @@ impl WalletService {
             .or_else(|| self.storage.load().ok())
             .ok_or(WalletError::NotFound)?;
         let payload = self.decrypt_payload(&wallet, old_password)?;
-        let keypair =
-            keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
+        let keypair = keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
         let device_secret = self.resolve_device_secret_for_write(&wallet)?;
         let updated = self.reencrypt_wallet_file(
             &wallet,
@@ -173,8 +192,7 @@ impl WalletService {
             return Ok(wallet);
         }
         let payload = self.decrypt_payload(&wallet, password)?;
-        let keypair =
-            keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
+        let keypair = keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
         let mut secret = generate_device_secret();
         self.device_secrets
             .set(&wallet.wallet_id, &secret)
@@ -207,8 +225,7 @@ impl WalletService {
             return Ok(wallet);
         }
         let payload = self.decrypt_payload(&wallet, password)?;
-        let keypair =
-            keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
+        let keypair = keypair_from_base64(&payload.private_key).map_err(WalletError::Operation)?;
         let updated = self.reencrypt_wallet_file(
             &wallet,
             &keypair,

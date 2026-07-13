@@ -65,8 +65,10 @@ impl SolanaRpc {
             .await
             .context("failed to decode Jupiter quote")?;
 
-        let (input_meta, output_meta) =
-            tokio::try_join!(resolve_mint(&quote.input_mint), resolve_mint(&quote.output_mint))?;
+        let (input_meta, output_meta) = tokio::try_join!(
+            resolve_mint(&quote.input_mint),
+            resolve_mint(&quote.output_mint)
+        )?;
 
         let in_amount: u64 = quote.in_amount.parse().unwrap_or(amount_raw);
         let out_amount: u64 = quote
@@ -129,8 +131,8 @@ impl SolanaRpc {
         let tx_bytes = BASE64
             .decode(swap_response.swap_transaction)
             .context("failed to decode swap transaction")?;
-        let unsigned: VersionedTransaction =
-            bincode::deserialize(&tx_bytes).context("failed to deserialize versioned transaction")?;
+        let unsigned: VersionedTransaction = bincode::deserialize(&tx_bytes)
+            .context("failed to deserialize versioned transaction")?;
         let signed = VersionedTransaction::try_new(unsigned.message, &[keypair])
             .map_err(|e| anyhow!("failed to sign swap transaction: {e}"))?;
 

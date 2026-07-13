@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useLocation } from "react-router-dom";
 import { SelectDropdown } from "@/components/SelectDropdown";
 import { MaskedPhrase } from "@/components/MaskedPhrase";
 import { PageHeader } from "@/components/PageHeader";
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useWallet } from "@/context/WalletContext";
 import {
   APP_VIEW_WINDOW_SIZES,
@@ -114,6 +115,7 @@ type OpenMenu = "app-view" | "auto-lock" | "explorer" | "network" | null;
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { section: sectionParam } = useParams<{ section: string }>();
   const { refresh, refreshBalances, settings, saveSettings, network, changeNetwork } =
     useWallet();
@@ -125,7 +127,7 @@ export function SettingsPage() {
   const [networkError, setNetworkError] = useState<string | null>(null);
   const [switchingNetwork, setSwitchingNetwork] = useState(false);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
-  const [removePassword, setRemovePassword] = useState("");
+  const [removeConfirm, setRemoveConfirm] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -160,6 +162,14 @@ export function SettingsPage() {
   const [deviceError, setDeviceError] = useState<string | null>(null);
   const [deviceBusy, setDeviceBusy] = useState(false);
   const [deviceDialog, setDeviceDialog] = useState<"enable" | "disable" | null>(null);
+  const [routeNotice, setRouteNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const notice = (location.state as { notice?: string } | null)?.notice;
+    if (!notice) return;
+    setRouteNotice(notice);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (sectionParam !== "security") return;
@@ -323,13 +333,14 @@ export function SettingsPage() {
   };
 
   const handleRemoveWallet = async () => {
+    if (!removeConfirm) return;
     setRemoving(true);
     setRemoveError(null);
     try {
-      await walletApi.removeWallet(removePassword);
+      await walletApi.resetLocalWallet();
       await walletApi.clearOnboardingDraft();
       setRemoveOpen(false);
-      setRemovePassword("");
+      setRemoveConfirm(false);
       await refresh();
       navigate("/onboarding", { replace: true });
     } catch (err) {
@@ -637,6 +648,11 @@ export function SettingsPage() {
         {section === "security" && (
           <Card>
             <CardContent className="space-y-3 pt-6">
+              {routeNotice && (
+                <Alert className="border-amber-500/40 text-amber-800 dark:text-amber-200">
+                  {routeNotice}
+                </Alert>
+              )}
               <Button
                 variant="outline"
                 className="w-full justify-start"
@@ -815,12 +831,17 @@ export function SettingsPage() {
           <Card className="border-destructive/40">
             <CardContent className="space-y-3 pt-6">
               <p className="text-sm text-muted-foreground">
-                This cannot be undone without your recovery phrase.
+                Removes the wallet from this device only. To use it again you need your recovery
+                phrase, or a portable backup file plus that backup’s password.
               </p>
               <Button
                 variant="destructive"
                 className="w-full justify-start sm:w-auto"
-                onClick={() => setRemoveOpen(true)}
+                onClick={() => {
+                  setRemoveConfirm(false);
+                  setRemoveError(null);
+                  setRemoveOpen(true);
+                }}
               >
                 Remove wallet from this device
               </Button>
@@ -1071,35 +1092,40 @@ export function SettingsPage() {
         onOpenChange={(open) => {
           setRemoveOpen(open);
           if (!open) {
-            setRemovePassword("");
+            setRemoveConfirm(false);
             setRemoveError(null);
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove wallet</DialogTitle>
+            <DialogTitle>Remove wallet from this device?</DialogTitle>
             <DialogDescription>
-              Confirm with your password. Make sure you have your recovery phrase.
+              This deletes the local wallet file only. You cannot open it again on this device
+              without a recovery phrase, or a portable encrypted backup plus that backup’s
+              password.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="remove-password">Password</Label>
-              <Input
-                id="remove-password"
-                type="password"
-                value={removePassword}
-                onChange={(e) => setRemovePassword(e.target.value)}
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+              <Checkbox
+                checked={removeConfirm}
+                onCheckedChange={setRemoveConfirm}
+                aria-label="Confirm wallet removal"
               />
-            </div>
+              <span>
+                I understand — I have my recovery phrase or a portable backup + password, or I
+                accept losing access.
+              </span>
+            </label>
             {removeError && (
               <Alert className="border-destructive/40 text-destructive">{removeError}</Alert>
             )}
             <Button
               variant="destructive"
+              className="w-full"
               onClick={() => void handleRemoveWallet()}
-              disabled={removing || !removePassword}
+              disabled={removing || !removeConfirm}
             >
               {removing ? "Removing..." : "Remove wallet"}
             </Button>

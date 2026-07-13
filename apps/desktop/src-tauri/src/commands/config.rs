@@ -1,6 +1,6 @@
 use crate::error::{map_wallet_error, CommandResult};
 use crate::state::AppState;
-use models::{AppSettings, Network, OnboardingDraft, RuntimeConfig, managed_rpc_url};
+use models::{managed_rpc_url, AppSettings, Network, OnboardingDraft, RuntimeConfig};
 use tauri::State;
 
 #[tauri::command]

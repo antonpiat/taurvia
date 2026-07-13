@@ -96,7 +96,10 @@ mod tests {
         settings.network = models::Network::SolanaMainnet;
         let _ = service.update_settings(settings).unwrap();
 
-        assert_eq!(service.get_settings().network, models::Network::SolanaDevnet);
+        assert_eq!(
+            service.get_settings().network,
+            models::Network::SolanaDevnet
+        );
         assert_eq!(service.wallet_network(), "solana-devnet");
     }
 
@@ -190,5 +193,20 @@ mod tests {
             .import_wallet_backup(&exported, "Password123!")
             .unwrap();
         assert_eq!(other.reveal_mnemonic("Password123!").unwrap(), mnemonic);
+    }
+
+    #[tokio::test]
+    async fn reset_local_wallet_without_password() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service.create_wallet(&mnemonic, "Password123!").unwrap();
+        assert!(service.wallet_exists());
+        service.reset_local_wallet().unwrap();
+        assert!(!service.wallet_exists());
+        assert!(!service.is_unlocked());
+        // Can recreate after wipe.
+        service.create_wallet(&mnemonic, "Password123!").unwrap();
+        assert!(service.wallet_exists());
     }
 }

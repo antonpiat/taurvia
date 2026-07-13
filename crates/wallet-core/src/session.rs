@@ -1,8 +1,8 @@
-use taurvia_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
 use models::{AppSettings, Network, RuntimeConfig, WalletFile};
-use storage::{AppConfigStore, DeviceSecretStore, FileWalletStore};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use storage::{AppConfigStore, DeviceSecretStore, FileWalletStore};
+use taurvia_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
 
 use crate::WalletError;
 
@@ -38,7 +38,11 @@ impl WalletService {
         let settings = config_store.load().unwrap_or_default();
         let mut runtime = RuntimeConfig::resolve(&settings);
         if let Some(url) = _legacy_rpc_url.filter(|u| !u.is_empty()) {
-            if settings.rpc_url.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true)
+            if settings
+                .rpc_url
+                .as_ref()
+                .map(|s| s.trim().is_empty())
+                .unwrap_or(true)
                 && std::env::var("TAURVIA_RPC_URL").is_err()
             {
                 runtime.rpc_url = url.to_string();

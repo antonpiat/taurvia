@@ -14,12 +14,13 @@ pub fn generate_mnemonic() -> Result<String> {
 }
 
 pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
-    Mnemonic::parse(mnemonic).map(|_| ()).map_err(|_| anyhow!("invalid mnemonic phrase"))
+    Mnemonic::parse(mnemonic)
+        .map(|_| ())
+        .map_err(|_| anyhow!("invalid mnemonic phrase"))
 }
 
 pub fn derive_keypair_from_mnemonic(mnemonic: &str) -> Result<Keypair> {
-    let mnemonic =
-        Mnemonic::parse(mnemonic).map_err(|_| anyhow!("invalid mnemonic phrase"))?;
+    let mnemonic = Mnemonic::parse(mnemonic).map_err(|_| anyhow!("invalid mnemonic phrase"))?;
     let seed = mnemonic.to_seed("");
     let path = DerivationPath::from_absolute_path_str(DEFAULT_DERIVATION_PATH)
         .map_err(|e| anyhow!("invalid derivation path: {e}"))?;

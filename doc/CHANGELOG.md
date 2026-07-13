@@ -12,6 +12,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Enhanced device protection (optional): OS keychain–bound wallet encryption so JSON + password alone cannot decrypt off-device
 - Import from backup: restore from exported encrypted wallet JSON + password
 - Welcome / onboarding split: Import from backup vs Import from recovery phrase
+- Unlock: Forgot password — reset wallet (destructive local wipe without password)
 
 ### Changed
 
@@ -19,6 +20,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Reveal recovery phrase requires password re-auth and re-decrypts from disk
 - Settings → Security: device-protection toggle; Reveal is last and destructive-styled
 - Export copy points at Import from backup; portable export needs protection off first when device-bound
+- Danger zone remove wallet: warning + agreement checkbox (no password); same local wipe as unlock reset
 
 ### Fixed
 

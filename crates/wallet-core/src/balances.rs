@@ -1,7 +1,7 @@
-use taurvia_solana::{get_metadata, get_prices, lamports_to_sol, WRAPPED_SOL_MINT};
 use models::{ActivityItem, TokenBalance, TokenInfo, WalletSnapshot};
 use std::collections::HashMap;
 use std::time::Duration;
+use taurvia_solana::{get_metadata, get_prices, lamports_to_sol, WRAPPED_SOL_MINT};
 
 use crate::session::WalletService;
 use crate::WalletError;

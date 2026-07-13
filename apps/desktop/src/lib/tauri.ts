@@ -50,6 +50,7 @@ export const walletApi = {
   disableDeviceProtection: (password: string) =>
     unwrap(commands.disableDeviceProtection(password)),
   removeWallet: (password: string) => unwrap(commands.removeWallet(password)),
+  resetLocalWallet: () => unwrap(commands.resetLocalWallet()),
   changeWalletPassword: (oldPassword: string, newPassword: string) =>
     unwrap(commands.changeWalletPassword(oldPassword, newPassword)),
   exportWalletToPath: (password: string, path: string) =>

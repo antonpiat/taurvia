@@ -5,9 +5,7 @@ use tauri::State;
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_wallet_snapshot(
-    state: State<'_, AppState>,
-) -> CommandResult<WalletSnapshot> {
+pub async fn get_wallet_snapshot(state: State<'_, AppState>) -> CommandResult<WalletSnapshot> {
     state.wallet.get_snapshot().await.map_err(map_wallet_error)
 }
 

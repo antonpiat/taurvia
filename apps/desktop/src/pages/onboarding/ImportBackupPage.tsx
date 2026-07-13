@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useWallet } from "@/context/WalletContext";
 import { ApiError, walletApi } from "@/lib/tauri";
 
@@ -53,14 +54,40 @@ export function ImportBackupPage() {
     setLoading(true);
     try {
       await walletApi.importWalletBackup(walletJson, password);
-      if (enableDeviceProtection) {
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError.message ?? "Could not import backup.");
+      setLoading(false);
+      return;
+    }
+
+    // Import already wrote + unlocked the wallet. Protection is optional and must not
+    // leave the UI thinking import failed if the keychain step errors.
+    if (enableDeviceProtection) {
+      try {
         await walletApi.enableDeviceProtection(password);
+      } catch (protErr) {
+        const apiError = protErr as ApiError;
+        await refresh();
+        navigate("/settings/security", {
+          replace: true,
+          state: {
+            notice:
+              apiError.message ??
+              "Wallet restored, but Enhanced device protection could not be enabled. Turn it on below.",
+          },
+        });
+        setLoading(false);
+        return;
       }
+    }
+
+    try {
       await refresh();
       navigate("/dashboard", { replace: true });
     } catch (err) {
       const apiError = err as ApiError;
-      setError(apiError.message ?? "Could not import backup.");
+      setError(apiError.message ?? "Wallet imported, but the app could not refresh. Unlock if needed.");
     } finally {
       setLoading(false);
     }
@@ -115,12 +142,11 @@ export function ImportBackupPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <label className="flex cursor-pointer items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1"
+          <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+            <Checkbox
               checked={enableDeviceProtection}
-              onChange={(e) => setEnableDeviceProtection(e.target.checked)}
+              onCheckedChange={setEnableDeviceProtection}
+              aria-label="Enable Enhanced device protection on this machine"
             />
             <span>
               Enable Enhanced device protection on this machine

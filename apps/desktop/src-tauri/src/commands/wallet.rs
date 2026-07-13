@@ -119,6 +119,12 @@ pub fn remove_wallet(password: String, state: State<'_, AppState>) -> CommandRes
 
 #[tauri::command]
 #[specta::specta]
+pub fn reset_local_wallet(state: State<'_, AppState>) -> CommandResult<()> {
+    state.wallet.reset_local_wallet().map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_wallet_password(
     old_password: String,
     new_password: String,
@@ -148,10 +154,7 @@ pub fn export_wallet_to_path(
 ) -> CommandResult<()> {
     let path = std::path::PathBuf::from(path.trim());
     if path.as_os_str().is_empty() {
-        return Err(models::ApiError::new(
-            "io_error",
-            "backup path is required",
-        ));
+        return Err(models::ApiError::new("io_error", "backup path is required"));
     }
     if !path.is_absolute() {
         return Err(models::ApiError::new(

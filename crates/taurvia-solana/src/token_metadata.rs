@@ -98,7 +98,10 @@ fn map_jupiter_token(mint: &str, token: JupiterToken) -> TokenInfo {
     let short = shorten_mint(mint);
     TokenInfo {
         mint: mint.to_string(),
-        symbol: token.symbol.filter(|s| !s.is_empty()).unwrap_or(short.clone()),
+        symbol: token
+            .symbol
+            .filter(|s| !s.is_empty())
+            .unwrap_or(short.clone()),
         name: token
             .name
             .filter(|s| !s.is_empty())
@@ -127,7 +130,9 @@ pub async fn resolve_mint(mint: &str) -> Result<TokenInfo> {
 
     match fetch_mint_metadata(mint).await {
         Ok(info) => {
-            metadata_cache().insert(mint.to_string(), info.clone()).await;
+            metadata_cache()
+                .insert(mint.to_string(), info.clone())
+                .await;
             Ok(info)
         }
         Err(_) => Ok(fallback_token_info(mint, None)),
@@ -298,7 +303,7 @@ pub fn curated_major_mints() -> Vec<&'static str> {
         WRAPPED_SOL_MINT,
         "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
         "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", // USDT
-        "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",   // JUP
+        "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",  // JUP
         "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", // BONK
     ]
 }
