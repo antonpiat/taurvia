@@ -39,9 +39,16 @@ export const walletApi = {
     unwrap(commands.createWallet(mnemonic, password)),
   importWallet: (mnemonic: string, password: string) =>
     unwrap(commands.importWallet(mnemonic, password)),
+  importWalletBackup: (walletJson: string, password: string) =>
+    unwrap(commands.importWalletBackup(walletJson, password)),
   unlockWallet: (password: string) => unwrap(commands.unlockWallet(password)),
   lockWallet: () => commands.lockWallet(),
-  revealMnemonic: () => unwrap(commands.revealMnemonic()),
+  revealMnemonic: (password: string) => unwrap(commands.revealMnemonic(password)),
+  deviceProtectionEnabled: () => commands.deviceProtectionEnabled(),
+  enableDeviceProtection: (password: string) =>
+    unwrap(commands.enableDeviceProtection(password)),
+  disableDeviceProtection: (password: string) =>
+    unwrap(commands.disableDeviceProtection(password)),
   removeWallet: (password: string) => unwrap(commands.removeWallet(password)),
   changeWalletPassword: (oldPassword: string, newPassword: string) =>
     unwrap(commands.changeWalletPassword(oldPassword, newPassword)),

@@ -41,6 +41,23 @@ impl std::str::FromStr for Network {
     }
 }
 
+/// How the wallet ciphertext is keyed.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "kebab-case")]
+pub enum WalletProtection {
+    /// Argon2id(password) only — portable with JSON + password.
+    #[default]
+    Password,
+    /// Argon2id(password) + OS keychain device secret — not portable off-device.
+    PasswordDevice,
+}
+
+impl WalletProtection {
+    pub fn is_device_bound(self) -> bool {
+        matches!(self, Self::PasswordDevice)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct CryptoEnvelope {
     pub kdf: String,
@@ -65,5 +82,8 @@ pub struct WalletFile {
     pub network: String,
     pub public_key: String,
     pub created_at: String,
+    /// Absent in older files → password-only.
+    #[serde(default)]
+    pub protection: WalletProtection,
     pub crypto: CryptoEnvelope,
 }

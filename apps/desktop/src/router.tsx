@@ -11,6 +11,7 @@ import { SwapPage } from "@/pages/SwapPage";
 import { UnlockPage } from "@/pages/UnlockPage";
 import { ConfirmSeedPage } from "@/pages/onboarding/ConfirmSeedPage";
 import { CreateImportPage } from "@/pages/onboarding/CreateImportPage";
+import { ImportBackupPage } from "@/pages/onboarding/ImportBackupPage";
 import { SetPasswordPage } from "@/pages/onboarding/SetPasswordPage";
 import { ShowSeedPage } from "@/pages/onboarding/ShowSeedPage";
 import { WalletReadyPage } from "@/pages/onboarding/WalletReadyPage";
@@ -34,6 +35,7 @@ export function AppRouter() {
           <Route path="/onboarding" element={<WelcomePage />} />
           <Route path="/onboarding/create" element={<CreateImportPage mode="create" />} />
           <Route path="/onboarding/import" element={<CreateImportPage mode="import" />} />
+          <Route path="/onboarding/import-backup" element={<ImportBackupPage />} />
           <Route path="/onboarding/seed" element={<ShowSeedPage />} />
           <Route path="/onboarding/confirm" element={<ConfirmSeedPage />} />
           <Route path="/onboarding/password" element={<SetPasswordPage />} />

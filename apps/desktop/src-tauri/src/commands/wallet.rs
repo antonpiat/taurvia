@@ -46,6 +46,19 @@ pub fn import_wallet(
 
 #[tauri::command]
 #[specta::specta]
+pub fn import_wallet_backup(
+    wallet_json: String,
+    password: String,
+    state: State<'_, AppState>,
+) -> CommandResult<WalletFile> {
+    state
+        .wallet
+        .import_wallet_backup(&wallet_json, &password)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn unlock_wallet(password: String, state: State<'_, AppState>) -> CommandResult<String> {
     state.wallet.unlock(&password).map_err(map_wallet_error)
 }
@@ -58,8 +71,41 @@ pub fn lock_wallet(state: State<'_, AppState>) {
 
 #[tauri::command]
 #[specta::specta]
-pub fn reveal_mnemonic(state: State<'_, AppState>) -> CommandResult<String> {
-    state.wallet.reveal_mnemonic().map_err(map_wallet_error)
+pub fn reveal_mnemonic(password: String, state: State<'_, AppState>) -> CommandResult<String> {
+    state
+        .wallet
+        .reveal_mnemonic(&password)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn device_protection_enabled(state: State<'_, AppState>) -> bool {
+    state.wallet.device_protection_enabled()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn enable_device_protection(
+    password: String,
+    state: State<'_, AppState>,
+) -> CommandResult<WalletFile> {
+    state
+        .wallet
+        .enable_device_protection(&password)
+        .map_err(map_wallet_error)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn disable_device_protection(
+    password: String,
+    state: State<'_, AppState>,
+) -> CommandResult<WalletFile> {
+    state
+        .wallet
+        .disable_device_protection(&password)
+        .map_err(map_wallet_error)
 }
 
 #[tauri::command]

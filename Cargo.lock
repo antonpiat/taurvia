@@ -1244,7 +1244,9 @@ version = "0.4.2"
 dependencies = [
  "aes-gcm",
  "argon2",
+ "hkdf",
  "rand 0.10.2",
+ "sha2",
  "thiserror 2.0.18",
  "zeroize",
 ]
@@ -2520,6 +2522,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12cb882ccb290b8646e554b157ab0b71e64e8d5bef775cd66b6531e52d302669"
 
 [[package]]
+name = "hkdf"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
+dependencies = [
+ "hmac",
+]
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3087,6 +3098,16 @@ dependencies = [
  "bitflags 2.13.0",
  "serde",
  "unicode-segmentation",
+]
+
+[[package]]
+name = "keyring"
+version = "3.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eebcc3aff044e5944a8fbaf69eb277d11986064cba30c468730e8b9909fb551c"
+dependencies = [
+ "log",
+ "zeroize",
 ]
 
 [[package]]
@@ -7330,6 +7351,8 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 name = "storage"
 version = "0.4.2"
 dependencies = [
+ "base64 0.22.1",
+ "keyring",
  "models",
  "serde_json",
  "tempfile",
@@ -8554,6 +8577,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]

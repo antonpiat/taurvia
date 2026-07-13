@@ -154,30 +154,57 @@ export function SettingsPage() {
     ((settings.default_slippage_bps ?? 50) / 100).toString(),
   );
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [seedPassword, setSeedPassword] = useState("");
+  const [deviceProtectionOn, setDeviceProtectionOn] = useState(false);
+  const [devicePassword, setDevicePassword] = useState("");
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+  const [deviceBusy, setDeviceBusy] = useState(false);
+  const [deviceDialog, setDeviceDialog] = useState<"enable" | "disable" | null>(null);
 
   useEffect(() => {
-    if (!seedOpen) return;
-    let cancelled = false;
-    setSeedLoading(true);
+    if (sectionParam !== "security") return;
+    void walletApi
+      .deviceProtectionEnabled()
+      .then(setDeviceProtectionOn)
+      .catch(() => setDeviceProtectionOn(false));
+  }, [sectionParam]);
+
+  const handleRevealSeed = async () => {
     setSeedError(null);
-    setMnemonic(null);
-    void (async () => {
-      try {
-        const phrase = await walletApi.revealMnemonic();
-        if (!cancelled) setMnemonic(phrase);
-      } catch (err) {
-        if (!cancelled) {
-          const apiError = err as ApiError;
-          setSeedError(apiError.message ?? "Failed to load recovery phrase");
-        }
-      } finally {
-        if (!cancelled) setSeedLoading(false);
+    setSeedLoading(true);
+    try {
+      const phrase = await walletApi.revealMnemonic(seedPassword);
+      setMnemonic(phrase);
+    } catch (err) {
+      const apiError = err as ApiError;
+      setSeedError(apiError.message ?? "Failed to reveal recovery phrase");
+      setMnemonic(null);
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
+  const handleDeviceProtectionToggle = async () => {
+    if (!deviceDialog) return;
+    setDeviceError(null);
+    setDeviceBusy(true);
+    try {
+      if (deviceDialog === "enable") {
+        await walletApi.enableDeviceProtection(devicePassword);
+        setDeviceProtectionOn(true);
+      } else {
+        await walletApi.disableDeviceProtection(devicePassword);
+        setDeviceProtectionOn(false);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [seedOpen]);
+      setDeviceDialog(null);
+      setDevicePassword("");
+    } catch (err) {
+      const apiError = err as ApiError;
+      setDeviceError(apiError.message ?? "Could not update device protection");
+    } finally {
+      setDeviceBusy(false);
+    }
+  };
 
   useEffect(() => {
     setOpenMenu(null);
@@ -620,20 +647,52 @@ export function SettingsPage() {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => setSeedOpen(true)}
-              >
-                Reveal recovery phrase
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
                 onClick={() => setExportOpen(true)}
               >
                 Export encrypted wallet
               </Button>
+              <div className="space-y-2 rounded-md border border-border p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Enhanced device protection</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {deviceProtectionOn
+                        ? "On — JSON + password alone cannot decrypt this wallet off this device."
+                        : "Off — a stolen backup file and password are enough to open the wallet elsewhere."}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDeviceError(null);
+                      setDevicePassword("");
+                      setDeviceDialog(deviceProtectionOn ? "disable" : "enable");
+                    }}
+                  >
+                    {deviceProtectionOn ? "Disable" : "Enable"}
+                  </Button>
+                </div>
+                {deviceProtectionOn && (
+                  <Alert className="border-amber-500/40 text-amber-800 dark:text-amber-200">
+                    OS reinstall, keychain/credential reset, or replacing this device can make the
+                    local wallet file unrecoverable without your recovery phrase.
+                  </Alert>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Sending and swapping always require your password.
+                Sending and swapping always require your password. Use Import from backup on
+                another device only with a password-only export (disable device protection first
+                if needed).
               </p>
+              <Button
+                variant="destructive"
+                className="w-full justify-start"
+                onClick={() => setSeedOpen(true)}
+              >
+                Reveal recovery phrase
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -778,25 +837,102 @@ export function SettingsPage() {
             setMnemonic(null);
             setSeedError(null);
             setSeedLoading(false);
+            setSeedPassword("");
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Recovery phrase</DialogTitle>
+            <DialogTitle>Reveal recovery phrase</DialogTitle>
             <DialogDescription>
-              Anyone with these words can control your funds. Hover or focus the phrase to
-              unblur it.
+              Enter your wallet password. Anyone with these words can control your funds.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            {seedLoading && (
-              <p className="text-sm text-muted-foreground">Loading recovery phrase…</p>
+            {!mnemonic && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="reveal-password">Password</Label>
+                  <Input
+                    id="reveal-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={seedPassword}
+                    onChange={(e) => setSeedPassword(e.target.value)}
+                  />
+                </div>
+                <Button
+                  variant="destructive"
+                  disabled={seedLoading || !seedPassword}
+                  onClick={() => void handleRevealSeed()}
+                >
+                  {seedLoading ? "Verifying…" : "Reveal phrase"}
+                </Button>
+              </>
             )}
             {seedError && (
               <Alert className="border-destructive/40 text-destructive">{seedError}</Alert>
             )}
-            {mnemonic && <MaskedPhrase words={words} />}
+            {mnemonic && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Hover or focus the phrase to unblur it.
+                </p>
+                <MaskedPhrase words={words} />
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deviceDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeviceDialog(null);
+            setDevicePassword("");
+            setDeviceError(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {deviceDialog === "enable"
+                ? "Enable Enhanced device protection"
+                : "Disable Enhanced device protection"}
+            </DialogTitle>
+            <DialogDescription>
+              {deviceDialog === "enable"
+                ? "Binds decryption to this device’s credential store. JSON + password alone will not unlock the wallet elsewhere. OS reinstall, keychain reset, or a new device can make the local file unrecoverable without your recovery phrase."
+                : "Removes the device binding. A stolen backup file and password will be enough to open the wallet on another machine."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="device-password">Wallet password</Label>
+              <Input
+                id="device-password"
+                type="password"
+                autoComplete="current-password"
+                value={devicePassword}
+                onChange={(e) => setDevicePassword(e.target.value)}
+              />
+            </div>
+            {deviceError && (
+              <Alert className="border-destructive/40 text-destructive">{deviceError}</Alert>
+            )}
+            <Button
+              disabled={deviceBusy || !devicePassword}
+              variant={deviceDialog === "disable" ? "destructive" : "default"}
+              onClick={() => void handleDeviceProtectionToggle()}
+            >
+              {deviceBusy
+                ? "Updating…"
+                : deviceDialog === "enable"
+                  ? "I have my recovery phrase — enable"
+                  : "Disable protection"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -901,7 +1037,9 @@ export function SettingsPage() {
           <DialogHeader>
             <DialogTitle>Export encrypted wallet</DialogTitle>
             <DialogDescription>
-              Saves your encrypted wallet backup JSON. This does not include a plaintext seed.
+              Saves your encrypted wallet backup JSON (no plaintext seed). Restore later with
+              Import from backup. If Enhanced device protection is on, disable it before exporting
+              if you need a portable backup for another machine.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

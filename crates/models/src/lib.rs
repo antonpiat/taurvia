@@ -19,6 +19,6 @@ pub use snapshot::WalletSnapshot;
 pub use swap::{SwapQuote, SwapResult};
 pub use token::{TokenBalance, TokenInfo};
 pub use wallet::{
-    CryptoEnvelope, EncryptedPayload, Network, WalletFile, DEFAULT_DERIVATION_PATH,
-    WALLET_FILE_VERSION,
+    CryptoEnvelope, EncryptedPayload, Network, WalletFile, WalletProtection,
+    DEFAULT_DERIVATION_PATH, WALLET_FILE_VERSION,
 };

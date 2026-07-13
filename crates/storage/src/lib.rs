@@ -1,3 +1,7 @@
+mod device_secret;
+
+pub use device_secret::{DeviceSecretError, DeviceSecretStore};
+
 use models::{AppSettings, WalletFile};
 use std::fs;
 use std::io::Write;
@@ -143,7 +147,7 @@ impl AppConfigStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::{CryptoEnvelope, WALLET_FILE_VERSION};
+    use models::{CryptoEnvelope, WalletProtection, WALLET_FILE_VERSION};
 
     fn sample_wallet() -> WalletFile {
         WalletFile {
@@ -152,6 +156,7 @@ mod tests {
             network: "solana-mainnet".into(),
             public_key: "test".into(),
             created_at: "2026-01-01T00:00:00Z".into(),
+            protection: WalletProtection::Password,
             crypto: CryptoEnvelope {
                 kdf: "argon2id".into(),
                 salt: "c2FsdA==".into(),
@@ -170,6 +175,7 @@ mod tests {
         storage.save(&wallet).unwrap();
         let loaded = storage.load().unwrap();
         assert_eq!(loaded.wallet_id, wallet.wallet_id);
+        assert_eq!(loaded.protection, WalletProtection::Password);
     }
 
     #[test]
@@ -209,5 +215,18 @@ mod tests {
         store.save(&settings).unwrap();
         let loaded = store.load().unwrap();
         assert_eq!(loaded.rpc_url.as_deref(), Some("https://example.rpc"));
+    }
+
+    #[test]
+    fn memory_device_secret_round_trip() {
+        let store = DeviceSecretStore::memory();
+        let secret = [7u8; 32];
+        store.set("wid", &secret).unwrap();
+        assert_eq!(store.get("wid").unwrap(), secret);
+        store.delete("wid").unwrap();
+        assert!(matches!(
+            store.get("wid"),
+            Err(DeviceSecretError::NotFound)
+        ));
     }
 }

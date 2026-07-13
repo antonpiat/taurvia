@@ -135,10 +135,11 @@ function ImportWalletForm() {
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle>Import wallet</CardTitle>
+          <CardTitle>Import from recovery phrase</CardTitle>
           <CardDescription>
-            Paste your 12 or 24-word recovery phrase, or import it from a .txt / .json file. The
-            phrase stays masked on screen.
+            Paste your 12 or 24-word recovery phrase, or import it from a .txt / .json file. Prefer
+            Import from backup when you have an exported wallet file. Anyone with this phrase can
+            move your funds. The phrase stays masked on screen.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

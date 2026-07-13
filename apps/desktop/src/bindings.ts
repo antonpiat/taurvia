@@ -37,6 +37,14 @@ async importWallet(mnemonic: string, password: string) : Promise<Result<WalletFi
     else return { status: "error", error: e  as any };
 }
 },
+async importWalletBackup(walletJson: string, password: string) : Promise<Result<WalletFile, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("import_wallet_backup", { walletJson, password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async unlockWallet(password: string) : Promise<Result<string, ApiError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("unlock_wallet", { password }) };
@@ -48,9 +56,28 @@ async unlockWallet(password: string) : Promise<Result<string, ApiError>> {
 async lockWallet() : Promise<void> {
     await TAURI_INVOKE("lock_wallet");
 },
-async revealMnemonic() : Promise<Result<string, ApiError>> {
+async revealMnemonic(password: string) : Promise<Result<string, ApiError>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("reveal_mnemonic") };
+    return { status: "ok", data: await TAURI_INVOKE("reveal_mnemonic", { password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deviceProtectionEnabled() : Promise<boolean> {
+    return await TAURI_INVOKE("device_protection_enabled");
+},
+async enableDeviceProtection(password: string) : Promise<Result<WalletFile, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("enable_device_protection", { password }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async disableDeviceProtection(password: string) : Promise<Result<WalletFile, ApiError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("disable_device_protection", { password }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -305,7 +332,23 @@ export type SwapQuote = { input_mint: string; output_mint: string; input_symbol:
 export type SwapResult = { signature: string; status: string }
 export type TokenBalance = { mint: string; symbol: string; name: string; amount: string; decimals: number; ui_amount: number; logo_uri: string | null; price_usd: number | null; value_usd: number | null }
 export type TokenInfo = { mint: string; symbol: string; name: string; decimals: number; logo_uri: string | null }
-export type WalletFile = { version: number; wallet_id: string; network: string; public_key: string; created_at: string; crypto: CryptoEnvelope }
+export type WalletFile = { version: number; wallet_id: string; network: string; public_key: string; created_at: string; 
+/**
+ * Absent in older files → password-only.
+ */
+protection?: WalletProtection; crypto: CryptoEnvelope }
+/**
+ * How the wallet ciphertext is keyed.
+ */
+export type WalletProtection = 
+/**
+ * Argon2id(password) only — portable with JSON + password.
+ */
+"password" | 
+/**
+ * Argon2id(password) + OS keychain device secret — not portable off-device.
+ */
+"password-device"
 export type WalletSnapshot = { exists: boolean; unlocked: boolean; 
 /**
  * Wallet file network id (e.g. `solana-mainnet`). Empty wallet → default mainnet.

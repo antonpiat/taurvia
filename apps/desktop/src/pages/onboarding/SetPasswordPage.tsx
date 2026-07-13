@@ -20,6 +20,7 @@ export function SetPasswordPage() {
   const [mnemonic, setMnemonic] = useState("");
   const [mode, setMode] = useState<"create" | "import">("create");
   const [ready, setReady] = useState(false);
+  const [enableDeviceProtection, setEnableDeviceProtection] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +69,9 @@ export function SetPasswordPage() {
       }
       await walletApi.clearOnboardingDraft();
       await unlock(password);
+      if (enableDeviceProtection) {
+        await walletApi.enableDeviceProtection(password);
+      }
       navigate("/onboarding/ready");
     } catch (err) {
       const apiError = err as ApiError;
@@ -122,6 +126,22 @@ export function SetPasswordPage() {
                 </p>
               )}
             </div>
+            <label className="flex cursor-pointer items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={enableDeviceProtection}
+                onChange={(e) => setEnableDeviceProtection(e.target.checked)}
+              />
+              <span>
+                Enable Enhanced device protection
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Binds decryption to this device’s credential store. OS reinstall, keychain reset,
+                  or replacing the device can make the local wallet file unrecoverable without your
+                  recovery phrase. Confirm you have (or will back up) that phrase before enabling.
+                </span>
+              </span>
+            </label>
             {error && <Alert className="border-destructive/40 text-destructive">{error}</Alert>}
             <Button className="w-full" type="submit" disabled={!canSubmit}>
               {loading ? "Securing wallet..." : mode === "import" ? "Import wallet" : "Create wallet"}

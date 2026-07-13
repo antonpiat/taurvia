@@ -1,6 +1,6 @@
 use taurvia_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaRpc};
 use models::{AppSettings, Network, RuntimeConfig, WalletFile};
-use storage::{AppConfigStore, FileWalletStore};
+use storage::{AppConfigStore, DeviceSecretStore, FileWalletStore};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -9,8 +9,6 @@ use crate::WalletError;
 pub(crate) struct WalletSession {
     pub public_key: String,
     pub keypair: Keypair,
-    /// Cleared with the session on lock. Used for recovery-phrase reveal while unlocked.
-    pub mnemonic: String,
 }
 
 pub struct WalletService {
@@ -20,26 +18,39 @@ pub struct WalletService {
     pub(crate) session: Arc<Mutex<Option<WalletSession>>>,
     pub(crate) cached_wallet: Mutex<Option<WalletFile>>,
     pub(crate) rpc: Mutex<SolanaRpc>,
+    pub(crate) device_secrets: DeviceSecretStore,
 }
 
 impl WalletService {
-    /// Desktop/mobile convenience: filesystem wallet store + resolved RuntimeConfig.
+    /// Desktop/mobile convenience: filesystem wallet store + OS device-secret store.
     pub fn new(data_dir: impl AsRef<Path>, _legacy_rpc_url: Option<&str>) -> Self {
+        Self::with_device_secrets(data_dir, _legacy_rpc_url, DeviceSecretStore::os())
+    }
+
+    /// Same as `new`, but injects a device-secret backend (use memory in tests).
+    pub fn with_device_secrets(
+        data_dir: impl AsRef<Path>,
+        _legacy_rpc_url: Option<&str>,
+        device_secrets: DeviceSecretStore,
+    ) -> Self {
         let data_dir = data_dir.as_ref().to_path_buf();
         let config_store = AppConfigStore::new(&data_dir);
         let settings = config_store.load().unwrap_or_default();
-        // Prefer explicit constructor arg only if settings/env did not resolve a custom URL
-        // and caller passed a URL (tests). Otherwise RuntimeConfig::resolve handles defaults.
         let mut runtime = RuntimeConfig::resolve(&settings);
         if let Some(url) = _legacy_rpc_url.filter(|u| !u.is_empty()) {
-            // Tests pass localhost; honor when settings have no override.
             if settings.rpc_url.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true)
                 && std::env::var("TAURVIA_RPC_URL").is_err()
             {
                 runtime.rpc_url = url.to_string();
             }
         }
-        Self::from_parts(settings, runtime, config_store, FileWalletStore::new(&data_dir))
+        Self::from_parts(
+            settings,
+            runtime,
+            config_store,
+            FileWalletStore::new(&data_dir),
+            device_secrets,
+        )
     }
 
     pub fn from_parts(
@@ -47,6 +58,7 @@ impl WalletService {
         runtime: RuntimeConfig,
         config_store: AppConfigStore,
         storage: FileWalletStore,
+        device_secrets: DeviceSecretStore,
     ) -> Self {
         configure_jupiter_api_key(runtime.jupiter_api_key.clone());
         Self {
@@ -56,6 +68,7 @@ impl WalletService {
             session: Arc::new(Mutex::new(None)),
             cached_wallet: Mutex::new(None),
             rpc: Mutex::new(SolanaRpc::new(Some(&runtime.rpc_url))),
+            device_secrets,
         }
     }
 
@@ -66,15 +79,12 @@ impl WalletService {
     pub fn update_settings(&self, settings: AppSettings) -> Result<RuntimeConfig, WalletError> {
         let prev = self.settings.lock().unwrap().clone();
         let mut settings = settings;
-        // Wallet file is authoritative for cluster once a wallet exists.
-        // Cluster switches must go through `change_network` so UI label and RPC stay aligned.
         if self.storage.exists() {
             settings.network = Network::parse(&self.wallet_network());
         }
         self.config_store.save(&settings)?;
         *self.settings.lock().unwrap() = settings.clone();
         let runtime = RuntimeConfig::resolve(&settings);
-        // Skip RPC / Jupiter rebuild for UI-only prefs (layout, auto-lock, explorer, …).
         let connectivity_changed = prev.rpc_url != settings.rpc_url
             || prev.jupiter_api_key != settings.jupiter_api_key
             || prev.network != settings.network;
@@ -85,7 +95,6 @@ impl WalletService {
         Ok(runtime)
     }
 
-    /// Network id from the wallet file (`solana-mainnet`, …). Default when none exists.
     pub fn wallet_network(&self) -> String {
         if let Some(wallet) = self.cached_wallet.lock().unwrap().as_ref() {
             return wallet.network.clone();
@@ -96,8 +105,6 @@ impl WalletService {
             .unwrap_or_else(|_| Network::SolanaMainnet.as_str().to_string())
     }
 
-    /// Switch Solana cluster. Updates wallet metadata + settings, clears custom RPC
-    /// override, rebuilds RPC client. No password — does not expose keys or sign.
     pub fn change_network(&self, network: Network) -> Result<RuntimeConfig, WalletError> {
         let wallet = self
             .cached_wallet
