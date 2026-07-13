@@ -46,6 +46,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
     ])
 }
 
+#[cfg(any(debug_assertions, test))]
 fn typescript_exporter() -> specta_typescript::Typescript {
     specta_typescript::Typescript::default()
         .header("// @ts-nocheck")
