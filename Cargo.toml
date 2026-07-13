@@ -36,5 +36,5 @@ spl-token-interface = "3.0.0"
 spl-associated-token-account-interface = "2.0.0"
 tokio = { version = "1.52.3", features = ["rt-multi-thread", "macros", "time"] }
 futures = "0.3.32"
-reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
 moka = { version = "0.12.15", features = ["future"] }
