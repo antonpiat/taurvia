@@ -1,11 +1,17 @@
 name: Desktop build
 
-# Matrix build only when Taurvia product version in tauri.conf.json increases on main.
+# Matrix build when product version increases on main, or via manual dispatch.
 on:
   push:
     branches: [main]
     paths:
       - "apps/desktop/src-tauri/tauri.conf.json"
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Build even if version did not increase"
+        type: boolean
+        default: true
 
 jobs:
   version-check:
@@ -24,8 +30,14 @@ jobs:
         run: |
           FILE=apps/desktop/src-tauri/tauri.conf.json
           CURRENT=$(jq -r .version "$FILE")
-          PREV=$(git show "${{ github.event.before }}:$FILE" 2>/dev/null | jq -r .version || echo "0.0.0")
           echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_build }}" = "true" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PREV=$(git show "${{ github.event.before }}:$FILE" 2>/dev/null | jq -r .version || echo "0.0.0")
           if [ "$CURRENT" != "$PREV" ] && [ "$(printf '%s\n%s\n' "$PREV" "$CURRENT" | sort -V | tail -n1)" = "$CURRENT" ]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           else
@@ -61,20 +73,34 @@ jobs:
             patchelf \
             libssl-dev
 
-      # Standalone install avoids the broken runner npm self-installer (Node 24).
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.5
-        with:
-          version: 11.12.0
-          standalone: true
-          package_json_file: apps/desktop/package.json
-
+      # Prefer Corepack over pnpm/action-setup: standalone mode crashes while
+      # switching versions (integrity undefined), and the npm self-installer
+      # breaks on Node 24 runners.
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: apps/desktop/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm from packageManager
+        working-directory: apps/desktop
+        run: corepack install
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        working-directory: apps/desktop
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('apps/desktop/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
