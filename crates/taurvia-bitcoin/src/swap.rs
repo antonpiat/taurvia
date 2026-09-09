@@ -10,8 +10,6 @@ pub struct ThorchainQuote {
     pub memo: String,
     pub expected_amount_out: Option<String>,
     pub fees: Option<ThorFees>,
-    pub expiry: Option<u64>,
-    pub router: Option<String>,
     pub recommended_min_amount_in: Option<String>,
     pub error: Option<String>,
 }
@@ -28,12 +26,13 @@ pub async fn quote_swap(
     to_asset: &str,
     amount_1e8: u64,
     destination: &str,
+    slippage_bps: u16,
 ) -> Result<ThorchainQuote> {
     if amount_1e8 == 0 {
         bail!("swap amount must be greater than zero");
     }
     let url = format!(
-        "{THORNODE}/thorchain/quote/swap?from_asset={from_asset}&to_asset={to_asset}&amount={amount_1e8}&destination={destination}"
+        "{THORNODE}/thorchain/quote/swap?from_asset={from_asset}&to_asset={to_asset}&amount={amount_1e8}&destination={destination}&tolerance_bps={slippage_bps}"
     );
     let response = taurvia_chain::http_client()
         .get(&url)
@@ -51,6 +50,15 @@ pub async fn quote_swap(
     }
     if parsed.inbound_address.is_empty() || parsed.memo.is_empty() {
         bail!("Thorchain quote missing inbound address or memo");
+    }
+    if let Some(min) = parsed
+        .recommended_min_amount_in
+        .as_deref()
+        .and_then(|s| s.parse::<u64>().ok())
+    {
+        if amount_1e8 < min {
+            bail!("amount is below Thorchain's recommended minimum");
+        }
     }
     Ok(parsed)
 }

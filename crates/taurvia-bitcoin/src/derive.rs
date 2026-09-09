@@ -33,8 +33,7 @@ impl BtcSigner {
 }
 
 pub fn from_wif(input: &str) -> Result<(BtcSigner, BtcSigner)> {
-    let pk = PrivateKey::from_wif(input.trim())
-        .map_err(|e| anyhow!("invalid Bitcoin WIF: {e}"))?;
+    let pk = PrivateKey::from_wif(input.trim()).map_err(|e| anyhow!("invalid Bitcoin WIF: {e}"))?;
     let mut secret = [0u8; 32];
     secret.copy_from_slice(&pk.inner.secret_bytes());
     let mainnet = signer_from_secret(secret, false)?;

@@ -19,7 +19,8 @@ pub(crate) struct FamilyKeyring {
 
 impl FamilyKeyring {
     pub fn from_mnemonic(mnemonic: &str) -> Result<Self, WalletError> {
-        let seed = taurvia_hd::seed_from_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)?;
+        let seed =
+            taurvia_hd::seed_from_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)?;
         let solana = taurvia_solana::derive_keypair_from_seed(seed.as_slice())
             .map_err(|_| WalletError::InvalidMnemonic)?;
         let evm = taurvia_evm::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
@@ -36,7 +37,8 @@ impl FamilyKeyring {
     }
 
     pub fn from_solana_and_mnemonic(solana: Keypair, mnemonic: &str) -> Result<Self, WalletError> {
-        let seed = taurvia_hd::seed_from_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)?;
+        let seed =
+            taurvia_hd::seed_from_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)?;
         let evm = taurvia_evm::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
         let bitcoin = taurvia_bitcoin::derive_from_seed(seed.as_slice(), false)
             .map_err(WalletError::Operation)?;
@@ -90,9 +92,9 @@ impl FamilyKeyring {
     }
 
     pub fn require_solana(&self) -> Result<&Keypair, WalletError> {
-        self.solana.as_ref().ok_or_else(|| {
-            WalletError::Operation(anyhow::anyhow!("this wallet has no Solana key"))
-        })
+        self.solana
+            .as_ref()
+            .ok_or_else(|| WalletError::Operation(anyhow::anyhow!("this wallet has no Solana key")))
     }
 
     pub fn require_evm(&self) -> Result<&taurvia_evm::EvmSigner, WalletError> {
@@ -121,10 +123,6 @@ impl FamilyKeyring {
         signer.ok_or_else(|| {
             WalletError::Operation(anyhow::anyhow!("this wallet has no Bitcoin key"))
         })
-    }
-
-    pub fn btc(&self, testnet: bool) -> Result<&taurvia_bitcoin::BtcSigner, WalletError> {
-        self.require_btc(testnet)
     }
 
     pub fn addresses(&self) -> models::WalletAddresses {
@@ -360,7 +358,7 @@ impl WalletService {
         }
         wallet.enabled_networks = cleaned.clone();
         let last = normalize_network_id(&wallet.network);
-        let last_desc = require_network(id_or_default(last));
+        let last_desc = require_network(last);
         let last_ok = cleaned.iter().any(|id| {
             let d = require_network(id);
             d.family == last_desc.family
@@ -406,7 +404,9 @@ impl WalletService {
             )));
         }
         let enabled = self.enabled_network_ids();
-        let family_on = enabled.iter().any(|eid| require_network(id_or_default(eid)).family == desc.family)
+        let family_on = enabled
+            .iter()
+            .any(|eid| require_network(eid).family == desc.family)
             || enabled.iter().any(|eid| normalize_network_id(eid) == id);
         if !family_on && !desc.is_testnet {
             return Err(WalletError::Operation(anyhow::anyhow!(
@@ -430,8 +430,6 @@ impl WalletService {
 
         let mut settings = self.get_settings();
         settings.network = id.to_string();
-        settings.rpc_url = None;
-        settings.rpc_urls.remove(id);
         self.update_settings(settings)
     }
 
@@ -482,6 +480,10 @@ impl WalletService {
             return session.keyring.address(desc.family, desc.is_testnet).ok();
         }
         let wallet = self.cached_or_disk()?;
+        if desc.family == ChainFamily::Bitcoin && desc.is_testnet {
+            // Stored address is mainnet; do not show it on Bitcoin testnet while locked.
+            return None;
+        }
         if let Some(addr) = wallet.addresses.get(desc.family) {
             return Some(addr.to_string());
         }
@@ -528,10 +530,16 @@ impl WalletService {
                 continue;
             }
             if desc.family == last.family {
-                if !out.iter().any(|d: &&models::NetworkDescriptor| d.id == last.id) {
+                if !out
+                    .iter()
+                    .any(|d: &&models::NetworkDescriptor| d.id == last.id)
+                {
                     out.push(last);
                 }
-            } else if !out.iter().any(|d: &&models::NetworkDescriptor| d.family == desc.family) {
+            } else if !out
+                .iter()
+                .any(|d: &&models::NetworkDescriptor| d.family == desc.family)
+            {
                 out.push(desc);
             }
         }
@@ -540,10 +548,6 @@ impl WalletService {
         }
         out
     }
-}
-
-fn id_or_default(id: &str) -> &str {
-    id
 }
 
 fn split_runtime(settings: &AppSettings, runtime: &RuntimeConfig) -> (String, String, String) {

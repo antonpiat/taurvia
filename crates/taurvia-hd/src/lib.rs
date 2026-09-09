@@ -22,7 +22,8 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<()> {
 
 /// BIP39 seed (PBKDF2, empty passphrase). Caller must drop / zeroize.
 pub fn seed_from_mnemonic(mnemonic: &str) -> Result<Zeroizing<[u8; SEED_LEN]>> {
-    let mnemonic = Mnemonic::parse(mnemonic).map_err(|_| anyhow::anyhow!("invalid mnemonic phrase"))?;
+    let mnemonic =
+        Mnemonic::parse(mnemonic).map_err(|_| anyhow::anyhow!("invalid mnemonic phrase"))?;
     let seed = mnemonic.to_seed("");
     Ok(Zeroizing::new(seed))
 }

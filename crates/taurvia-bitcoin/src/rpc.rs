@@ -8,9 +8,7 @@ use bitcoin::{
     Address, Amount, CompressedPublicKey, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut,
     Txid, Witness,
 };
-use models::{
-    ActivityItem, NetworkDescriptor, SendPreview, SendResult, WalletSnapshot,
-};
+use models::{ActivityItem, NetworkDescriptor, SendPreview, SendResult, WalletSnapshot};
 use serde::Deserialize;
 use std::str::FromStr;
 use std::time::Duration;
@@ -84,7 +82,7 @@ impl BtcRpc {
                 taurvia_chain::native_price_usd(price_id),
             ),
         );
-        let utxos = utxos.unwrap_or_default();
+        let utxos = utxos.context("failed to fetch Bitcoin UTXOs")?;
         let sats: u64 = utxos.iter().map(|u| u.value).sum();
         let native_balance = sats as f64 / SATS_PER_BTC;
         let native_price_usd = price.ok().and_then(|r| r.ok());
@@ -179,12 +177,7 @@ impl BtcRpc {
             .collect())
     }
 
-    pub async fn preview_send(
-        &self,
-        from: &str,
-        to: &str,
-        amount_btc: f64,
-    ) -> Result<SendPreview> {
+    pub async fn preview_send(&self, from: &str, to: &str, amount_btc: f64) -> Result<SendPreview> {
         let (_selected, fee_sats, _change, _send_sats) =
             self.select_coins(from, to, amount_btc, None).await?;
         Ok(SendPreview {
@@ -199,12 +192,7 @@ impl BtcRpc {
         })
     }
 
-    pub async fn send(
-        &self,
-        signer: &BtcSigner,
-        to: &str,
-        amount_btc: f64,
-    ) -> Result<SendResult> {
+    pub async fn send(&self, signer: &BtcSigner, to: &str, amount_btc: f64) -> Result<SendResult> {
         self.send_with_memo(signer, to, amount_btc, None).await
     }
 
@@ -288,9 +276,7 @@ impl BtcRpc {
         utxos.sort_by_key(|u| std::cmp::Reverse(u.value));
 
         let extra_outputs = 1.0 + if memo.is_some() { 1.0 } else { 0.0 };
-        let memo_vbytes = memo
-            .map(|m| 11.0 + m.len() as f64)
-            .unwrap_or(0.0);
+        let memo_vbytes = memo.map(|m| 11.0 + m.len() as f64).unwrap_or(0.0);
 
         let mut selected = Vec::new();
         let mut total = 0u64;
@@ -321,8 +307,9 @@ impl BtcRpc {
         amount_btc: f64,
         memo: Option<&str>,
     ) -> Result<(Transaction, u64)> {
-        let (selected, fee, change, send_sats) =
-            self.select_coins(&signer.address, to, amount_btc, memo).await?;
+        let (selected, fee, change, send_sats) = self
+            .select_coins(&signer.address, to, amount_btc, memo)
+            .await?;
 
         let dest: Address = Address::from_str(to)
             .map_err(|e| anyhow!("invalid recipient: {e}"))?
@@ -376,8 +363,8 @@ impl BtcRpc {
 
         let secp = secp();
         let privkey = signer.private_key()?;
-        let compressed = CompressedPublicKey::from_private_key(secp, &privkey)
-            .map_err(|e| anyhow!("{e}"))?;
+        let compressed =
+            CompressedPublicKey::from_private_key(secp, &privkey).map_err(|e| anyhow!("{e}"))?;
         let prev_script = Address::p2wpkh(&compressed, signer.network).script_pubkey();
 
         let mut cache = SighashCache::new(tx);

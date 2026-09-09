@@ -1,6 +1,4 @@
-use models::{
-    ActivityItem, ChainFamily, ChainSnapshot, TokenBalance, TokenInfo, WalletSnapshot,
-};
+use models::{ActivityItem, ChainFamily, ChainSnapshot, TokenBalance, TokenInfo, WalletSnapshot};
 use std::collections::HashMap;
 use std::time::Duration;
 use taurvia_solana::{get_metadata, get_prices, lamports_to_sol, WRAPPED_SOL_MINT};
@@ -18,7 +16,7 @@ impl WalletService {
         let account_name = self.account_name();
         let import_kind = self.import_kind();
         let enabled_networks = self.enabled_network_ids();
-        let can_reveal_mnemonic = import_kind.has_mnemonic();
+        let can_reveal_mnemonic = exists && import_kind.has_mnemonic();
 
         let mut snap = WalletSnapshot::empty(network.clone(), desc.native_symbol.to_string());
         snap.exists = exists;
@@ -76,6 +74,7 @@ impl WalletService {
             },
         );
 
+        // Option<Result<T,E>>: skip missing families, omit chains whose RPC failed (do not invent a 0).
         let mut chains = Vec::new();
         for chain in [sol_r, evm_r, btc_r].into_iter().flatten().flatten() {
             chains.push(chain);
@@ -127,7 +126,10 @@ impl WalletService {
         let url = self.endpoint_for(desc.id);
         let rpc = taurvia_evm::EvmRpc::new(&url, *desc);
         let address = self.with_session(|k| k.require_evm().map(|e| e.address.clone()))??;
-        let snap = rpc.snapshot(&address).await.map_err(WalletError::Operation)?;
+        let snap = rpc
+            .snapshot(&address)
+            .await
+            .map_err(WalletError::Operation)?;
         Ok(chain_from_legacy(snap))
     }
 
@@ -137,8 +139,12 @@ impl WalletService {
     ) -> Result<ChainSnapshot, WalletError> {
         let url = self.endpoint_for(desc.id);
         let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-        let address = self.with_session(|k| k.btc(desc.is_testnet).map(|s| s.address.clone()))??;
-        let snap = rpc.snapshot(&address).await.map_err(WalletError::Operation)?;
+        let address =
+            self.with_session(|k| k.require_btc(desc.is_testnet).map(|s| s.address.clone()))??;
+        let snap = rpc
+            .snapshot(&address)
+            .await
+            .map_err(WalletError::Operation)?;
         Ok(chain_from_legacy(snap))
     }
 
@@ -200,7 +206,8 @@ impl WalletService {
                     .map_err(WalletError::Operation)
             }
             ChainFamily::Evm => {
-                let address = self.with_session(|k| k.require_evm().map(|e| e.address.clone()))??;
+                let address =
+                    self.with_session(|k| k.require_evm().map(|e| e.address.clone()))??;
                 taurvia_evm::activity(*desc, &address, limit)
                     .await
                     .map_err(WalletError::Operation)
@@ -208,7 +215,9 @@ impl WalletService {
             ChainFamily::Bitcoin => {
                 let url = self.endpoint_for(desc.id);
                 let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-                let address = self.with_session(|k| k.btc(desc.is_testnet).map(|s| s.address.clone()))??;
+                let address = self.with_session(|k| {
+                    k.require_btc(desc.is_testnet).map(|s| s.address.clone())
+                })??;
                 rpc.activity(&address, limit)
                     .await
                     .map_err(WalletError::Operation)

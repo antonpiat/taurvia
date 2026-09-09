@@ -51,7 +51,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         assert!(service.wallet_exists());
         let pubkey = service.unlock("Password123!").unwrap();
         assert!(!pubkey.is_empty());
@@ -78,7 +80,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        let err = service.create_wallet(&mnemonic, "password123", "Account 1").unwrap_err();
+        let err = service
+            .create_wallet(&mnemonic, "password123", "Account 1")
+            .unwrap_err();
         assert!(err.to_string().contains("uppercase"));
     }
 
@@ -87,10 +91,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
         service
-            .change_network("solana-devnet")
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
             .unwrap();
+        service.change_network("solana-devnet").unwrap();
 
         let mut settings = service.get_settings();
         settings.network = "solana-mainnet".into();
@@ -105,7 +109,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         service.unlock("Password123!").unwrap();
         service
             .set_enabled_networks(&["ethereum-mainnet".into()])
@@ -163,11 +169,17 @@ mod tests {
         assert!(!service.import_kind().has_mnemonic());
         assert!(service.reveal_mnemonic("Password123!").is_err());
         let err = service.change_network("ethereum-mainnet").unwrap_err();
-        assert!(err.to_string().to_lowercase().contains("ethereum") || err.to_string().contains("key"));
+        assert!(
+            err.to_string().to_lowercase().contains("ethereum") || err.to_string().contains("key")
+        );
         let enable_err = service
             .set_enabled_networks(&["ethereum-mainnet".into(), "solana-mainnet".into()])
             .unwrap_err();
-        assert!(enable_err.to_string().to_lowercase().contains("solana") || enable_err.to_string().contains("Ethereum") || enable_err.to_string().contains("only"));
+        assert!(
+            enable_err.to_string().to_lowercase().contains("solana")
+                || enable_err.to_string().contains("Ethereum")
+                || enable_err.to_string().contains("only")
+        );
     }
 
     #[tokio::test]
@@ -182,7 +194,10 @@ mod tests {
         let addr = service.unlock("Password123!").unwrap();
         assert!(addr.starts_with("0x"));
         assert_eq!(service.import_kind(), models::ImportKind::EvmKey);
-        assert_eq!(service.enabled_network_ids(), vec!["ethereum-mainnet".to_string()]);
+        assert_eq!(
+            service.enabled_network_ids(),
+            vec!["ethereum-mainnet".to_string()]
+        );
         assert!(service.change_network("solana-mainnet").is_err());
     }
 
@@ -210,7 +225,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         service.unlock("Password123!").unwrap();
         service.enable_device_protection("Password123!").unwrap();
         assert!(service.device_protection_enabled());
@@ -223,7 +240,9 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, WalletError::DeviceSecretMissing));
 
-        other.import_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        other
+            .import_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         other.unlock("Password123!").unwrap();
         assert_eq!(other.reveal_mnemonic("Password123!").unwrap(), mnemonic);
     }
@@ -233,7 +252,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         let exported = service.export_wallet("Password123!").unwrap();
 
         let dir2 = tempfile::tempdir().unwrap();
@@ -250,7 +271,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         service.unlock("Password123!").unwrap();
         service.enable_device_protection("Password123!").unwrap();
         service.disable_device_protection("Password123!").unwrap();
@@ -270,13 +293,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         assert!(service.wallet_exists());
         service.reset_local_wallet().unwrap();
         assert!(!service.wallet_exists());
         assert!(!service.is_unlocked());
         // Can recreate after wipe.
-        service.create_wallet(&mnemonic, "Password123!", "Account 1").unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
         assert!(service.wallet_exists());
     }
 }

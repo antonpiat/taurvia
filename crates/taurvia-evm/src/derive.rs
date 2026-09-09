@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use bip32::{DerivationPath, XPrv};
-use k256::elliptic_curve::sec1::ToEncodedPoint;
+use k256::elliptic_curve::sec1::ToSec1Point;
 use sha3::{Digest, Keccak256};
 use zeroize::Zeroizing;
 
@@ -22,8 +22,8 @@ pub fn derive_from_seed(seed: &[u8]) -> Result<EvmSigner> {
     let path: DerivationPath = EVM_DERIVATION_PATH
         .parse()
         .map_err(|e| anyhow!("invalid evm derivation path: {e}"))?;
-    let xprv = XPrv::derive_from_path(seed, &path)
-        .map_err(|e| anyhow!("evm derivation failed: {e}"))?;
+    let xprv =
+        XPrv::derive_from_path(seed, &path).map_err(|e| anyhow!("evm derivation failed: {e}"))?;
     let secret_key = xprv.private_key();
     let mut secret = Zeroizing::new([0u8; 32]);
     secret.copy_from_slice(secret_key.to_bytes().as_slice());
@@ -68,7 +68,7 @@ fn address_from_secret(secret: &[u8; 32]) -> Result<String> {
     let sk = k256::SecretKey::from_slice(secret.as_slice())
         .map_err(|e| anyhow!("invalid secp256k1 key: {e}"))?;
     let pk = sk.public_key();
-    let uncompressed = pk.to_encoded_point(false);
+    let uncompressed = pk.to_sec1_point(false);
     let bytes = uncompressed.as_bytes();
     // skip 0x04 prefix
     let hash = Keccak256::digest(&bytes[1..]);
@@ -82,7 +82,11 @@ fn eip55(addr: &[u8]) -> String {
     let mut out = String::from("0x");
     for (i, ch) in hex.chars().enumerate() {
         let hash_byte = hash[i / 2];
-        let nibble = if i % 2 == 0 { hash_byte >> 4 } else { hash_byte & 0x0f };
+        let nibble = if i % 2 == 0 {
+            hash_byte >> 4
+        } else {
+            hash_byte & 0x0f
+        };
         if ch.is_ascii_hexdigit() && ch.is_ascii_alphabetic() && nibble >= 8 {
             out.push(ch.to_ascii_uppercase());
         } else {

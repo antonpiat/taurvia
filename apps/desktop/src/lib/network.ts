@@ -23,8 +23,20 @@ export function findNetwork(
   return networks.find((n) => n.id === normalized);
 }
 
-export function enabledNetworks(networks: NetworkInfo[]): NetworkInfo[] {
-  return networks.filter((n) => n.enabled);
+/** Last-used picker: activated mainnets plus testnets of those families. */
+export function lastUsedNetworkOptions(
+  networks: NetworkInfo[],
+  activatedIds: string[],
+): NetworkInfo[] {
+  const activated = new Set(activatedIds);
+  const families = new Set(
+    networks.filter((n) => activated.has(n.id)).map((n) => n.family),
+  );
+  return networks.filter(
+    (n) =>
+      n.enabled &&
+      (activated.has(n.id) || (n.is_testnet && families.has(n.family))),
+  );
 }
 
 export function canSwap(info: NetworkInfo | undefined): boolean {
@@ -40,15 +52,9 @@ export function canSwapAny(enabledIds: string[], networks: NetworkInfo[]): boole
 
 export function networkShortLabel(info: NetworkInfo | undefined, id?: unknown): string {
   if (info) {
-    return info.is_testnet ? `${info.name}` : info.name;
+    return info.name;
   }
   return normalizeNetworkId(id);
-}
-
-/** Shell subtitle under the brand mark. */
-export function productChainLabel(info: NetworkInfo | undefined): string {
-  if (!info) return "Wallet";
-  return info.name;
 }
 
 export function nativeAssetId(family: ChainFamily | undefined): string {

@@ -52,8 +52,6 @@ struct ZeroxFees {
 #[derive(Debug, Deserialize)]
 struct ZeroxGas {
     amount: Option<String>,
-    #[allow(dead_code)]
-    token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -63,8 +61,6 @@ struct ZeroxIssues {
 
 #[derive(Debug, Deserialize)]
 struct ZeroxAllowance {
-    #[allow(dead_code)]
-    actual: Option<String>,
     spender: Option<String>,
 }
 
@@ -79,10 +75,17 @@ impl EvmRpc {
         api_key: Option<&str>,
     ) -> Result<SwapQuote> {
         let quote = self
-            .zerox_quote(taker, sell_token, buy_token, amount_ui, slippage_bps, api_key)
+            .zerox_quote(
+                taker,
+                sell_token,
+                buy_token,
+                amount_ui,
+                slippage_bps,
+                api_key,
+            )
             .await?;
-        let sell_meta = evm_asset_meta(self.descriptor.id, sell_token);
-        let buy_meta = evm_asset_meta(self.descriptor.id, buy_token);
+        let sell_meta = evm_asset_meta(self.descriptor.id, sell_token)?;
+        let buy_meta = evm_asset_meta(self.descriptor.id, buy_token)?;
         let sell_amount = quote.sell_amount.unwrap_or_default();
         let buy_amount = quote
             .buy_amount
@@ -142,8 +145,14 @@ impl EvmRpc {
         let tx = quote
             .transaction
             .ok_or_else(|| anyhow!("0x quote has no transaction (API key may be required)"))?;
-        self.send_calldata(signer, &tx.to, &tx.data, tx.value.as_deref(), tx.gas.as_deref())
-            .await
+        self.send_calldata(
+            signer,
+            &tx.to,
+            &tx.data,
+            tx.value.as_deref(),
+            tx.gas.as_deref(),
+        )
+        .await
     }
 
     async fn zerox_quote(
@@ -161,7 +170,7 @@ impl EvmRpc {
         if sell.eq_ignore_ascii_case(&buy) {
             bail!("input and output tokens must differ");
         }
-        let decimals = evm_asset_meta(self.descriptor.id, sell_token).1;
+        let decimals = evm_asset_meta(self.descriptor.id, sell_token)?.1;
         let sell_amount = f64_to_u256(amount_ui, decimals);
         if sell_amount.is_zero() {
             bail!("swap amount must be greater than zero");
@@ -196,23 +205,16 @@ impl EvmRpc {
         signer: &EvmSigner,
         token: &str,
         spender: &str,
-        amount_ui: f64,
+        _amount_ui: f64,
     ) -> Result<()> {
         if is_native(token) {
             return Ok(());
         }
-        let decimals = evm_asset_meta(self.descriptor.id, token).1;
-        let amount = f64_to_u256(amount_ui, decimals);
         let spender = Address::from_str(spender).context("invalid 0x spender")?;
-        let contract = Address::from_str(token).context("invalid sell token")?;
         let call = approveCall {
             spender,
             amount: U256::MAX,
         };
-        let tx = TransactionRequest::default()
-            .with_to(contract)
-            .with_input(call.abi_encode());
-        let _ = (amount, tx);
         self.send_calldata(
             signer,
             token,
@@ -276,15 +278,15 @@ fn is_native(asset: &str) -> bool {
         || asset.eq_ignore_ascii_case(NATIVE)
 }
 
-fn evm_asset_meta(network_id: &str, asset: &str) -> (String, u8) {
+fn evm_asset_meta(network_id: &str, asset: &str) -> Result<(String, u8)> {
     if is_native(asset) {
-        return ("ETH".into(), 18);
+        return Ok(("ETH".into(), 18));
     }
     curated_tokens(network_id)
         .iter()
         .find(|t| t.address.eq_ignore_ascii_case(asset))
         .map(|t| (t.symbol.to_string(), t.decimals))
-        .unwrap_or_else(|| ("TOKEN".into(), 18))
+        .ok_or_else(|| anyhow!("unsupported Ethereum token"))
 }
 
 fn parse_u256(value: &str) -> Result<U256> {

@@ -54,14 +54,15 @@ pub async fn native_price_usd(coingecko_id: &str) -> Result<f64> {
         .get(coingecko_id)
         .and_then(|m| m.get("usd").copied())
         .context("coingecko missing usd price")?;
-    native_cache()
-        .insert(coingecko_id.to_string(), price)
-        .await;
+    native_cache().insert(coingecko_id.to_string(), price).await;
     Ok(price)
 }
 
 /// ERC-20 USD prices keyed by lowercase contract address (Ethereum platform).
-pub async fn token_prices_usd(platform: &str, contracts: &[String]) -> Result<HashMap<String, f64>> {
+pub async fn token_prices_usd(
+    platform: &str,
+    contracts: &[String],
+) -> Result<HashMap<String, f64>> {
     if contracts.is_empty() {
         return Ok(HashMap::new());
     }

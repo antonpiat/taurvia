@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
-import { canSwapAny } from "@/lib/network";
+import { canSwapAny, familyLabel } from "@/lib/network";
 import {
   BTC_NATIVE,
   BTC_NATIVE_TOKEN,
@@ -50,7 +50,7 @@ function looksLikeMintSymbol(symbol: string | null | undefined): boolean {
 
 export function SwapPage() {
   const navigate = useNavigate();
-  const { nativeBalance, tokens, refreshBalances, settings, saveSettings, explorer, network, networkInfo, networks, enabledNetworks, chains, changeNetwork } = useWallet();
+  const { refreshBalances, settings, saveSettings, explorer, network, networkInfo, networks, enabledNetworks, chains, changeNetwork } = useWallet();
   const [fromMint, setFromMint] = useState(WRAPPED_SOL);
   const [toMint, setToMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
   const [amount, setAmount] = useState("");
@@ -122,13 +122,13 @@ export function SwapPage() {
       const chainSnap = chains.find((c) => c.network.startsWith("ethereum"));
       map.set(ETH_NATIVE, {
         ...ETH_MAJOR_TOKENS[0],
-        balanceUi: chainSnap?.native_balance ?? nativeBalance ?? 0,
+        balanceUi: chainSnap?.native_balance ?? 0,
         chain,
       });
       for (const major of ETH_MAJOR_TOKENS) {
         if (!map.has(major.mint)) map.set(major.mint, { ...major, chain });
       }
-      for (const token of chainSnap?.tokens ?? tokens) {
+      for (const token of chainSnap?.tokens ?? []) {
         map.set(token.mint, withLocalLogo({
           mint: token.mint,
           symbol: token.symbol,
@@ -145,19 +145,20 @@ export function SwapPage() {
       const chainSnap = chains.find((c) => c.network.startsWith("bitcoin"));
       map.set(BTC_NATIVE, {
         ...BTC_NATIVE_TOKEN,
-        balanceUi: chainSnap?.native_balance ?? nativeBalance ?? 0,
+        balanceUi: chainSnap?.native_balance ?? 0,
         chain: "bitcoin",
       });
       map.set(ETH_NATIVE, { ...ETH_MAJOR_TOKENS[0], chain: "evm" });
       map.set(WRAPPED_SOL, { ...MAJOR_TOKENS[0], chain: "solana" });
       return Array.from(map.values());
     }
+    const chainSnap = chains.find((c) => c.network.startsWith("solana"));
     map.set(WRAPPED_SOL, {
       ...MAJOR_TOKENS[0],
-      balanceUi: nativeBalance ?? 0,
+      balanceUi: chainSnap?.native_balance ?? 0,
       chain: "solana",
     });
-    for (const token of tokens) {
+    for (const token of chainSnap?.tokens ?? []) {
       map.set(token.mint, withLocalLogo({
         mint: token.mint,
         symbol: token.symbol,
@@ -175,8 +176,21 @@ export function SwapPage() {
       if (!map.has(extra.mint)) map.set(extra.mint, withLocalLogo({ ...extra, chain: "solana" }, "solana"));
     }
     return Array.from(map.values());
-  }, [extraTokens, nativeBalance, tokens, networkInfo?.family, chains]);
+  }, [extraTokens, networkInfo?.family, chains]);
 
+  const fromSelectable = useMemo(() => {
+    if (networkInfo?.family === "bitcoin") {
+      return selectable.filter((t) => t.mint === BTC_NATIVE);
+    }
+    return selectable;
+  }, [selectable, networkInfo?.family]);
+
+  const toSelectable = useMemo(() => {
+    if (networkInfo?.family === "bitcoin") {
+      return selectable.filter((t) => t.mint !== BTC_NATIVE);
+    }
+    return selectable;
+  }, [selectable, networkInfo?.family]);
   const fromToken = selectable.find((token) => token.mint === fromMint);
   const toToken = selectable.find((token) => token.mint === toMint);
   const fromSymbol =
@@ -398,9 +412,13 @@ export function SwapPage() {
                   type="button"
                   size="sm"
                   variant={n.id === network ? "default" : "outline"}
-                  onClick={() => void changeNetwork(n.id)}
+                  aria-pressed={n.id === network}
+                  onClick={() => {
+                    if (n.id === network) return;
+                    void changeNetwork(n.id);
+                  }}
                 >
-                  {n.name}
+                  {familyLabel(n.family)}
                 </Button>
               ))}
             </div>
@@ -408,7 +426,7 @@ export function SwapPage() {
           <TokenDropdown
             label="From"
             token={fromToken}
-            tokens={selectable}
+            tokens={fromSelectable}
             selectedMint={fromMint}
             placeholder="Select token"
             open={pickerSide === "from"}
@@ -419,17 +437,19 @@ export function SwapPage() {
             chain={networkFamilyToChain(networkInfo?.family)}
           />
 
+          {networkInfo?.family !== "bitcoin" && (
           <div className="flex justify-center">
             <Button type="button" variant="outline" size="sm" onClick={handleFlip}>
               <ArrowDownUp className="h-4 w-4" />
               Flip
             </Button>
           </div>
+          )}
 
           <TokenDropdown
             label="To"
             token={toToken}
-            tokens={selectable}
+            tokens={toSelectable}
             selectedMint={toMint}
             placeholder="Select token"
             open={pickerSide === "to"}

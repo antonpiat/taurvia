@@ -51,8 +51,8 @@ pub async fn activity(
     Ok(txs
         .into_iter()
         .map(|tx| {
-            let failed = tx.is_error.as_deref() == Some("1")
-                || tx.txreceipt_status.as_deref() == Some("0");
+            let failed =
+                tx.is_error.as_deref() == Some("1") || tx.txreceipt_status.as_deref() == Some("0");
             let incoming = tx.to.to_lowercase() == me;
             let raw: U256 = tx.value.parse().unwrap_or(U256::ZERO);
             let amount = u256_to_f64(raw, 18);
@@ -65,7 +65,11 @@ pub async fn activity(
             ActivityItem {
                 txid: tx.hash,
                 timestamp: tx.time_stamp.parse().ok(),
-                status: if failed { "failed".into() } else { "confirmed".into() },
+                status: if failed {
+                    "failed".into()
+                } else {
+                    "confirmed".into()
+                },
                 direction: direction.into(),
                 amount: if raw.is_zero() { None } else { Some(amount) },
                 amount_symbol: Some(descriptor.native_symbol.to_string()),

@@ -15,9 +15,9 @@ pub use config::{
 };
 pub use error::ApiError;
 pub use network::{
-    default_enabled_network_ids, env_rpc_override, get_network,
-    list_network_info, mainnet_id_for_family, managed_rpc_url, normalize_network_id, require_network,
-    ChainFamily, ChainFeatures, NetworkDescriptor, NetworkInfo, DEFAULT_NETWORK_ID, NETWORKS,
+    default_enabled_network_ids, env_rpc_override, get_network, list_network_info,
+    mainnet_id_for_family, managed_rpc_url, normalize_network_id, require_network, ChainFamily,
+    ChainFeatures, NetworkDescriptor, NetworkInfo, DEFAULT_NETWORK_ID, NETWORKS,
     NETWORK_BITCOIN_MAINNET, NETWORK_BITCOIN_TESTNET, NETWORK_ETHEREUM_MAINNET,
     NETWORK_ETHEREUM_SEPOLIA, NETWORK_SOLANA_DEVNET, NETWORK_SOLANA_MAINNET,
 };
