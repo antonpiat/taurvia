@@ -19,8 +19,9 @@ import type {
   ImportKind,
   NetworkInfo,
   RuntimeConfig,
+  TokenBalance,
 } from "@/lib/tauri";
-import { TokenBalance, walletApi } from "@/lib/tauri";
+import { walletApi } from "@/lib/tauri";
 
 const DEFAULT_SETTINGS: AppSettings = {
   rpc_url: null,
@@ -50,8 +51,6 @@ interface WalletContextValue {
   networkInfo: NetworkInfo | undefined;
   nativeBalance: number | null;
   nativeSymbol: string;
-  nativePriceUsd: number | null;
-  nativeValueUsd: number | null;
   totalPortfolioUsd: number | null;
   tokens: TokenBalance[];
   chains: ChainSnapshot[];
@@ -85,8 +84,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [networks, setNetworks] = useState<NetworkInfo[]>([]);
   const [nativeBalance, setNativeBalance] = useState<number | null>(null);
   const [nativeSymbol, setNativeSymbol] = useState("SOL");
-  const [nativePriceUsd, setNativePriceUsd] = useState<number | null>(null);
-  const [nativeValueUsd, setNativeValueUsd] = useState<number | null>(null);
   const [totalPortfolioUsd, setTotalPortfolioUsd] = useState<number | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [chains, setChains] = useState<ChainSnapshot[]>([]);
@@ -134,8 +131,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           setPublicKey(chain.public_key);
           setNativeBalance(chain.native_balance);
           setNativeSymbol(chain.native_symbol || "SOL");
-          setNativePriceUsd(chain.native_price_usd);
-          setNativeValueUsd(chain.native_value_usd);
           setTokens(chain.tokens ?? []);
         }
         return;
@@ -146,8 +141,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setPublicKey(snapshot.public_key);
       setNativeBalance(snapshot.native_balance);
       setNativeSymbol(snapshot.native_symbol || "SOL");
-      setNativePriceUsd(snapshot.native_price_usd);
-      setNativeValueUsd(snapshot.native_value_usd);
       setTokens(snapshot.tokens ?? []);
     },
     [],
@@ -276,8 +269,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setUnlocked(false);
     setPublicKey(null);
     setNativeBalance(null);
-    setNativePriceUsd(null);
-    setNativeValueUsd(null);
     setTotalPortfolioUsd(null);
     setTokens([]);
     setChains([]);
@@ -376,8 +367,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       networkInfo,
       nativeBalance,
       nativeSymbol,
-      nativePriceUsd,
-      nativeValueUsd,
       totalPortfolioUsd,
       tokens,
       chains,
@@ -408,8 +397,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       networkInfo,
       nativeBalance,
       nativeSymbol,
-      nativePriceUsd,
-      nativeValueUsd,
       totalPortfolioUsd,
       tokens,
       chains,

@@ -39,15 +39,12 @@ export function lastUsedNetworkOptions(
   );
 }
 
-export function canSwap(info: NetworkInfo | undefined): boolean {
+function canSwap(info: NetworkInfo | undefined): boolean {
   return Boolean(info?.features.swap && !info.is_testnet);
 }
 
 export function canSwapAny(enabledIds: string[], networks: NetworkInfo[]): boolean {
-  return enabledIds.some((id) => {
-    const info = networks.find((n) => n.id === id);
-    return canSwap(info);
-  });
+  return enabledIds.some((id) => canSwap(networks.find((n) => n.id === id)));
 }
 
 export function networkShortLabel(info: NetworkInfo | undefined, id?: unknown): string {

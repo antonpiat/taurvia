@@ -8,13 +8,11 @@ export type {
   ExplorerKind,
   ImportKind,
   NetworkInfo,
-  OnboardingDraft,
   RuntimeConfig,
   SendPreview,
   SwapQuote,
   TokenBalance,
   TokenInfo,
-  WalletSnapshot,
 } from "@/bindings";
 
 async function unwrap<T>(promise: Promise<Result<T, unknown>> | Promise<T>): Promise<T> {
@@ -64,7 +62,6 @@ export const walletApi = {
     unwrap(commands.changeWalletNetwork(network)),
   setEnabledNetworks: (networks: string[]) =>
     unwrap(commands.setEnabledNetworks(networks)),
-  setAccountName: (name: string) => unwrap(commands.setAccountName(name)),
   listNetworks: () => commands.listNetworks(),
   getActivity: (limit: number) => unwrap(commands.getActivity(limit)),
   previewSend: (to: string, amount: number, asset: string | null) =>

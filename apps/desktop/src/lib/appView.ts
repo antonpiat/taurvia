@@ -10,7 +10,7 @@ import {
 
 export type AppViewKind = "desktop" | "compact" | "phone";
 
-export type WindowSize = { width: number; height: number };
+type WindowSize = { width: number; height: number };
 
 export const APP_VIEW_WINDOW_SIZES: Record<AppViewKind, WindowSize & { label: string }> = {
   desktop: { width: 1100, height: 720, label: "1100×720" },
@@ -29,7 +29,7 @@ export function normalizeAppView(value: unknown): AppViewKind {
   return "desktop";
 }
 
-export function layoutFromWidth(width: number): AppViewKind {
+function layoutFromWidth(width: number): AppViewKind {
   if (width < 768) return "phone";
   if (width < 1024) return "compact";
   return "desktop";
@@ -43,7 +43,7 @@ function clampSize(width: number, height: number): WindowSize {
 }
 
 /** Resolve size to restore: saved pixels, else the view preset. */
-export function resolveWindowSize(settings: {
+function resolveWindowSize(settings: {
   app_view?: unknown;
   window_width?: number | null;
   window_height?: number | null;
@@ -58,15 +58,15 @@ export function resolveWindowSize(settings: {
 /** While true, ignore resize→settings sync (programmatic size change in progress). */
 let suppressViewSyncUntil = 0;
 
-export function suppressAppViewResizeSync(ms = 400) {
+function suppressAppViewResizeSync(ms = 400) {
   suppressViewSyncUntil = Date.now() + ms;
 }
 
-export function isAppViewResizeSyncSuppressed() {
+function isAppViewResizeSyncSuppressed() {
   return Date.now() < suppressViewSyncUntil;
 }
 
-export async function applyWindowSize(width: number, height: number): Promise<void> {
+async function applyWindowSize(width: number, height: number): Promise<void> {
   const size = clampSize(width, height);
   suppressAppViewResizeSync(500);
   try {
