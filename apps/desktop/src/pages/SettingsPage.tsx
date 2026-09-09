@@ -29,7 +29,7 @@ import {
 import { DEFAULT_AUTO_LOCK_MINUTES, normalizeAutoLockMinutes } from "@/lib/autoLock";
 import { explorerLabel, normalizeExplorer } from "@/lib/explorer";
 import {
-  enabledNetworks,
+  lastUsedNetworkOptions,
   familyLabel,
   networkShortLabel,
   normalizeNetworkId,
@@ -42,7 +42,7 @@ import {
   type SettingsSectionId,
 } from "@/lib/settingsNav";
 import { TokenIcon } from "@/components/TokenIcon";
-import { withLocalLogo } from "@/lib/tokenCatalog";
+import { inferTokenChain, withLocalLogo } from "@/lib/tokenCatalog";
 import { ApiError, AppSettings, ExplorerKind, walletApi } from "@/lib/tauri";
 import { shortenAddress } from "@/lib/utils";
 
@@ -599,6 +599,7 @@ export function SettingsPage() {
                             <TokenIcon
                               symbol={row.symbol}
                               mint={row.mint}
+                              chain={inferTokenChain(row.mint)}
                               logoUri={row.logo_uri}
                               size={32}
                             />
@@ -774,10 +775,24 @@ export function SettingsPage() {
                 const info = networks.find((n) => n.id === id);
                 if (!info) return null;
                 const on = activatedNetworks.includes(id);
+                const keyOnly =
+                  importKind === "solana-key" ||
+                  importKind === "evm-key" ||
+                  importKind === "bitcoin-key";
+                const keyFamily =
+                  importKind === "solana-key"
+                    ? "solana"
+                    : importKind === "evm-key"
+                      ? "evm"
+                      : importKind === "bitcoin-key"
+                        ? "bitcoin"
+                        : null;
+                const lockedOut = Boolean(keyOnly && keyFamily && info.family !== keyFamily);
                 return (
                   <label key={id} className="flex cursor-pointer items-center gap-2.5 text-sm">
                     <Checkbox
                       checked={on}
+                      disabled={lockedOut}
                       onCheckedChange={(checked) => {
                         const next = checked
                           ? [...activatedNetworks.filter((x) => x !== id), id]
@@ -788,14 +803,14 @@ export function SettingsPage() {
                         });
                       }}
                     />
-                    <span>{info.name}</span>
+                    <span>{info.name}{lockedOut ? " (this key)" : ""}</span>
                   </label>
                 );
               })}
               <SelectDropdown
                 label="Network"
                 value={normalizeNetworkId(network)}
-                options={enabledNetworks(networks)
+                options={lastUsedNetworkOptions(networks, activatedNetworks)
                   .slice()
                   .sort((a, b) => a.family.localeCompare(b.family) || a.name.localeCompare(b.name))
                   .map((info) => ({

@@ -74,11 +74,9 @@ impl WalletService {
             private_key: stored_secret,
             derivation_path: DEFAULT_DERIVATION_PATH.to_string(),
         };
-        let network = models::mainnet_id_for_family(
-            kind.family()
-                .unwrap_or(models::ChainFamily::Solana),
-        )
-        .to_string();
+        let network =
+            models::mainnet_id_for_family(kind.family().unwrap_or(models::ChainFamily::Solana))
+                .to_string();
         let wallet = self.encrypt_wallet_file(
             &keyring,
             &payload,
@@ -501,7 +499,8 @@ fn keyring_from_payload(
             Ok(FamilyKeyring::from_solana_key(keypair))
         }
         ImportKind::EvmKey => {
-            let signer = taurvia_evm::from_hex(&payload.private_key).map_err(WalletError::Operation)?;
+            let signer =
+                taurvia_evm::from_hex(&payload.private_key).map_err(WalletError::Operation)?;
             Ok(FamilyKeyring::from_evm_key(signer))
         }
         ImportKind::BitcoinKey => {
@@ -528,14 +527,6 @@ fn detect_and_parse_key(secret: &str) -> Result<(FamilyKeyring, ImportKind, Stri
             FamilyKeyring::from_btc_keys(main, test),
             ImportKind::BitcoinKey,
             trimmed.to_string(),
-        ));
-    }
-    if trimmed.len() == 64 && trimmed.chars().all(|c| c.is_ascii_hexdigit()) {
-        let signer = taurvia_evm::from_hex(trimmed).map_err(WalletError::Operation)?;
-        return Ok((
-            FamilyKeyring::from_evm_key(signer),
-            ImportKind::EvmKey,
-            format!("0x{}", trimmed.to_ascii_lowercase()),
         ));
     }
     if let Ok(kp) = keypair_from_secret_input(trimmed) {

@@ -188,10 +188,7 @@ impl RuntimeConfig {
         let managed = managed_rpc_url(network_id).to_string();
 
         Self {
-            rpc_url: from_map
-                .or(from_legacy)
-                .or(from_env)
-                .unwrap_or(managed),
+            rpc_url: from_map.or(from_legacy).or(from_env).unwrap_or(managed),
             jupiter_api_key: jupiter_from_settings.or(jupiter_from_env),
         }
     }

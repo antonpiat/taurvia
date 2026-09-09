@@ -18,21 +18,6 @@ export type DropdownToken = {
   chain?: "solana" | "evm" | "bitcoin";
 };
 
-function TokenAvatar({
-  symbol,
-  logoUri,
-  mint,
-  chain,
-}: {
-  symbol: string;
-  logoUri: string | null;
-  eager?: boolean;
-  mint?: string;
-  chain?: "solana" | "evm" | "bitcoin";
-}) {
-  return <TokenIcon symbol={symbol} mint={mint} chain={chain} logoUri={logoUri} size={32} />;
-}
-
 function matchesQuery(token: DropdownToken, query: string): boolean {
   if (!query) return true;
   const q = query.toLowerCase();
@@ -171,11 +156,12 @@ export function TokenDropdown({
         >
           {displayToken ? (
             <span className="flex min-w-0 items-center gap-3">
-              <TokenAvatar
+              <TokenIcon
                 symbol={displayToken.symbol}
-                logoUri={displayToken.logo_uri}
                 mint={displayToken.mint}
                 chain={displayToken.chain}
+                logoUri={displayToken.logo_uri}
+                size={32}
               />
               <span className="min-w-0">
                 <span className="block text-base font-semibold leading-tight">
@@ -249,11 +235,12 @@ export function TokenDropdown({
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-3">
-                        <TokenAvatar
+                        <TokenIcon
                           symbol={row.symbol}
-                          logoUri={row.logo_uri}
                           mint={row.mint}
                           chain={row.chain}
+                          logoUri={row.logo_uri}
+                          size={32}
                         />
                         <span className="min-w-0">
                           <span className="block font-semibold">{row.symbol}</span>
@@ -298,11 +285,12 @@ export function TokenDropdown({
                           className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left transition-colors hover:bg-accent/50"
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <TokenAvatar
+                            <TokenIcon
                               symbol={row.symbol}
-                              logoUri={row.logo_uri}
                               mint={row.mint}
                               chain={chain}
+                              logoUri={row.logo_uri}
+                              size={32}
                             />
                             <span className="min-w-0">
                               <span className="block font-semibold">{row.symbol}</span>

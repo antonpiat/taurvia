@@ -15,10 +15,14 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
     match family {
         ChainFamily::Solana => {
             if looks_evm {
-                bail!("this looks like an Ethereum address; switch network or paste a Solana address");
+                bail!(
+                    "this looks like an Ethereum address; switch network or paste a Solana address"
+                );
             }
             if looks_btc {
-                bail!("this looks like a Bitcoin address; switch network or paste a Solana address");
+                bail!(
+                    "this looks like a Bitcoin address; switch network or paste a Solana address"
+                );
             }
             if !looks_solana {
                 bail!("invalid Solana address");
@@ -56,7 +60,9 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
 }
 
 fn is_evm_hex(address: &str) -> bool {
-    let rest = address.strip_prefix("0x").or_else(|| address.strip_prefix("0X"));
+    let rest = address
+        .strip_prefix("0x")
+        .or_else(|| address.strip_prefix("0X"));
     match rest {
         Some(hex) => hex.len() == 40 && hex.chars().all(|c| c.is_ascii_hexdigit()),
         None => false,
@@ -67,9 +73,7 @@ fn is_bitcoin_bech32(address: &str) -> bool {
     let lower = address.to_ascii_lowercase();
     (lower.starts_with("bc1") || lower.starts_with("tb1"))
         && lower.len() >= 14
-        && lower
-            .chars()
-            .all(|c| matches!(c, 'a'..='z' | '0'..='9'))
+        && lower.chars().all(|c| matches!(c, 'a'..='z' | '0'..='9'))
 }
 
 fn looks_base58(address: &str) -> bool {

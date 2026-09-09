@@ -54,7 +54,9 @@ impl EvmRpc {
 
         let (native, market) = tokio::join!(
             native_fut,
-            tokio::time::timeout(MARKET_DATA_BUDGET, async { tokio::join!(tokens_fut, price_fut) })
+            tokio::time::timeout(MARKET_DATA_BUDGET, async {
+                tokio::join!(tokens_fut, price_fut)
+            })
         );
         let native = native.context("eth_getBalance failed")?;
         let native_balance = u256_to_f64(native, 18);

@@ -46,7 +46,10 @@ impl WalletService {
             AssetFamily::Bitcoin => models::NETWORK_BITCOIN_MAINNET,
         };
         let enabled = self.enabled_network_ids();
-        if !enabled.iter().any(|id| models::normalize_network_id(id) == mainnet) {
+        if !enabled
+            .iter()
+            .any(|id| models::normalize_network_id(id) == mainnet)
+        {
             return Err(WalletError::Operation(anyhow::anyhow!(
                 "activate {} mainnet to swap",
                 match family {
@@ -113,15 +116,17 @@ impl WalletService {
             models::ChainFamily::Evm => {
                 self.require_swap_backend(AssetFamily::Evm)?;
                 let q = q.to_ascii_lowercase();
-                Ok(taurvia_evm::curated_tokens(models::NETWORK_ETHEREUM_MAINNET)
-                    .iter()
-                    .filter(|t| {
-                        t.symbol.to_ascii_lowercase().contains(&q)
-                            || t.name.to_ascii_lowercase().contains(&q)
-                            || t.address.to_ascii_lowercase().contains(&q)
-                    })
-                    .map(taurvia_evm::token_info)
-                    .collect())
+                Ok(
+                    taurvia_evm::curated_tokens(models::NETWORK_ETHEREUM_MAINNET)
+                        .iter()
+                        .filter(|t| {
+                            t.symbol.to_ascii_lowercase().contains(&q)
+                                || t.name.to_ascii_lowercase().contains(&q)
+                                || t.address.to_ascii_lowercase().contains(&q)
+                        })
+                        .map(taurvia_evm::token_info)
+                        .collect(),
+                )
             }
             models::ChainFamily::Bitcoin => Ok(Vec::new()),
             models::ChainFamily::Sui => Err(WalletError::Operation(anyhow::anyhow!(
@@ -211,7 +216,7 @@ impl WalletService {
                     .await
             }
             (AssetFamily::Bitcoin, _) => {
-                self.thorchain_execute_btc(input_mint, output_mint, amount_ui)
+                self.thorchain_execute_btc(input_mint, output_mint, amount_ui, slippage_bps)
                     .await
             }
             _ => Err(WalletError::Operation(anyhow::anyhow!(
@@ -233,7 +238,7 @@ impl WalletService {
         let amount_raw = ui_amount_to_raw(&input_mint, amount_ui)
             .await
             .map_err(WalletError::Operation)?;
-        self.rpc_handle()
+        self.solana_mainnet_rpc()
             .quote_swap(&input_mint, &output_mint, amount_raw, slippage_bps)
             .await
             .map_err(WalletError::Operation)
@@ -252,7 +257,7 @@ impl WalletService {
         let amount_raw = ui_amount_to_raw(&input_mint, amount_ui)
             .await
             .map_err(WalletError::Operation)?;
-        self.rpc_handle()
+        self.solana_mainnet_rpc()
             .execute_swap(
                 &keypair,
                 &input_mint,
@@ -262,6 +267,10 @@ impl WalletService {
             )
             .await
             .map_err(WalletError::Operation)
+    }
+
+    fn solana_mainnet_rpc(&self) -> taurvia_solana::SolanaRpc {
+        taurvia_solana::SolanaRpc::new(Some(&self.endpoint_for(models::NETWORK_SOLANA_MAINNET)))
     }
 
     fn zerox_api_key(&self) -> Option<String> {
@@ -338,9 +347,10 @@ impl WalletService {
         let to_asset = taurvia_bitcoin::thor_asset(output_mint).map_err(WalletError::Operation)?;
         let dest = self.thorchain_destination(output_mint)?;
         let amount_1e8 = (amount_ui * 1e8).round() as u64;
-        let quote = taurvia_bitcoin::thorchain_quote(from_asset, to_asset, amount_1e8, &dest)
-            .await
-            .map_err(WalletError::Operation)?;
+        let quote =
+            taurvia_bitcoin::thorchain_quote(from_asset, to_asset, amount_1e8, &dest, slippage_bps)
+                .await
+                .map_err(WalletError::Operation)?;
         let in_sym = if taurvia_bitcoin::is_btc(input_mint) {
             "BTC"
         } else if taurvia_bitcoin::is_eth_native(input_mint) {
@@ -372,6 +382,7 @@ impl WalletService {
         input_mint: &str,
         output_mint: &str,
         amount_ui: f64,
+        slippage_bps: u16,
     ) -> Result<SwapResult, WalletError> {
         if !taurvia_bitcoin::is_btc(input_mint) {
             return Err(WalletError::Operation(anyhow::anyhow!(
@@ -382,15 +393,21 @@ impl WalletService {
         let from_asset = taurvia_bitcoin::thor_asset(input_mint).map_err(WalletError::Operation)?;
         let to_asset = taurvia_bitcoin::thor_asset(output_mint).map_err(WalletError::Operation)?;
         let amount_1e8 = (amount_ui * 1e8).round() as u64;
-        let quote = taurvia_bitcoin::thorchain_quote(from_asset, to_asset, amount_1e8, &dest)
-            .await
-            .map_err(WalletError::Operation)?;
+        let quote =
+            taurvia_bitcoin::thorchain_quote(from_asset, to_asset, amount_1e8, &dest, slippage_bps)
+                .await
+                .map_err(WalletError::Operation)?;
         let url = self.endpoint_for(models::NETWORK_BITCOIN_MAINNET);
         let desc = *models::require_network(models::NETWORK_BITCOIN_MAINNET);
         let rpc = taurvia_bitcoin::BtcRpc::new(&url, desc);
-        let signer = self.with_session(|k| k.btc(false).cloned())??;
+        let signer = self.with_session(|k| k.require_btc(false).cloned())??;
         let result = rpc
-            .send_with_memo(&signer, &quote.inbound_address, amount_ui, Some(&quote.memo))
+            .send_with_memo(
+                &signer,
+                &quote.inbound_address,
+                amount_ui,
+                Some(&quote.memo),
+            )
             .await
             .map_err(WalletError::Operation)?;
         Ok(SwapResult {
@@ -407,7 +424,7 @@ impl WalletService {
             return Ok(self.require_pubkey()?.to_string());
         }
         if taurvia_bitcoin::is_btc(output_mint) {
-            return self.with_session(|k| k.btc(false).map(|s| s.address.clone()))?;
+            return self.with_session(|k| k.require_btc(false).map(|s| s.address.clone()))?;
         }
         Err(WalletError::Operation(anyhow::anyhow!(
             "unsupported Thorchain destination"

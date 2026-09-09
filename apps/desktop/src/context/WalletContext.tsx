@@ -97,12 +97,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_SETTINGS.enabled_networks ?? [],
   );
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const refreshPromise = useRef<Promise<void> | null>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unlockedRef = useRef(false);
   const autoLockMinutesRef = useRef(DEFAULT_AUTO_LOCK_MINUTES);
   const settingsRef = useRef(settings);
   const restoredWindowSize = useRef(false);
+  const networkRef = useRef(DEFAULT_NETWORK_ID);
+  const refreshGen = useRef(0);
 
   settingsRef.current = settings;
 
@@ -116,42 +117,54 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const applySnapshot = useCallback(
     (snapshot: Awaited<ReturnType<typeof walletApi.getWalletSnapshot>>) => {
+      const snapNet = normalizeNetworkId(snapshot.network);
       setWalletExists(snapshot.exists);
       setUnlocked(snapshot.unlocked);
-      setPublicKey(snapshot.public_key);
-      setNetwork(normalizeNetworkId(snapshot.network));
-      setNativeBalance(snapshot.native_balance);
-      setNativeSymbol(snapshot.native_symbol || "SOL");
-      setNativePriceUsd(snapshot.native_price_usd);
-      setNativeValueUsd(snapshot.native_value_usd);
       setTotalPortfolioUsd(snapshot.total_portfolio_usd);
-      setTokens(snapshot.tokens ?? []);
       setChains(snapshot.chains ?? []);
       setAccountName(snapshot.account_name || "Account 1");
       setImportKind(snapshot.import_kind ?? "mnemonic");
       setCanRevealMnemonic(Boolean(snapshot.can_reveal_mnemonic));
       setEnabledNetworksState(snapshot.enabled_networks ?? DEFAULT_SETTINGS.enabled_networks ?? []);
+
+      const wanted = networkRef.current;
+      if (snapNet !== wanted) {
+        const chain = (snapshot.chains ?? []).find((c) => c.network === wanted);
+        if (chain) {
+          setPublicKey(chain.public_key);
+          setNativeBalance(chain.native_balance);
+          setNativeSymbol(chain.native_symbol || "SOL");
+          setNativePriceUsd(chain.native_price_usd);
+          setNativeValueUsd(chain.native_value_usd);
+          setTokens(chain.tokens ?? []);
+        }
+        return;
+      }
+
+      networkRef.current = snapNet;
+      setNetwork(snapNet);
+      setPublicKey(snapshot.public_key);
+      setNativeBalance(snapshot.native_balance);
+      setNativeSymbol(snapshot.native_symbol || "SOL");
+      setNativePriceUsd(snapshot.native_price_usd);
+      setNativeValueUsd(snapshot.native_value_usd);
+      setTokens(snapshot.tokens ?? []);
     },
     [],
   );
 
   const refresh = useCallback(async () => {
-    if (refreshPromise.current) {
-      return refreshPromise.current;
-    }
-
-    const run = (async () => {
-      setBalancesLoading(true);
-      try {
-        applySnapshot(await walletApi.getWalletSnapshot());
-      } finally {
+    const gen = ++refreshGen.current;
+    setBalancesLoading(true);
+    try {
+      const snapshot = await walletApi.getWalletSnapshot();
+      if (gen !== refreshGen.current) return;
+      applySnapshot(snapshot);
+    } finally {
+      if (gen === refreshGen.current) {
         setBalancesLoading(false);
-        refreshPromise.current = null;
       }
-    })();
-
-    refreshPromise.current = run;
-    return run;
+    }
   }, [applySnapshot]);
 
   const refreshBalances = useCallback(async () => {
@@ -221,8 +234,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const changeNetwork = useCallback(
     async (nextNetwork: string) => {
-      const runtime = await walletApi.changeWalletNetwork(nextNetwork);
-      setNetwork(normalizeNetworkId(nextNetwork));
+      const id = normalizeNetworkId(nextNetwork);
+      if (id === networkRef.current) {
+        return {
+          rpc_url: settingsRef.current.rpc_url?.trim() || "",
+          jupiter_api_key: settingsRef.current.jupiter_api_key ?? null,
+        };
+      }
+      networkRef.current = id;
+      setNetwork(id);
+      // Drop in-flight snapshots so they cannot snap the tag back to the previous chain.
+      refreshGen.current += 1;
+      const runtime = await walletApi.changeWalletNetwork(id);
+      if (networkRef.current !== id) {
+        return runtime;
+      }
       void reloadSettings();
       void refresh();
       return runtime;

@@ -215,7 +215,10 @@ pub fn set_enabled_networks(
 #[tauri::command]
 #[specta::specta]
 pub fn set_account_name(name: String, state: State<'_, AppState>) -> CommandResult<()> {
-    state.wallet.set_account_name(&name).map_err(map_wallet_error)
+    state
+        .wallet
+        .set_account_name(&name)
+        .map_err(map_wallet_error)
 }
 
 #[tauri::command]

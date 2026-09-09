@@ -100,10 +100,6 @@ export function chainBadgeSrc(chain: TokenChain): string {
   return solLogo;
 }
 
-export function localLogoForMint(mint: string): string | null {
-  return SOL_LOGOS[mint] ?? null;
-}
-
 export function localLogoForAsset(
   chain: TokenChain | undefined,
   mint: string,
@@ -117,6 +113,7 @@ export function localLogoForAsset(
   }
   if (m.toLowerCase() === "eth") return ethLogo;
   if (m.toLowerCase() === "btc") return btcLogo;
+  if (m.toLowerCase() === "sol" || symbol === "SOL") return solLogo;
   return SOL_LOGOS[m] ?? null;
 }
 
@@ -156,4 +153,11 @@ export function networkFamilyToChain(family: string | undefined): TokenChain | u
   if (family === "bitcoin") return "bitcoin";
   if (family === "solana") return "solana";
   return undefined;
+}
+
+export function inferTokenChain(mint: string): TokenChain {
+  const m = mint.trim();
+  if (m.toLowerCase() === "btc") return "bitcoin";
+  if (m.toLowerCase() === "eth" || m.startsWith("0x") || m.startsWith("0X")) return "evm";
+  return "solana";
 }

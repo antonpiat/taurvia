@@ -22,28 +22,28 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 thiserror = "2.0.20"
 anyhow = "1.0.104"
-uuid = { version = "1.25.0", features = ["v4", "serde"] }
+uuid = { version = "1.26.0", features = ["v4", "serde"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 base64 = "0.23.1"
 rand = "0.10.2"
 zeroize = { version = "1.9.0", features = ["derive"] }
-argon2 = "0.5.3"
+argon2 = "0.6.0"
 aes-gcm = "0.11.1"
 hkdf = "0.13.0"
 sha2 = "0.11.0"
-keyring = "4.1.6"
+keyring = "4.2.0"
 bip39 = "2.2.2"
 bip32 = "0.5.3"
 hex = "0.4.3"
-k256 = { version = "0.13.4", features = ["ecdsa"] }
-sha3 = "0.10.8"
-bitcoin = { version = "0.32.7", default-features = false, features = ["std", "rand-std"] }
+k256 = { version = "0.14.0", features = ["ecdsa"] }
+sha3 = "0.12.0"
+bitcoin = { version = "0.32.102", default-features = false, features = ["std", "rand-std"] }
 solana-sdk = "4.0.1"
-solana-client = "4.1.2"
+solana-client = "4.2.2"
 solana-commitment-config = "3.1.1"
 spl-token-interface = "3.0.0"
 spl-associated-token-account-interface = "2.0.0"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time"] }
 futures = "0.3.34"
-reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
 moka = { version = "0.12.16", features = ["future"] }

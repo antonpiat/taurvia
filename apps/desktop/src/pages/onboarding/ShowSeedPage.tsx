@@ -49,6 +49,7 @@ export function ShowSeedPage() {
       const phrase = await walletApi.generateMnemonic();
       await walletApi.setOnboardingDraft({ mnemonic: phrase, mode: "create" });
       setMnemonic(phrase);
+      setStored(false);
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message ?? "Failed to generate a new phrase");

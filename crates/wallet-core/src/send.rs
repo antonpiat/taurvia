@@ -34,7 +34,9 @@ impl WalletService {
             ChainFamily::Bitcoin => {
                 let url = self.btc_esplora.lock().unwrap().clone();
                 let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-                let from = self.with_session(|k| k.btc(desc.is_testnet).map(|s| s.address.clone()))??;
+                let from = self.with_session(|k| {
+                    k.require_btc(desc.is_testnet).map(|s| s.address.clone())
+                })??;
                 rpc.preview_send(&from, to, amount)
                     .await
                     .map_err(WalletError::Operation)
@@ -63,7 +65,8 @@ impl WalletService {
                 if native {
                     self.send_sol_unlocked(to, amount).await
                 } else {
-                    self.send_spl_unlocked(asset.unwrap_or(""), to, amount).await
+                    self.send_spl_unlocked(asset.unwrap_or(""), to, amount)
+                        .await
                 }
             }
             ChainFamily::Evm => {
@@ -77,7 +80,7 @@ impl WalletService {
             ChainFamily::Bitcoin => {
                 let url = self.btc_esplora.lock().unwrap().clone();
                 let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-                let signer = self.with_session(|k| k.btc(desc.is_testnet).cloned())??;
+                let signer = self.with_session(|k| k.require_btc(desc.is_testnet).cloned())??;
                 rpc.send(&signer, to, amount)
                     .await
                     .map_err(WalletError::Operation)
@@ -119,7 +122,11 @@ impl WalletService {
         Ok(preview)
     }
 
-    async fn send_sol_unlocked(&self, to: &str, amount_sol: f64) -> Result<SendResult, WalletError> {
+    async fn send_sol_unlocked(
+        &self,
+        to: &str,
+        amount_sol: f64,
+    ) -> Result<SendResult, WalletError> {
         let keypair = self.signing_keypair()?;
         self.rpc_handle()
             .send_sol(&keypair, to, amount_sol)
