@@ -43,7 +43,7 @@ import {
 } from "@/lib/settingsNav";
 import { TokenIcon } from "@/components/TokenIcon";
 import { inferTokenChain, withLocalLogo } from "@/lib/tokenCatalog";
-import { ApiError, AppSettings, ExplorerKind, walletApi } from "@/lib/tauri";
+import { ApiError, AppSettings, ExplorerKind, type ImportKind, walletApi } from "@/lib/tauri";
 import { shortenAddress } from "@/lib/utils";
 
 const APP_VIEW_OPTIONS: Array<{
@@ -107,6 +107,13 @@ function rpcOverrideFor(settings: AppSettings, networkId: string): string {
     return settings.rpc_url.trim();
   }
   return "";
+}
+
+function keyImportFamily(kind: ImportKind): "solana" | "evm" | "bitcoin" | null {
+  if (kind === "solana-key") return "solana";
+  if (kind === "evm-key") return "evm";
+  if (kind === "bitcoin-key") return "bitcoin";
+  return null;
 }
 
 export function SettingsPage() {
@@ -719,43 +726,41 @@ export function SettingsPage() {
         {section === "transactions" && (
           <Card>
             <CardContent className="space-y-4 pt-6">
+              <div className="space-y-2">
+                <Label htmlFor="default-slippage">Default slippage (%)</Label>
+                <Input
+                  id="default-slippage"
+                  value={slippageInput}
+                  onChange={(e) => setSlippageInput(e.target.value)}
+                  onBlur={() => void handleSlippageBlur()}
+                  inputMode="decimal"
+                />
+              </div>
               {networkInfo?.family === "solana" ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="default-slippage">Default slippage (%)</Label>
-                    <Input
-                      id="default-slippage"
-                      value={slippageInput}
-                      onChange={(e) => setSlippageInput(e.target.value)}
-                      onBlur={() => void handleSlippageBlur()}
-                      inputMode="decimal"
-                    />
-                  </div>
-                  <SelectDropdown
-                    label="Block explorer"
-                    value={explorerValue}
-                    options={[
-                      {
-                        value: "solscan" as ExplorerKind,
-                        label: explorerLabel("solscan"),
-                        description: "Open transaction links on Solscan",
-                      },
-                      {
-                        value: "solanaExplorer" as ExplorerKind,
-                        label: explorerLabel("solanaExplorer"),
-                        description: "Open transaction links on Solana Explorer",
-                      },
-                    ]}
-                    open={openMenu === "explorer"}
-                    disabled={savingPrefs}
-                    onOpenChange={(open) => setOpenMenu(open ? "explorer" : null)}
-                    onChange={(next) => void patchSettings({ explorer: next })}
-                  />
-                </>
+                <SelectDropdown
+                  label="Block explorer"
+                  value={explorerValue}
+                  options={[
+                    {
+                      value: "solscan" as ExplorerKind,
+                      label: explorerLabel("solscan"),
+                      description: "Open transaction links on Solscan",
+                    },
+                    {
+                      value: "solanaExplorer" as ExplorerKind,
+                      label: explorerLabel("solanaExplorer"),
+                      description: "Open transaction links on Solana Explorer",
+                    },
+                  ]}
+                  open={openMenu === "explorer"}
+                  disabled={savingPrefs}
+                  onOpenChange={(open) => setOpenMenu(open ? "explorer" : null)}
+                  onChange={(next) => void patchSettings({ explorer: next })}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Explorer links for {networkInfo?.name ?? "this network"} come from the network
-                  descriptor. Swap slippage applies on Solana Mainnet only.
+                  descriptor.
                 </p>
               )}
             </CardContent>
@@ -775,19 +780,8 @@ export function SettingsPage() {
                 const info = networks.find((n) => n.id === id);
                 if (!info) return null;
                 const on = activatedNetworks.includes(id);
-                const keyOnly =
-                  importKind === "solana-key" ||
-                  importKind === "evm-key" ||
-                  importKind === "bitcoin-key";
-                const keyFamily =
-                  importKind === "solana-key"
-                    ? "solana"
-                    : importKind === "evm-key"
-                      ? "evm"
-                      : importKind === "bitcoin-key"
-                        ? "bitcoin"
-                        : null;
-                const lockedOut = Boolean(keyOnly && keyFamily && info.family !== keyFamily);
+                const keyFamily = keyImportFamily(importKind);
+                const lockedOut = Boolean(keyFamily && info.family !== keyFamily);
                 return (
                   <label key={id} className="flex cursor-pointer items-center gap-2.5 text-sm">
                     <Checkbox

@@ -15,7 +15,7 @@ export type DropdownToken = {
   name: string;
   logo_uri: string | null;
   balanceUi?: number;
-  chain?: "solana" | "evm" | "bitcoin";
+  chain?: TokenChain;
 };
 
 function matchesQuery(token: DropdownToken, query: string): boolean {
@@ -112,7 +112,7 @@ export function TokenDropdown({
           const results = await walletApi.searchTokens(q);
           if (cancelled) return;
           const localMints = new Set(tokens.map((t) => t.mint));
-          setRemote(results.filter((r) => !localMints.has(r.mint)).map((t) => withLocalLogo(t)));
+          setRemote(results.filter((r) => !localMints.has(r.mint)).map((t) => withLocalLogo(t, chain)));
           setSearchError(null);
         } catch (err) {
           if (!cancelled) {
@@ -133,7 +133,7 @@ export function TokenDropdown({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, open, enableRemoteSearch, tokens]);
+  }, [query, open, enableRemoteSearch, tokens, chain]);
 
   const displayToken = token
     ? withLocalLogo({ ...token, chain: token.chain ?? chain }, token.chain ?? chain)

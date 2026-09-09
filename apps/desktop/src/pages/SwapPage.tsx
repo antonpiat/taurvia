@@ -26,18 +26,21 @@ import {
   ETH_NATIVE,
   MAJOR_TOKENS,
   MAX_SWAP_FAVORITES,
+  SOL_USDC,
   WRAPPED_SOL,
+  inferTokenChain,
   isCuratedMint,
   networkFamilyToChain,
   toStoredFavorite,
   withLocalLogo,
+  type TokenChain,
 } from "@/lib/tokenCatalog";
 import { ApiError, SwapQuote, TokenInfo, walletApi } from "@/lib/tauri";
 
 const DEFAULT_SLIPPAGE_BPS = 50;
 const SAME_TOKEN_ERROR = "Choose two different tokens to continue.";
 
-type SelectableToken = TokenInfo & { balanceUi?: number; chain?: "solana" | "evm" | "bitcoin" };
+type SelectableToken = TokenInfo & { balanceUi?: number; chain?: TokenChain };
 
 function isLikelySolanaMint(value: string): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value.trim());
@@ -52,7 +55,7 @@ export function SwapPage() {
   const navigate = useNavigate();
   const { refreshBalances, settings, saveSettings, explorer, network, networkInfo, networks, enabledNetworks, chains, changeNetwork } = useWallet();
   const [fromMint, setFromMint] = useState(WRAPPED_SOL);
-  const [toMint, setToMint] = useState("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+  const [toMint, setToMint] = useState(SOL_USDC);
   const [amount, setAmount] = useState("");
   const [slippageBps, setSlippageBps] = useState(
     settings.default_slippage_bps || DEFAULT_SLIPPAGE_BPS,
@@ -64,7 +67,7 @@ export function SwapPage() {
   const [extraTokens, setExtraTokens] = useState<TokenInfo[]>(() =>
     (settings.swap_favorite_tokens ?? [])
       .filter((t) => !isCuratedMint(t.mint))
-      .map((t) => withLocalLogo(t)),
+      .map((t) => withLocalLogo(t, inferTokenChain(t.mint))),
   );
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [pickerSide, setPickerSide] = useState<"from" | "to" | null>(null);
@@ -91,7 +94,7 @@ export function SwapPage() {
       setToMint(ETH_NATIVE);
     } else {
       setFromMint(WRAPPED_SOL);
-      setToMint("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+      setToMint(SOL_USDC);
     }
     setQuote(null);
   }, [networkInfo?.family]);
@@ -99,12 +102,14 @@ export function SwapPage() {
   useEffect(() => {
     const favorites = (settings.swap_favorite_tokens ?? [])
       .filter((t) => !isCuratedMint(t.mint))
-      .map((t) => withLocalLogo(t));
+      .map((t) => withLocalLogo(t, inferTokenChain(t.mint)));
     setExtraTokens((prev) => {
       const map = new Map<string, TokenInfo>();
       for (const t of favorites) map.set(t.mint, t);
       for (const t of prev) {
-        if (!map.has(t.mint) && !isCuratedMint(t.mint)) map.set(t.mint, withLocalLogo(t));
+        if (!map.has(t.mint) && !isCuratedMint(t.mint)) {
+          map.set(t.mint, withLocalLogo(t, inferTokenChain(t.mint)));
+        }
       }
       return Array.from(map.values());
     });
@@ -626,7 +631,7 @@ export function SwapPage() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Swaps are quoted through Jupiter. Transactions are signed locally on your device.
+            Quotes use Jupiter, 0x, or Thorchain. Transactions are signed locally on your device.
           </p>
         </CardContent>
       </Card>

@@ -3,14 +3,14 @@
  * At least 8 characters with upper, lower, number, and special character.
  */
 
-export type PasswordRequirementId =
+type PasswordRequirementId =
   | "length"
   | "uppercase"
   | "lowercase"
   | "number"
   | "special";
 
-export type PasswordRequirement = {
+type PasswordRequirement = {
   id: PasswordRequirementId;
   label: string;
   met: boolean;

@@ -35,10 +35,7 @@ export function txExplorerUrl(
   }
 }
 
-export function explorerLabel(explorer: ExplorerKind, info?: NetworkInfo | null): string {
-  if (info && info.family !== "solana") {
-    return `${info.name} explorer`;
-  }
+export function explorerLabel(explorer: ExplorerKind): string {
   switch (normalizeExplorer(explorer)) {
     case "solanaExplorer":
       return "Solana Explorer";
