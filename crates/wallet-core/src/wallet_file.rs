@@ -520,10 +520,12 @@ fn detect_and_parse_key(secret: &str) -> Result<(FamilyKeyring, ImportKind, Stri
     let trimmed = secret.trim();
     if trimmed.to_ascii_lowercase().starts_with("suiprivkey1") {
         let signer = taurvia_sui::from_secret(trimmed).map_err(WalletError::Operation)?;
-        let stored = signer
-            .to_suiprivkey()
-            .map_err(WalletError::Operation)?;
-        return Ok((FamilyKeyring::from_sui_key(signer), ImportKind::SuiKey, stored));
+        let stored = signer.to_suiprivkey().map_err(WalletError::Operation)?;
+        return Ok((
+            FamilyKeyring::from_sui_key(signer),
+            ImportKind::SuiKey,
+            stored,
+        ));
     }
     if trimmed.starts_with("0x") || trimmed.starts_with("0X") {
         let signer = taurvia_evm::from_hex(trimmed).map_err(WalletError::Operation)?;

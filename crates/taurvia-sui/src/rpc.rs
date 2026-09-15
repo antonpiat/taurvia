@@ -30,14 +30,32 @@ impl SuiRpc {
 
     pub async fn snapshot(&self, address: &str) -> Result<WalletSnapshot> {
         let price_id = self.descriptor.coingecko_id.unwrap_or("sui");
-        let (native, tokens, price) = tokio::join!(
-            self.get_balance(address, SUI_COIN_TYPE),
-            self.token_balances(address),
-            tokio::time::timeout(MARKET_DATA_BUDGET, taurvia_chain::native_price_usd(price_id)),
+        let (balances, price) = tokio::join!(
+            self.all_balances(address),
+            tokio::time::timeout(
+                MARKET_DATA_BUDGET,
+                taurvia_chain::native_price_usd(price_id)
+            ),
         );
-        let native_mist = native.context("suix_getBalance failed")?;
+        let all = balances.context("suix_getAllBalances failed")?;
+        let mut native_mist = 0u64;
+        let mut token_rows = Vec::new();
+        for bal in all {
+            let raw: u64 = bal.total_balance.parse().unwrap_or(0);
+            if is_sui_coin(&bal.coin_type) {
+                native_mist = raw;
+                continue;
+            }
+            if raw == 0 {
+                continue;
+            }
+            token_rows.push((bal.coin_type, raw));
+            if token_rows.len() >= MAX_TOKEN_ROWS {
+                break;
+            }
+        }
+        let tokens = self.enrich_token_balances(token_rows).await;
         let native_balance = native_mist as f64 / MIST_PER_SUI;
-        let tokens = tokens.unwrap_or_default();
         let native_price_usd = price.ok().and_then(|r| r.ok());
         let native_value_usd = native_price_usd.map(|p| p * native_balance);
         let tokens_value: f64 = tokens.iter().filter_map(|t| t.value_usd).sum();
@@ -140,7 +158,10 @@ impl SuiRpc {
             .build_unsigned(from, to, mist, &coin_type)
             .await
             .context("failed to build Sui transfer")?;
-        let fee = self.dry_run_fee(&tx.tx_bytes).await.unwrap_or(DEFAULT_GAS_BUDGET);
+        let fee = self
+            .dry_run_fee(&tx.tx_bytes)
+            .await
+            .unwrap_or(DEFAULT_GAS_BUDGET);
         Ok(SendPreview {
             from: from.to_string(),
             to: to.to_string(),
@@ -225,16 +246,9 @@ impl SuiRpc {
                 SUI_DECIMALS,
             ));
         }
-        let meta: Option<CoinMetadata> = self
-            .rpc("suix_getCoinMetadata", json!([a]))
-            .await
-            .unwrap_or(None);
-        let meta = meta.context("unknown Sui coin")?;
-        Ok((
-            meta.symbol.unwrap_or_else(|| short_coin_type(a)),
-            a.to_string(),
-            meta.decimals.unwrap_or(9).min(u8::MAX as u32) as u8,
-        ))
+        let meta = self.coin_metadata(a).await.context("unknown Sui coin")?;
+        let (decimals, symbol, _) = metadata_fields(Some(&meta), a);
+        Ok((symbol, a.to_string(), decimals))
     }
 
     async fn build_unsigned(
@@ -245,23 +259,29 @@ impl SuiRpc {
         coin_type: &str,
     ) -> Result<BuiltTx> {
         if is_sui_coin(coin_type) {
-            let coins = self.coin_ids(from, SUI_COIN_TYPE).await?;
+            let coins = self.coin_ids(from, SUI_COIN_TYPE, 50).await?;
             if coins.is_empty() {
                 bail!("no SUI coins to spend");
             }
             self.rpc(
                 "unsafe_paySui",
-                json!([from, coins, [to], [amount.to_string()], DEFAULT_GAS_BUDGET.to_string()]),
+                json!([
+                    from,
+                    coins,
+                    [to],
+                    [amount.to_string()],
+                    DEFAULT_GAS_BUDGET.to_string()
+                ]),
             )
             .await
             .context("unsafe_paySui")
         } else {
-            let coins = self.coin_ids(from, coin_type).await?;
+            let coins = self.coin_ids(from, coin_type, 50).await?;
             if coins.is_empty() {
                 bail!("no coins of this type to spend");
             }
             let gas = self
-                .coin_ids(from, SUI_COIN_TYPE)
+                .coin_ids(from, SUI_COIN_TYPE, 1)
                 .await?
                 .into_iter()
                 .next()
@@ -291,79 +311,68 @@ impl SuiRpc {
         let computation: u64 = used.computation_cost.parse().unwrap_or(0);
         let storage: u64 = used.storage_cost.parse().unwrap_or(0);
         let rebate: u64 = used.storage_rebate.parse().unwrap_or(0);
-        Ok(computation.saturating_add(storage).saturating_sub(rebate).max(1))
+        Ok(computation
+            .saturating_add(storage)
+            .saturating_sub(rebate)
+            .max(1))
     }
 
-    async fn get_balance(&self, address: &str, coin_type: &str) -> Result<u64> {
-        let result: CoinBalance = self
-            .rpc("suix_getBalance", json!([address, coin_type]))
+    async fn all_balances(&self, address: &str) -> Result<Vec<CoinBalance>> {
+        self.rpc("suix_getAllBalances", json!([address]))
             .await
-            .context("suix_getBalance")?;
-        result
-            .total_balance
-            .parse()
-            .context("parse Sui balance")
+            .context("suix_getAllBalances")
     }
 
-    async fn token_balances(&self, address: &str) -> Result<Vec<TokenBalance>> {
-        let all: Vec<CoinBalance> = self
-            .rpc("suix_getAllBalances", json!([address]))
-            .await
-            .unwrap_or_default();
-        let mut out = Vec::new();
-        for bal in all.into_iter().filter(|b| !is_sui_coin(&b.coin_type)) {
-            let raw: u64 = bal.total_balance.parse().unwrap_or(0);
-            if raw == 0 {
-                continue;
-            }
-            let meta: Option<CoinMetadata> = self
-                .rpc("suix_getCoinMetadata", json!([bal.coin_type]))
-                .await
-                .unwrap_or(None);
-            let decimals = meta
-                .as_ref()
-                .and_then(|m| m.decimals)
-                .unwrap_or(9)
-                .min(u8::MAX as u32) as u8;
-            let symbol = meta
-                .as_ref()
-                .and_then(|m| m.symbol.clone())
-                .unwrap_or_else(|| short_coin_type(&bal.coin_type));
-            let name = meta
-                .as_ref()
-                .and_then(|m| m.name.clone())
-                .unwrap_or_else(|| symbol.clone());
-            let ui_amount = raw as f64 / 10f64.powi(i32::from(decimals));
-            out.push(TokenBalance {
-                mint: bal.coin_type,
-                symbol,
-                name,
-                amount: raw.to_string(),
-                decimals,
-                ui_amount,
-                logo_uri: meta.and_then(|m| m.icon_url),
-                price_usd: None,
-                value_usd: None,
-            });
-            if out.len() >= MAX_TOKEN_ROWS {
-                break;
-            }
+    async fn enrich_token_balances(&self, rows: Vec<(String, u64)>) -> Vec<TokenBalance> {
+        let futs = rows
+            .into_iter()
+            .map(|(coin_type, raw)| self.token_row(coin_type, raw));
+        futures::future::join_all(futs).await
+    }
+
+    async fn token_row(&self, coin_type: String, raw: u64) -> TokenBalance {
+        let meta = self.coin_metadata(&coin_type).await;
+        let (decimals, symbol, name) = metadata_fields(meta.as_ref(), &coin_type);
+        let ui_amount = raw as f64 / 10f64.powi(i32::from(decimals));
+        TokenBalance {
+            mint: coin_type,
+            symbol,
+            name,
+            amount: raw.to_string(),
+            decimals,
+            ui_amount,
+            logo_uri: meta.and_then(|m| m.icon_url),
+            price_usd: None,
+            value_usd: None,
         }
-        Ok(out)
     }
 
-    async fn coin_ids(&self, owner: &str, coin_type: &str) -> Result<Vec<String>> {
-        let mut ids = Vec::new();
+    async fn coin_metadata(&self, coin_type: &str) -> Option<CoinMetadata> {
+        self.rpc("suix_getCoinMetadata", json!([coin_type]))
+            .await
+            .unwrap_or(None)
+    }
+
+    async fn coin_ids(&self, owner: &str, coin_type: &str, max: usize) -> Result<Vec<String>> {
+        let max = max.max(1);
+        let mut ids = Vec::with_capacity(max);
         let mut cursor: Option<String> = None;
         loop {
+            let page_size = (max - ids.len()).min(50);
             let page: CoinPage = self
-                .rpc("suix_getCoins", json!([owner, coin_type, cursor, 50]))
+                .rpc(
+                    "suix_getCoins",
+                    json!([owner, coin_type, cursor, page_size]),
+                )
                 .await
                 .context("suix_getCoins")?;
             for coin in page.data {
                 ids.push(coin.coin_object_id);
+                if ids.len() >= max {
+                    return Ok(ids);
+                }
             }
-            if !page.has_next_page || page.next_cursor.is_none() || ids.len() >= 50 {
+            if !page.has_next_page || page.next_cursor.is_none() {
                 break;
             }
             cursor = page.next_cursor;
@@ -395,6 +404,20 @@ impl SuiRpc {
         resp.result
             .ok_or_else(|| anyhow!("{method}: missing result"))
     }
+}
+
+fn metadata_fields(meta: Option<&CoinMetadata>, coin_type: &str) -> (u8, String, String) {
+    let decimals = meta
+        .and_then(|m| m.decimals)
+        .unwrap_or(9)
+        .min(u8::MAX as u32) as u8;
+    let symbol = meta
+        .and_then(|m| m.symbol.clone())
+        .unwrap_or_else(|| short_coin_type(coin_type));
+    let name = meta
+        .and_then(|m| m.name.clone())
+        .unwrap_or_else(|| symbol.clone());
+    (decimals, symbol, name)
 }
 
 fn is_native_asset(asset: &str) -> bool {

@@ -15,7 +15,6 @@ export const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
 export const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const ETH_NATIVE = "eth";
 export const BTC_NATIVE = "btc";
-export const SUI_NATIVE = "sui";
 
 const SOL_USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 const SOL_JUP = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
@@ -101,14 +100,6 @@ export const BTC_NATIVE_TOKEN: TokenInfo = {
   logo_uri: btcLogo,
 };
 
-export const SUI_NATIVE_TOKEN: TokenInfo = {
-  mint: SUI_NATIVE,
-  symbol: "SUI",
-  name: "Sui",
-  decimals: 9,
-  logo_uri: suiLogo,
-};
-
 export function chainBadgeSrc(chain: TokenChain): string {
   if (chain === "evm") return ethLogo;
   if (chain === "bitcoin") return btcLogo;
@@ -129,8 +120,6 @@ export function localLogoForAsset(
     return EVM_LOGOS[m.toLowerCase()] ?? null;
   }
   if (m.toLowerCase() === "eth") return ethLogo;
-  if (m.toLowerCase() === "btc") return btcLogo;
-  if (m.toLowerCase() === "sui") return suiLogo;
   if (m.toLowerCase() === "sol" || symbol === "SOL") return solLogo;
   return SOL_LOGOS[m] ?? null;
 }
@@ -167,10 +156,9 @@ export function toStoredFavorite(info: TokenInfo): TokenInfo | null {
 export const MAX_SWAP_FAVORITES = 50;
 
 export function networkFamilyToChain(family: string | undefined): TokenChain | undefined {
-  if (family === "evm") return "evm";
-  if (family === "bitcoin") return "bitcoin";
-  if (family === "solana") return "solana";
-  if (family === "sui") return "sui";
+  if (family === "evm" || family === "bitcoin" || family === "solana" || family === "sui") {
+    return family;
+  }
   return undefined;
 }
 

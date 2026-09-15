@@ -10,6 +10,7 @@ use taurvia_solana::{configure_jupiter_api_key, Keypair, Pubkey, Signer, SolanaR
 use crate::WalletError;
 use zeroize::Zeroize;
 
+#[derive(Default)]
 pub(crate) struct FamilyKeyring {
     pub solana: Option<Keypair>,
     pub evm: Option<taurvia_evm::EvmSigner>,
@@ -24,80 +25,55 @@ impl FamilyKeyring {
             taurvia_hd::seed_from_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)?;
         let solana = taurvia_solana::derive_keypair_from_seed(seed.as_slice())
             .map_err(|_| WalletError::InvalidMnemonic)?;
-        let evm = taurvia_evm::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
-        let bitcoin = taurvia_bitcoin::derive_from_seed(seed.as_slice(), false)
-            .map_err(WalletError::Operation)?;
-        let bitcoin_testnet = taurvia_bitcoin::derive_from_seed(seed.as_slice(), true)
-            .map_err(WalletError::Operation)?;
-        let sui = taurvia_sui::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
-        Ok(Self {
-            solana: Some(solana),
-            evm: Some(evm),
-            bitcoin: Some(bitcoin),
-            bitcoin_testnet: Some(bitcoin_testnet),
-            sui: Some(sui),
-        })
+        Self::from_seed(Some(solana), seed.as_slice())
     }
 
     pub fn from_solana_and_mnemonic(solana: Keypair, mnemonic: &str) -> Result<Self, WalletError> {
         let seed =
             taurvia_hd::seed_from_mnemonic(mnemonic).map_err(|_| WalletError::InvalidMnemonic)?;
-        let evm = taurvia_evm::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
-        let bitcoin = taurvia_bitcoin::derive_from_seed(seed.as_slice(), false)
-            .map_err(WalletError::Operation)?;
-        let bitcoin_testnet = taurvia_bitcoin::derive_from_seed(seed.as_slice(), true)
-            .map_err(WalletError::Operation)?;
-        let sui = taurvia_sui::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
+        Self::from_seed(Some(solana), seed.as_slice())
+    }
+
+    fn from_seed(solana: Option<Keypair>, seed: &[u8]) -> Result<Self, WalletError> {
         Ok(Self {
-            solana: Some(solana),
-            evm: Some(evm),
-            bitcoin: Some(bitcoin),
-            bitcoin_testnet: Some(bitcoin_testnet),
-            sui: Some(sui),
+            solana,
+            evm: Some(taurvia_evm::derive_from_seed(seed).map_err(WalletError::Operation)?),
+            bitcoin: Some(
+                taurvia_bitcoin::derive_from_seed(seed, false).map_err(WalletError::Operation)?,
+            ),
+            bitcoin_testnet: Some(
+                taurvia_bitcoin::derive_from_seed(seed, true).map_err(WalletError::Operation)?,
+            ),
+            sui: Some(taurvia_sui::derive_from_seed(seed).map_err(WalletError::Operation)?),
         })
     }
 
     pub fn from_solana_key(solana: Keypair) -> Self {
-        Self {
-            solana: Some(solana),
-            evm: None,
-            bitcoin: None,
-            bitcoin_testnet: None,
-            sui: None,
-        }
+        let mut keyring = Self::default();
+        keyring.solana = Some(solana);
+        keyring
     }
 
     pub fn from_evm_key(evm: taurvia_evm::EvmSigner) -> Self {
-        Self {
-            solana: None,
-            evm: Some(evm),
-            bitcoin: None,
-            bitcoin_testnet: None,
-            sui: None,
-        }
+        let mut keyring = Self::default();
+        keyring.evm = Some(evm);
+        keyring
     }
 
     pub fn from_btc_keys(
         bitcoin: taurvia_bitcoin::BtcSigner,
         bitcoin_testnet: taurvia_bitcoin::BtcSigner,
     ) -> Self {
-        Self {
-            solana: None,
-            evm: None,
-            bitcoin: Some(bitcoin),
-            bitcoin_testnet: Some(bitcoin_testnet),
-            sui: None,
-        }
+        let mut keyring = Self::default();
+        keyring.bitcoin = Some(bitcoin);
+        keyring.bitcoin_testnet = Some(bitcoin_testnet);
+        keyring
     }
 
     pub fn from_sui_key(sui: taurvia_sui::SuiSigner) -> Self {
-        Self {
-            solana: None,
-            evm: None,
-            bitcoin: None,
-            bitcoin_testnet: None,
-            sui: Some(sui),
-        }
+        let mut keyring = Self::default();
+        keyring.sui = Some(sui);
+        keyring
     }
 
     pub fn has_family(&self, family: ChainFamily) -> bool {

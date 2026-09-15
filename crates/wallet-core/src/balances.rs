@@ -38,54 +38,24 @@ impl WalletService {
             return Ok(snap);
         }
 
-        let mut sol = None;
-        let mut evm = None;
-        let mut btc = None;
-        let mut sui = None;
-        for d in self.snapshot_descriptors() {
-            if !self.family_available_unlocked(d.family) {
-                continue;
-            }
-            match d.family {
-                ChainFamily::Solana => sol = Some(d),
-                ChainFamily::Evm => evm = Some(d),
-                ChainFamily::Bitcoin => btc = Some(d),
-                ChainFamily::Sui => sui = Some(d),
-            }
-        }
+        let descriptors = self.snapshot_descriptors();
+        let descriptors = match self.with_session(|k| {
+            descriptors
+                .into_iter()
+                .filter(|d| k.has_family(d.family))
+                .collect::<Vec<_>>()
+        }) {
+            Ok(d) => d,
+            Err(_) => return Ok(snap),
+        };
 
-        let (sol_r, evm_r, btc_r, sui_r) = tokio::join!(
-            async {
-                match sol {
-                    Some(d) => Some(self.chain_snapshot(d).await),
-                    None => None,
-                }
-            },
-            async {
-                match evm {
-                    Some(d) => Some(self.chain_snapshot(d).await),
-                    None => None,
-                }
-            },
-            async {
-                match btc {
-                    Some(d) => Some(self.chain_snapshot(d).await),
-                    None => None,
-                }
-            },
-            async {
-                match sui {
-                    Some(d) => Some(self.chain_snapshot(d).await),
-                    None => None,
-                }
-            },
-        );
-
-        // Option<Result<T,E>>: skip missing families, omit chains whose RPC failed (do not invent a 0).
-        let mut chains = Vec::new();
-        for chain in [sol_r, evm_r, btc_r, sui_r].into_iter().flatten().flatten() {
-            chains.push(chain);
-        }
+        // Skip missing families; omit chains whose RPC failed (do not invent a 0).
+        let chains: Vec<_> =
+            futures::future::join_all(descriptors.into_iter().map(|d| self.chain_snapshot(d)))
+                .await
+                .into_iter()
+                .flatten()
+                .collect();
 
         let total: f64 = chains.iter().filter_map(|c| c.total_usd).sum();
         let active = chains
@@ -108,62 +78,34 @@ impl WalletService {
         Ok(snap)
     }
 
-    fn family_available_unlocked(&self, family: ChainFamily) -> bool {
-        self.with_session(|k| k.has_family(family)).unwrap_or(false)
-    }
-
     async fn chain_snapshot(
         &self,
         desc: &'static models::NetworkDescriptor,
     ) -> Result<ChainSnapshot, WalletError> {
-        match desc.family {
-            ChainFamily::Solana => self.solana_chain_snapshot(desc).await,
-            ChainFamily::Evm => self.evm_chain_snapshot(desc).await,
-            ChainFamily::Bitcoin => self.bitcoin_chain_snapshot(desc).await,
-            ChainFamily::Sui => self.sui_chain_snapshot(desc).await,
+        if desc.family == ChainFamily::Solana {
+            return self.solana_chain_snapshot(desc).await;
         }
-    }
-
-    async fn evm_chain_snapshot(
-        &self,
-        desc: &'static models::NetworkDescriptor,
-    ) -> Result<ChainSnapshot, WalletError> {
         let url = self.endpoint_for(desc.id);
-        let rpc = taurvia_evm::EvmRpc::new(&url, *desc);
-        let address = self.with_session(|k| k.require_evm().map(|e| e.address.clone()))??;
-        let snap = rpc
-            .snapshot(&address)
-            .await
-            .map_err(WalletError::Operation)?;
-        Ok(chain_from_legacy(snap))
-    }
-
-    async fn bitcoin_chain_snapshot(
-        &self,
-        desc: &'static models::NetworkDescriptor,
-    ) -> Result<ChainSnapshot, WalletError> {
-        let url = self.endpoint_for(desc.id);
-        let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-        let address =
-            self.with_session(|k| k.require_btc(desc.is_testnet).map(|s| s.address.clone()))??;
-        let snap = rpc
-            .snapshot(&address)
-            .await
-            .map_err(WalletError::Operation)?;
-        Ok(chain_from_legacy(snap))
-    }
-
-    async fn sui_chain_snapshot(
-        &self,
-        desc: &'static models::NetworkDescriptor,
-    ) -> Result<ChainSnapshot, WalletError> {
-        let url = self.endpoint_for(desc.id);
-        let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
-        let address = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
-        let snap = rpc
-            .snapshot(&address)
-            .await
-            .map_err(WalletError::Operation)?;
+        let address = self.with_session(|k| k.address(desc.family, desc.is_testnet))??;
+        let snap = match desc.family {
+            ChainFamily::Evm => {
+                taurvia_evm::EvmRpc::new(&url, *desc)
+                    .snapshot(&address)
+                    .await
+            }
+            ChainFamily::Bitcoin => {
+                taurvia_bitcoin::BtcRpc::new(&url, *desc)
+                    .snapshot(&address)
+                    .await
+            }
+            ChainFamily::Sui => {
+                taurvia_sui::SuiRpc::new(&url, *desc)
+                    .snapshot(&address)
+                    .await
+            }
+            ChainFamily::Solana => unreachable!(),
+        }
+        .map_err(WalletError::Operation)?;
         Ok(chain_from_legacy(snap))
     }
 
@@ -216,39 +158,34 @@ impl WalletService {
 
     pub async fn get_activity(&self, limit: usize) -> Result<Vec<ActivityItem>, WalletError> {
         let desc = self.active_descriptor();
+        if desc.family == ChainFamily::Solana {
+            let pubkey = self.require_pubkey()?;
+            return self
+                .rpc_handle()
+                .get_activity(&pubkey, limit)
+                .await
+                .map_err(WalletError::Operation);
+        }
+        let address = self.with_session(|k| k.address(desc.family, desc.is_testnet))??;
         match desc.family {
-            ChainFamily::Solana => {
-                let pubkey = self.require_pubkey()?;
-                self.rpc_handle()
-                    .get_activity(&pubkey, limit)
-                    .await
-                    .map_err(WalletError::Operation)
-            }
-            ChainFamily::Evm => {
-                let address =
-                    self.with_session(|k| k.require_evm().map(|e| e.address.clone()))??;
-                taurvia_evm::activity(*desc, &address, limit)
-                    .await
-                    .map_err(WalletError::Operation)
-            }
+            ChainFamily::Evm => taurvia_evm::activity(*desc, &address, limit)
+                .await
+                .map_err(WalletError::Operation),
             ChainFamily::Bitcoin => {
                 let url = self.endpoint_for(desc.id);
-                let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-                let address = self.with_session(|k| {
-                    k.require_btc(desc.is_testnet).map(|s| s.address.clone())
-                })??;
-                rpc.activity(&address, limit)
+                taurvia_bitcoin::BtcRpc::new(&url, *desc)
+                    .activity(&address, limit)
                     .await
                     .map_err(WalletError::Operation)
             }
             ChainFamily::Sui => {
                 let url = self.endpoint_for(desc.id);
-                let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
-                let address = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
-                rpc.activity(&address, limit)
+                taurvia_sui::SuiRpc::new(&url, *desc)
+                    .activity(&address, limit)
                     .await
                     .map_err(WalletError::Operation)
             }
+            ChainFamily::Solana => unreachable!(),
         }
     }
 }
