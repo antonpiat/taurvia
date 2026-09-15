@@ -84,16 +84,6 @@ fn hex_body(address: &str) -> Option<&str> {
     rest.chars().all(|c| c.is_ascii_hexdigit()).then_some(rest)
 }
 
-fn is_sui_hex(address: &str) -> bool {
-    let rest = address
-        .strip_prefix("0x")
-        .or_else(|| address.strip_prefix("0X"));
-    match rest {
-        Some(hex) => hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit()),
-        None => false,
-    }
-}
-
 fn is_bitcoin_bech32(address: &str) -> bool {
     let lower = address.to_ascii_lowercase();
     (lower.starts_with("bc1") || lower.starts_with("tb1"))
