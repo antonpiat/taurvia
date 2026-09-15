@@ -16,7 +16,7 @@ import {
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
-import { nativeAssetId } from "@/lib/network";
+import { nativeAssetId, recipientAddressPlaceholder } from "@/lib/network";
 import { ApiError, SendPreview, walletApi } from "@/lib/tauri";
 import { localLogoForAsset, networkFamilyToChain, withLocalLogo } from "@/lib/tokenCatalog";
 import { shortenAddress } from "@/lib/utils";
@@ -89,16 +89,7 @@ export function SendPage() {
   const selectedToken = selectable.find((token) => token.mint === selectedMint) ?? selectable[0];
   const isNative = selectedToken?.mint === nativeMint;
   const tokenSymbol = selectedToken?.symbol ?? nativeSymbol;
-  const recipientPlaceholder =
-    networkInfo?.family === "evm" || networkInfo?.family === "sui"
-      ? "0x…"
-      : networkInfo?.family === "sui"
-        ? "0x…"
-        : networkInfo?.family === "bitcoin"
-          ? networkInfo.is_testnet
-            ? "tb1q…"
-            : "bc1q…"
-          : "Solana address";
+  const recipientPlaceholder = recipientAddressPlaceholder(networkInfo);
 
   const handlePreview = async () => {
     setError(null);
