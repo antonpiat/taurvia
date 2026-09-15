@@ -15,6 +15,7 @@ export const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
 export const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const ETH_NATIVE = "eth";
 export const BTC_NATIVE = "btc";
+export const SUI_NATIVE = "sui";
 
 const SOL_USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 const SOL_JUP = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
@@ -98,6 +99,14 @@ export const BTC_NATIVE_TOKEN: TokenInfo = {
   name: "Bitcoin",
   decimals: 8,
   logo_uri: btcLogo,
+};
+
+export const SUI_NATIVE_TOKEN: TokenInfo = {
+  mint: SUI_NATIVE,
+  symbol: "SUI",
+  name: "Sui",
+  decimals: 9,
+  logo_uri: suiLogo,
 };
 
 export function chainBadgeSrc(chain: TokenChain): string {
