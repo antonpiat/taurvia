@@ -109,10 +109,11 @@ function rpcOverrideFor(settings: AppSettings, networkId: string): string {
   return "";
 }
 
-function keyImportFamily(kind: ImportKind): "solana" | "evm" | "bitcoin" | null {
+function keyImportFamily(kind: ImportKind): "solana" | "evm" | "bitcoin" | "sui" | null {
   if (kind === "solana-key") return "solana";
   if (kind === "evm-key") return "evm";
   if (kind === "bitcoin-key") return "bitcoin";
+  if (kind === "sui-key") return "sui";
   return null;
 }
 
@@ -776,9 +777,10 @@ export function SettingsPage() {
                   ? "Turn chains on or off. Last-used chain is for Send and Receive."
                   : "This wallet was imported from a single key."}
               </p>
-              {["solana-mainnet", "ethereum-mainnet", "bitcoin-mainnet"].map((id) => {
-                const info = networks.find((n) => n.id === id);
-                if (!info) return null;
+              {networks
+                .filter((n) => n.enabled && !n.is_testnet)
+                .map((info) => {
+                const id = info.id;
                 const on = activatedNetworks.includes(id);
                 const keyFamily = keyImportFamily(importKind);
                 const lockedOut = Boolean(keyFamily && info.family !== keyFamily);

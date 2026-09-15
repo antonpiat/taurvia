@@ -60,6 +60,8 @@ export function nativeAssetId(family: ChainFamily | undefined): string {
       return "eth";
     case "bitcoin":
       return "btc";
+    case "sui":
+      return "sui";
     default:
       return "sol";
   }

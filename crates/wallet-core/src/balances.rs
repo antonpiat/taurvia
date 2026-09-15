@@ -41,6 +41,7 @@ impl WalletService {
         let mut sol = None;
         let mut evm = None;
         let mut btc = None;
+        let mut sui = None;
         for d in self.snapshot_descriptors() {
             if !self.family_available_unlocked(d.family) {
                 continue;
@@ -49,11 +50,11 @@ impl WalletService {
                 ChainFamily::Solana => sol = Some(d),
                 ChainFamily::Evm => evm = Some(d),
                 ChainFamily::Bitcoin => btc = Some(d),
-                ChainFamily::Sui => {}
+                ChainFamily::Sui => sui = Some(d),
             }
         }
 
-        let (sol_r, evm_r, btc_r) = tokio::join!(
+        let (sol_r, evm_r, btc_r, sui_r) = tokio::join!(
             async {
                 match sol {
                     Some(d) => Some(self.chain_snapshot(d).await),
@@ -72,11 +73,17 @@ impl WalletService {
                     None => None,
                 }
             },
+            async {
+                match sui {
+                    Some(d) => Some(self.chain_snapshot(d).await),
+                    None => None,
+                }
+            },
         );
 
         // Option<Result<T,E>>: skip missing families, omit chains whose RPC failed (do not invent a 0).
         let mut chains = Vec::new();
-        for chain in [sol_r, evm_r, btc_r].into_iter().flatten().flatten() {
+        for chain in [sol_r, evm_r, btc_r, sui_r].into_iter().flatten().flatten() {
             chains.push(chain);
         }
 
@@ -113,9 +120,7 @@ impl WalletService {
             ChainFamily::Solana => self.solana_chain_snapshot(desc).await,
             ChainFamily::Evm => self.evm_chain_snapshot(desc).await,
             ChainFamily::Bitcoin => self.bitcoin_chain_snapshot(desc).await,
-            ChainFamily::Sui => Err(WalletError::Operation(anyhow::anyhow!(
-                "Sui is not enabled yet"
-            ))),
+            ChainFamily::Sui => self.sui_chain_snapshot(desc).await,
         }
     }
 
@@ -141,6 +146,20 @@ impl WalletService {
         let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
         let address =
             self.with_session(|k| k.require_btc(desc.is_testnet).map(|s| s.address.clone()))??;
+        let snap = rpc
+            .snapshot(&address)
+            .await
+            .map_err(WalletError::Operation)?;
+        Ok(chain_from_legacy(snap))
+    }
+
+    async fn sui_chain_snapshot(
+        &self,
+        desc: &'static models::NetworkDescriptor,
+    ) -> Result<ChainSnapshot, WalletError> {
+        let url = self.endpoint_for(desc.id);
+        let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
+        let address = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
         let snap = rpc
             .snapshot(&address)
             .await
@@ -222,7 +241,14 @@ impl WalletService {
                     .await
                     .map_err(WalletError::Operation)
             }
-            ChainFamily::Sui => Ok(Vec::new()),
+            ChainFamily::Sui => {
+                let url = self.endpoint_for(desc.id);
+                let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
+                let address = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
+                rpc.activity(&address, limit)
+                    .await
+                    .map_err(WalletError::Operation)
+            }
         }
     }
 }

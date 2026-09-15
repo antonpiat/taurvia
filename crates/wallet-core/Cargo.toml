@@ -8,6 +8,7 @@ license.workspace = true
 taurvia-solana = { path = "../taurvia-solana" }
 taurvia-evm = { path = "../taurvia-evm" }
 taurvia-bitcoin = { path = "../taurvia-bitcoin" }
+taurvia-sui = { path = "../taurvia-sui" }
 taurvia-hd = { path = "../taurvia-hd" }
 taurvia-chain = { path = "../taurvia-chain" }
 crypto = { path = "../crypto" }

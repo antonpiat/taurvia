@@ -10,7 +10,7 @@
 
 <p align="center">
   A non-custodial desktop wallet — keys stay on your machine, every signature is produced in Rust.
-  Solana, Ethereum, and Bitcoin from one seed (or a single private key). Swap on each enabled mainnet.
+  Solana, Ethereum, Bitcoin, and Sui from one seed (or a single private key). Swap on each enabled mainnet.
 </p>
 
 <p align="center">
@@ -28,13 +28,13 @@
 
 Most wallets ask you to trust a browser tab or a hosted service. Taurvia is a **native desktop app**: your seed phrase and private keys never leave your device, and every signature is produced inside a Rust core the UI cannot bypass.
 
-Built with **Tauri v2**. One BIP39 phrase derives Solana, Ethereum, and Bitcoin. Importing a raw private key unlocks that family only. Not a dApp browser, not WalletConnect, and no JavaScript key material.
+Built with **Tauri v2**. One BIP39 phrase derives Solana, Ethereum, Bitcoin, and Sui. Importing a raw private key unlocks that family only. Not a dApp browser, not WalletConnect, and no JavaScript key material.
 
 ## Features
 
 | | |
 |---|---|
-| **Create & import** | New seed → account name + password (no quiz). Restore with a 12/24-word phrase, a private key (Solana / Ethereum / Bitcoin WIF), or Taurvia JSON. Hardware wallet listed as coming soon |
+| **Create & import** | New seed → account name + password (no quiz). Restore with a 12/24-word phrase, a private key (Solana / Ethereum / Bitcoin WIF / Sui suiprivkey), or Taurvia JSON. Hardware wallet listed as coming soon |
 | **Portfolio** | All activated mainnets at once — one USD total, then native + tokens per chain, with chain-badged icons |
 | **Swap** | Same-chain first: Jupiter on Solana, 0x on Ethereum, Thorchain when Bitcoin is the source. Quotes and signatures stay in Rust; password-gated |
 | **Send / receive** | Last-used chain for the address, then the asset. Rust preview: network, full recipient, amount, fee |
@@ -54,6 +54,7 @@ flowchart TB
   SOL["taurvia-solana"]
   EVM["taurvia-evm"]
   BTC["taurvia-bitcoin"]
+  SUI["taurvia-sui"]
   STORE["storage<br/>encrypted wallet file"]
 
   UI -->|Tauri IPC| WC
@@ -63,13 +64,14 @@ flowchart TB
   REG --> SOL
   REG --> EVM
   REG --> BTC
+  REG --> SUI
 ```
 
 - **At rest:** Argon2id (+ optional OS keychain device binding) + AES-256-GCM — **one envelope** for the mnemonic or imported key
 - **In memory:** family signers only while unlocked — recovery phrase is not kept in session RAM; lock drops and zeroizes the keyring
-- **Key-only wallets:** a Solana, Ethereum, or Bitcoin key cannot derive the other curves; other chains cannot be activated; reveal seed is hidden
+- **Key-only wallets:** a Solana, Ethereum, Bitcoin, or Sui key cannot derive the other families; other chains cannot be activated; reveal seed is hidden
 - **At sign time:** transactions (including Jupiter, 0x, and Thorchain BTC sends) are built and signed in Rust, not JavaScript
-- **Wrong-chain sends:** Rust rejects `0x` on Solana, `bc1` on Ethereum, base58 on Bitcoin, etc.
+- **Wrong-chain sends:** Rust rejects `0x` 40-hex on Solana/Sui, `bc1` on Ethereum, base58 on Bitcoin, Sui 64-hex on Ethereum, etc.
 - **Seed reveal:** re-decrypts from disk with password every time
 - **Details:** see [`doc/SECURITY.md`](doc/SECURITY.md) (device protection, backup vs seed restore, multi-family session)
 
@@ -78,9 +80,9 @@ flowchart TB
 | Layer | Technology |
 |-------|------------|
 | Shell | Tauri v2 |
-| Core | Rust workspace — `crypto`, `storage`, `taurvia-hd`, `taurvia-chain`, `taurvia-solana`, `taurvia-evm`, `taurvia-bitcoin`, `wallet-core`, `models` |
+| Core | Rust workspace — `crypto`, `storage`, `taurvia-hd`, `taurvia-chain`, `taurvia-solana`, `taurvia-evm`, `taurvia-bitcoin`, `taurvia-sui`, `wallet-core`, `models` |
 | UI | React 19, TypeScript, Vite, Tailwind CSS 4 |
-| Chains | Solana SDK 4 + SPL; alloy (EVM) in Rust; bitcoin 0.32 Native SegWit |
+| Chains | Solana SDK 4 + SPL; alloy (EVM) in Rust; bitcoin 0.32 Native SegWit; Sui JSON-RPC + SLIP-0010 Ed25519 |
 | Package manager | pnpm |
 
 ## Getting started
@@ -153,6 +155,7 @@ flowchart LR
   REG --> SOL["taurvia-solana"]
   REG --> EVM["taurvia-evm"]
   REG --> BTC["taurvia-bitcoin"]
+  REG --> SUI["taurvia-sui"]
   STORE --> DISK[("~/.local/share/com.taurvia.wallet")]
 ```
 
@@ -166,6 +169,7 @@ flowchart LR
 | `taurvia-solana` | Solana RPC, SPL, Jupiter swap |
 | `taurvia-evm` | alloy provider, EIP-1559, ERC-20, 0x swap |
 | `taurvia-bitcoin` | BIP84 Native SegWit, Esplora, Thorchain quote + inbound send |
+| `taurvia-sui` | SLIP-0010 Ed25519, JSON-RPC balances / PaySui, Suiscan |
 | `wallet-core` | Session, encrypt/decrypt, password-gated dispatch **by family**, parallel portfolio snapshot |
 | `taurvia-desktop` | Thin Tauri shell + IPC commands |
 
@@ -178,16 +182,16 @@ Same BIP39 seed as Phantom / MetaMask / typical BIP84 wallets. Tests live next t
 | Solana | `m/44'/501'/0'/0'` | base58 |
 | Ethereum (and later Polygon/Base) | `m/44'/60'/0'/0/0` | EIP-55 `0x…` |
 | Bitcoin | `m/84'/0'/0'/0/0` (testnet `m/84'/1'/0'/0/0`) | Native SegWit `bc1q` / `tb1q` |
-| Sui (later) | SLIP-0010 `m/44'/784'/0'/0'/0'` | — |
+| Sui | SLIP-0010 `m/44'/784'/0'/0'/0'` | `0x` + 64 hex |
 
 ### Adding a network
 
 | You want | What to change |
 |---------|----------------|
 | **Polygon / Base** (or another EVM L2) | One `NetworkDescriptor` row: RPC, `eip155_chain_id`, explorer, token list, `enabled: true`. Same `EvmSigner`. No new crate. |
-| **A new VM** (Sui) | New `crates/taurvia-sui` implementing the chain backend, `ChainFamily` variant, `FamilyKeyring` field. UI picks it up from `list_networks()`. |
+| **A new VM** | New `crates/taurvia-*` implementing the chain backend, `ChainFamily` variant, `FamilyKeyring` field. UI picks it up from `list_networks()`. |
 
-Signing still cannot move to JavaScript. Disabled stubs already exist for `polygon-mainnet`, `polygon-amoy`, `base-mainnet`, `base-sepolia`, and `sui-mainnet`.
+Signing still cannot move to JavaScript. Disabled stubs already exist for `polygon-mainnet`, `polygon-amoy`, `base-mainnet`, and `base-sepolia`.
 
 ### Future extension points
 
@@ -213,6 +217,7 @@ taurvia/
 │   ├── taurvia-solana/        # RPC, transfers, Jupiter
 │   ├── taurvia-evm/           # alloy, EIP-1559, ERC-20, 0x
 │   ├── taurvia-bitcoin/       # BIP84, Esplora, Thorchain
+│   ├── taurvia-sui/           # SLIP-0010 Ed25519, Sui JSON-RPC
 │   ├── storage/               # wallet file persistence
 │   └── wallet-core/           # session, signing, snapshots, swap
 └── doc/                       # project docs

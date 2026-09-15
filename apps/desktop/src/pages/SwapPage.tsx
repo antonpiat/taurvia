@@ -115,9 +115,19 @@ export function SwapPage() {
     });
   }, [settings.swap_favorite_tokens]);
 
-  const swapChains = networks.filter(
-    (n) => n.enabled && !n.is_testnet && n.features.swap && enabledNetworks.includes(n.id),
+  const swapChains = useMemo(
+    () =>
+      networks.filter(
+        (n) => n.enabled && !n.is_testnet && n.features.swap && enabledNetworks.includes(n.id),
+      ),
+    [networks, enabledNetworks],
   );
+
+  useEffect(() => {
+    if (swapChains.length === 0) return;
+    if (swapChains.some((n) => n.id === network)) return;
+    void changeNetwork(swapChains[0].id);
+  }, [network, swapChains, changeNetwork]);
 
   const selectable = useMemo(() => {
     const map = new Map<string, SelectableToken>();

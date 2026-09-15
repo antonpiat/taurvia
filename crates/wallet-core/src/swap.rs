@@ -129,9 +129,7 @@ impl WalletService {
                 )
             }
             models::ChainFamily::Bitcoin => Ok(Vec::new()),
-            models::ChainFamily::Sui => Err(WalletError::Operation(anyhow::anyhow!(
-                "token search is not available on this chain"
-            ))),
+            models::ChainFamily::Sui => Ok(Vec::new()),
         }
     }
 

@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   rpc_urls: {},
   jupiter_api_key: null,
   network: DEFAULT_NETWORK_ID,
-  enabled_networks: ["solana-mainnet", "ethereum-mainnet", "bitcoin-mainnet"],
+  enabled_networks: ["solana-mainnet", "ethereum-mainnet", "bitcoin-mainnet", "sui-mainnet"],
   zerox_api_key: null,
   auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,
   hide_balances: true,

@@ -9,8 +9,9 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
     }
 
     let looks_evm = is_evm_hex(address);
+    let looks_sui = is_sui_hex(address);
     let looks_btc = is_bitcoin_bech32(address);
-    let looks_solana = !looks_evm && !looks_btc && looks_base58(address);
+    let looks_solana = !looks_evm && !looks_sui && !looks_btc && looks_base58(address);
 
     match family {
         ChainFamily::Solana => {
@@ -18,6 +19,9 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
                 bail!(
                     "this looks like an Ethereum address; switch network or paste a Solana address"
                 );
+            }
+            if looks_sui {
+                bail!("this looks like a Sui address; switch network or paste a Solana address");
             }
             if looks_btc {
                 bail!(
@@ -33,14 +37,17 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
             if looks_btc {
                 bail!("this looks like a Bitcoin address; switch network or paste an Ethereum address");
             }
+            if looks_sui {
+                bail!("this looks like a Sui address; switch network or paste an Ethereum address");
+            }
             if !looks_evm {
                 bail!("invalid Ethereum address");
             }
             Ok(())
         }
         ChainFamily::Bitcoin => {
-            if looks_evm {
-                bail!("this looks like an Ethereum address; switch network or paste a Bitcoin address");
+            if looks_evm || looks_sui {
+                bail!("this looks like an Ethereum or Sui address; switch network or paste a Bitcoin address");
             }
             if !looks_btc {
                 bail!("invalid Bitcoin address (Native SegWit bc1/tb1 required)");
@@ -51,7 +58,10 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
             if looks_btc {
                 bail!("this looks like a Bitcoin address; switch network or paste a Sui address");
             }
-            if !looks_evm {
+            if looks_evm {
+                bail!("this looks like an Ethereum address; switch network or paste a Sui address");
+            }
+            if !looks_sui {
                 bail!("invalid Sui address");
             }
             Ok(())
@@ -65,6 +75,16 @@ fn is_evm_hex(address: &str) -> bool {
         .or_else(|| address.strip_prefix("0X"));
     match rest {
         Some(hex) => hex.len() == 40 && hex.chars().all(|c| c.is_ascii_hexdigit()),
+        None => false,
+    }
+}
+
+fn is_sui_hex(address: &str) -> bool {
+    let rest = address
+        .strip_prefix("0x")
+        .or_else(|| address.strip_prefix("0X"));
+    match rest {
+        Some(hex) => hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit()),
         None => false,
     }
 }
@@ -115,5 +135,24 @@ mod tests {
             "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
         )
         .unwrap();
+    }
+
+    #[test]
+    fn sui_accepts_64_hex() {
+        validate_recipient(
+            ChainFamily::Sui,
+            "0x5e93a736d04fbb25737aa40bee40171ef79f65fae833749e3c089fe7cc2161f1",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn sui_rejects_evm() {
+        let err = validate_recipient(
+            ChainFamily::Sui,
+            "0x9858effd232b4033e47d90003d41ec34ecaeda94",
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("Ethereum"));
     }
 }

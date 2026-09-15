@@ -7,6 +7,8 @@ pub const NETWORK_ETHEREUM_MAINNET: &str = "ethereum-mainnet";
 pub const NETWORK_ETHEREUM_SEPOLIA: &str = "ethereum-sepolia";
 pub const NETWORK_BITCOIN_MAINNET: &str = "bitcoin-mainnet";
 pub const NETWORK_BITCOIN_TESTNET: &str = "bitcoin-testnet";
+pub const NETWORK_SUI_MAINNET: &str = "sui-mainnet";
+pub const NETWORK_SUI_TESTNET: &str = "sui-testnet";
 pub const DEFAULT_NETWORK_ID: &str = NETWORK_SOLANA_MAINNET;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
@@ -101,7 +103,7 @@ const SUI_FEATURES: ChainFeatures = ChainFeatures {
 };
 
 /// Static network table. **EVM L2s (Polygon, Base) are extra rows** with `ChainFamily::Evm`.
-/// A new VM (Sui) needs a family crate + `ChainFamily` variant — not a descriptor-only change.
+/// A new VM needs a family crate + `ChainFamily` variant — not a descriptor-only change.
 pub static NETWORKS: &[NetworkDescriptor] = &[
     NetworkDescriptor {
         id: NETWORK_SOLANA_MAINNET,
@@ -258,7 +260,7 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         coingecko_id: Some("ethereum"),
     },
     NetworkDescriptor {
-        id: "sui-mainnet",
+        id: NETWORK_SUI_MAINNET,
         family: ChainFamily::Sui,
         name: "Sui",
         native_symbol: "SUI",
@@ -269,7 +271,26 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         explorer_address: "https://suiscan.xyz/mainnet/account/{address}",
         explorer_api: None,
         features: SUI_FEATURES,
-        enabled: false,
+        enabled: true,
+        coingecko_id: Some("sui"),
+    },
+    NetworkDescriptor {
+        id: NETWORK_SUI_TESTNET,
+        family: ChainFamily::Sui,
+        name: "Sui Testnet",
+        native_symbol: "SUI",
+        is_testnet: true,
+        eip155_chain_id: None,
+        default_rpc: "https://fullnode.testnet.sui.io:443",
+        explorer_tx: "https://suiscan.xyz/testnet/tx/{txid}",
+        explorer_address: "https://suiscan.xyz/testnet/account/{address}",
+        explorer_api: None,
+        features: ChainFeatures {
+            tokens: true,
+            swap: false,
+            utxo: false,
+        },
+        enabled: true,
         coingecko_id: Some("sui"),
     },
 ];
@@ -313,6 +334,7 @@ pub fn default_enabled_network_ids() -> Vec<String> {
         NETWORK_SOLANA_MAINNET.to_string(),
         NETWORK_ETHEREUM_MAINNET.to_string(),
         NETWORK_BITCOIN_MAINNET.to_string(),
+        NETWORK_SUI_MAINNET.to_string(),
     ]
 }
 
@@ -321,7 +343,7 @@ pub fn mainnet_id_for_family(family: ChainFamily) -> &'static str {
         ChainFamily::Solana => NETWORK_SOLANA_MAINNET,
         ChainFamily::Evm => NETWORK_ETHEREUM_MAINNET,
         ChainFamily::Bitcoin => NETWORK_BITCOIN_MAINNET,
-        ChainFamily::Sui => "sui-mainnet",
+        ChainFamily::Sui => NETWORK_SUI_MAINNET,
     }
 }
 

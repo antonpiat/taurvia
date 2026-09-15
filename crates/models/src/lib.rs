@@ -19,7 +19,8 @@ pub use network::{
     mainnet_id_for_family, managed_rpc_url, normalize_network_id, require_network, ChainFamily,
     ChainFeatures, NetworkDescriptor, NetworkInfo, DEFAULT_NETWORK_ID, NETWORKS,
     NETWORK_BITCOIN_MAINNET, NETWORK_BITCOIN_TESTNET, NETWORK_ETHEREUM_MAINNET,
-    NETWORK_ETHEREUM_SEPOLIA, NETWORK_SOLANA_DEVNET, NETWORK_SOLANA_MAINNET,
+    NETWORK_ETHEREUM_SEPOLIA, NETWORK_SOLANA_DEVNET, NETWORK_SOLANA_MAINNET, NETWORK_SUI_MAINNET,
+    NETWORK_SUI_TESTNET,
 };
 pub use send::{SendPreview, SendResult};
 pub use snapshot::{ChainSnapshot, WalletSnapshot};
