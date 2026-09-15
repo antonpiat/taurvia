@@ -67,6 +67,18 @@ export function nativeAssetId(family: ChainFamily | undefined): string {
   }
 }
 
+export function recipientAddressPlaceholder(info: NetworkInfo | undefined): string {
+  switch (info?.family) {
+    case "evm":
+    case "sui":
+      return "0x…";
+    case "bitcoin":
+      return info.is_testnet ? "tb1q…" : "bc1q…";
+    default:
+      return "Solana address";
+  }
+}
+
 export function receiveWarning(info: NetworkInfo | undefined): string {
   const name = info?.name ?? "this network";
   return `Only send ${name} assets to this address.`;
