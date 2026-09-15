@@ -109,6 +109,20 @@ impl WalletService {
         Ok(chain_from_legacy(snap))
     }
 
+    async fn sui_chain_snapshot(
+        &self,
+        desc: &'static models::NetworkDescriptor,
+    ) -> Result<ChainSnapshot, WalletError> {
+        let url = self.endpoint_for(desc.id);
+        let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
+        let address = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
+        let snap = rpc
+            .snapshot(&address)
+            .await
+            .map_err(WalletError::Operation)?;
+        Ok(chain_from_legacy(snap))
+    }
+
     async fn solana_chain_snapshot(
         &self,
         desc: &'static models::NetworkDescriptor,

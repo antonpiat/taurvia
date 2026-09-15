@@ -92,11 +92,13 @@ export function SendPage() {
   const recipientPlaceholder =
     networkInfo?.family === "evm" || networkInfo?.family === "sui"
       ? "0x…"
-      : networkInfo?.family === "bitcoin"
-        ? networkInfo.is_testnet
-          ? "tb1q…"
-          : "bc1q…"
-        : "Solana address";
+      : networkInfo?.family === "sui"
+        ? "0x…"
+        : networkInfo?.family === "bitcoin"
+          ? networkInfo.is_testnet
+            ? "tb1q…"
+            : "bc1q…"
+          : "Solana address";
 
   const handlePreview = async () => {
     setError(null);
