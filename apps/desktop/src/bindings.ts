@@ -328,7 +328,7 @@ export type ExplorerKind = "solscan" | "solanaExplorer"
 /**
  * How secrets were imported. Key-only wallets cannot derive other families.
  */
-export type ImportKind = "mnemonic" | "solana-key" | "evm-key" | "bitcoin-key"
+export type ImportKind = "mnemonic" | "solana-key" | "evm-key" | "bitcoin-key" | "sui-key"
 /**
  * Specta/UI copy of a descriptor (owned strings).
  */

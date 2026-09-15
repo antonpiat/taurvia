@@ -8,6 +8,7 @@ members = [
     "crates/taurvia-solana",
     "crates/taurvia-evm",
     "crates/taurvia-bitcoin",
+    "crates/taurvia-sui",
     "crates/wallet-core",
     "apps/desktop/src-tauri",
 ]

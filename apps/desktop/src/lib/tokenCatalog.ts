@@ -9,11 +9,13 @@ import jupLogo from "@/assets/tokens/jup.png";
 import bonkLogo from "@/assets/tokens/bonk.png";
 import ethLogo from "@/assets/tokens/eth.svg";
 import btcLogo from "@/assets/tokens/btc.svg";
+import suiLogo from "@/assets/tokens/sui.svg";
 
 export const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
 export const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const ETH_NATIVE = "eth";
 export const BTC_NATIVE = "btc";
+export const SUI_NATIVE = "sui";
 
 const SOL_USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 const SOL_JUP = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
@@ -25,7 +27,7 @@ const ETH_WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const ETH_DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 const ETH_WBTC = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599";
 
-export type TokenChain = "solana" | "evm" | "bitcoin";
+export type TokenChain = "solana" | "evm" | "bitcoin" | "sui";
 
 const SOL_LOGOS: Record<string, string> = {
   [WRAPPED_SOL]: solLogo,
@@ -99,9 +101,18 @@ export const BTC_NATIVE_TOKEN: TokenInfo = {
   logo_uri: btcLogo,
 };
 
+export const SUI_NATIVE_TOKEN: TokenInfo = {
+  mint: SUI_NATIVE,
+  symbol: "SUI",
+  name: "Sui",
+  decimals: 9,
+  logo_uri: suiLogo,
+};
+
 export function chainBadgeSrc(chain: TokenChain): string {
   if (chain === "evm") return ethLogo;
   if (chain === "bitcoin") return btcLogo;
+  if (chain === "sui") return suiLogo;
   return solLogo;
 }
 
@@ -112,12 +123,14 @@ export function localLogoForAsset(
 ): string | null {
   const m = mint.trim();
   if (chain === "bitcoin" || m.toLowerCase() === "btc" || symbol === "BTC") return btcLogo;
+  if (chain === "sui" || m.toLowerCase() === "sui" || symbol === "SUI") return suiLogo;
   if (chain === "evm") {
     if (m.toLowerCase() === "eth" || symbol === "ETH") return ethLogo;
     return EVM_LOGOS[m.toLowerCase()] ?? null;
   }
   if (m.toLowerCase() === "eth") return ethLogo;
   if (m.toLowerCase() === "btc") return btcLogo;
+  if (m.toLowerCase() === "sui") return suiLogo;
   if (m.toLowerCase() === "sol" || symbol === "SOL") return solLogo;
   return SOL_LOGOS[m] ?? null;
 }
@@ -157,12 +170,19 @@ export function networkFamilyToChain(family: string | undefined): TokenChain | u
   if (family === "evm") return "evm";
   if (family === "bitcoin") return "bitcoin";
   if (family === "solana") return "solana";
+  if (family === "sui") return "sui";
   return undefined;
 }
 
 export function inferTokenChain(mint: string): TokenChain {
   const m = mint.trim();
   if (m.toLowerCase() === "btc") return "bitcoin";
-  if (m.toLowerCase() === "eth" || m.startsWith("0x") || m.startsWith("0X")) return "evm";
+  if (m.toLowerCase() === "sui" || m.includes("::")) return "sui";
+  if (m.toLowerCase() === "eth") return "evm";
+  if (m.startsWith("0x") || m.startsWith("0X")) {
+    const hex = m.slice(2);
+    if (hex.length === 64) return "sui";
+    return "evm";
+  }
   return "solana";
 }

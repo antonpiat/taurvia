@@ -32,6 +32,7 @@ pub enum ImportKind {
     SolanaKey,
     EvmKey,
     BitcoinKey,
+    SuiKey,
 }
 
 impl ImportKind {
@@ -41,6 +42,7 @@ impl ImportKind {
             Self::SolanaKey => Some(crate::ChainFamily::Solana),
             Self::EvmKey => Some(crate::ChainFamily::Evm),
             Self::BitcoinKey => Some(crate::ChainFamily::Bitcoin),
+            Self::SuiKey => Some(crate::ChainFamily::Sui),
         }
     }
 

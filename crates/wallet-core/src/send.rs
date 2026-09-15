@@ -41,9 +41,14 @@ impl WalletService {
                     .await
                     .map_err(WalletError::Operation)
             }
-            ChainFamily::Sui => Err(WalletError::Operation(anyhow::anyhow!(
-                "Sui is not enabled yet"
-            ))),
+            ChainFamily::Sui => {
+                let url = self.endpoint_for(desc.id);
+                let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
+                let from = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
+                rpc.preview_send(&from, to, amount, asset)
+                    .await
+                    .map_err(WalletError::Operation)
+            }
         }
     }
 
@@ -85,9 +90,14 @@ impl WalletService {
                     .await
                     .map_err(WalletError::Operation)
             }
-            ChainFamily::Sui => Err(WalletError::Operation(anyhow::anyhow!(
-                "Sui is not enabled yet"
-            ))),
+            ChainFamily::Sui => {
+                let url = self.endpoint_for(desc.id);
+                let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
+                let signer = self.with_session(|k| k.require_sui().cloned())??;
+                rpc.send(&signer, to, amount, asset)
+                    .await
+                    .map_err(WalletError::Operation)
+            }
         }
     }
 

@@ -508,11 +508,23 @@ fn keyring_from_payload(
                 taurvia_bitcoin::from_wif(&payload.private_key).map_err(WalletError::Operation)?;
             Ok(FamilyKeyring::from_btc_keys(main, test))
         }
+        ImportKind::SuiKey => {
+            let signer =
+                taurvia_sui::from_secret(&payload.private_key).map_err(WalletError::Operation)?;
+            Ok(FamilyKeyring::from_sui_key(signer))
+        }
     }
 }
 
 fn detect_and_parse_key(secret: &str) -> Result<(FamilyKeyring, ImportKind, String), WalletError> {
     let trimmed = secret.trim();
+    if trimmed.to_ascii_lowercase().starts_with("suiprivkey1") {
+        let signer = taurvia_sui::from_secret(trimmed).map_err(WalletError::Operation)?;
+        let stored = signer
+            .to_suiprivkey()
+            .map_err(WalletError::Operation)?;
+        return Ok((FamilyKeyring::from_sui_key(signer), ImportKind::SuiKey, stored));
+    }
     if trimmed.starts_with("0x") || trimmed.starts_with("0X") {
         let signer = taurvia_evm::from_hex(trimmed).map_err(WalletError::Operation)?;
         let hex = trimmed[2..].to_ascii_lowercase();
@@ -538,6 +550,6 @@ fn detect_and_parse_key(secret: &str) -> Result<(FamilyKeyring, ImportKind, Stri
         ));
     }
     Err(WalletError::Operation(anyhow::anyhow!(
-        "unrecognized private key (Solana base58/JSON, Ethereum 0x hex, or Bitcoin WIF)"
+        "unrecognized private key (Solana base58/JSON, Ethereum 0x hex, Bitcoin WIF, or Sui suiprivkey1…)"
     )))
 }

@@ -43,8 +43,8 @@ export function ImportKeyPage() {
         <CardHeader>
           <CardTitle>Import private key</CardTitle>
           <CardDescription>
-            Solana (base58 or JSON), Ethereum (0x hex), or Bitcoin WIF. Other chains cannot be
-            derived from a single key.
+            Solana (base58 or JSON), Ethereum (0x hex), Bitcoin WIF, or Sui (suiprivkey1…). Other
+            chains cannot be derived from a single key.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

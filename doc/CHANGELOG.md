@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Sui Mainnet + Testnet: SLIP-0010 Ed25519 from the same seed, JSON-RPC balances and PaySui transfers, Suiscan links. New mnemonic wallets activate Sui with the other mainnets. Swap stays off (`features.swap = false`). Private-key import accepts `suiprivkey1…`.
+
 ---
 
 ## [0.5.1] - 2026-09-01

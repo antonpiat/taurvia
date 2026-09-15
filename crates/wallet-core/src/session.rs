@@ -15,6 +15,7 @@ pub(crate) struct FamilyKeyring {
     pub evm: Option<taurvia_evm::EvmSigner>,
     pub bitcoin: Option<taurvia_bitcoin::BtcSigner>,
     pub bitcoin_testnet: Option<taurvia_bitcoin::BtcSigner>,
+    pub sui: Option<taurvia_sui::SuiSigner>,
 }
 
 impl FamilyKeyring {
@@ -28,11 +29,13 @@ impl FamilyKeyring {
             .map_err(WalletError::Operation)?;
         let bitcoin_testnet = taurvia_bitcoin::derive_from_seed(seed.as_slice(), true)
             .map_err(WalletError::Operation)?;
+        let sui = taurvia_sui::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
         Ok(Self {
             solana: Some(solana),
             evm: Some(evm),
             bitcoin: Some(bitcoin),
             bitcoin_testnet: Some(bitcoin_testnet),
+            sui: Some(sui),
         })
     }
 
@@ -44,11 +47,13 @@ impl FamilyKeyring {
             .map_err(WalletError::Operation)?;
         let bitcoin_testnet = taurvia_bitcoin::derive_from_seed(seed.as_slice(), true)
             .map_err(WalletError::Operation)?;
+        let sui = taurvia_sui::derive_from_seed(seed.as_slice()).map_err(WalletError::Operation)?;
         Ok(Self {
             solana: Some(solana),
             evm: Some(evm),
             bitcoin: Some(bitcoin),
             bitcoin_testnet: Some(bitcoin_testnet),
+            sui: Some(sui),
         })
     }
 
@@ -58,6 +63,7 @@ impl FamilyKeyring {
             evm: None,
             bitcoin: None,
             bitcoin_testnet: None,
+            sui: None,
         }
     }
 
@@ -67,6 +73,7 @@ impl FamilyKeyring {
             evm: Some(evm),
             bitcoin: None,
             bitcoin_testnet: None,
+            sui: None,
         }
     }
 
@@ -79,6 +86,17 @@ impl FamilyKeyring {
             evm: None,
             bitcoin: Some(bitcoin),
             bitcoin_testnet: Some(bitcoin_testnet),
+            sui: None,
+        }
+    }
+
+    pub fn from_sui_key(sui: taurvia_sui::SuiSigner) -> Self {
+        Self {
+            solana: None,
+            evm: None,
+            bitcoin: None,
+            bitcoin_testnet: None,
+            sui: Some(sui),
         }
     }
 
@@ -87,7 +105,7 @@ impl FamilyKeyring {
             ChainFamily::Solana => self.solana.is_some(),
             ChainFamily::Evm => self.evm.is_some(),
             ChainFamily::Bitcoin => self.bitcoin.is_some() || self.bitcoin_testnet.is_some(),
-            ChainFamily::Sui => false,
+            ChainFamily::Sui => self.sui.is_some(),
         }
     }
 
@@ -108,10 +126,14 @@ impl FamilyKeyring {
             ChainFamily::Solana => Ok(self.require_solana()?.pubkey().to_string()),
             ChainFamily::Evm => Ok(self.require_evm()?.address.clone()),
             ChainFamily::Bitcoin => Ok(self.require_btc(testnet)?.address.clone()),
-            ChainFamily::Sui => Err(WalletError::Operation(anyhow::anyhow!(
-                "Sui is not enabled yet"
-            ))),
+            ChainFamily::Sui => Ok(self.require_sui()?.address.clone()),
         }
+    }
+
+    pub fn require_sui(&self) -> Result<&taurvia_sui::SuiSigner, WalletError> {
+        self.sui
+            .as_ref()
+            .ok_or_else(|| WalletError::Operation(anyhow::anyhow!("this wallet has no Sui key")))
     }
 
     pub fn require_btc(&self, testnet: bool) -> Result<&taurvia_bitcoin::BtcSigner, WalletError> {
@@ -136,6 +158,9 @@ impl FamilyKeyring {
         if let Some(btc) = self.bitcoin.as_ref() {
             addresses.set(ChainFamily::Bitcoin, btc.address.clone());
         }
+        if let Some(sui) = self.sui.as_ref() {
+            addresses.set(ChainFamily::Sui, sui.address.clone());
+        }
         addresses
     }
 
@@ -146,6 +171,7 @@ impl FamilyKeyring {
             .or_else(|| self.evm.as_ref().map(|e| e.address.clone()))
             .or_else(|| self.bitcoin.as_ref().map(|b| b.address.clone()))
             .or_else(|| self.bitcoin_testnet.as_ref().map(|b| b.address.clone()))
+            .or_else(|| self.sui.as_ref().map(|s| s.address.clone()))
             .unwrap_or_default()
     }
 }

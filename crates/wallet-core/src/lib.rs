@@ -146,6 +146,7 @@ mod tests {
         assert!(enabled.contains(&"solana-mainnet".to_string()));
         assert!(enabled.contains(&"ethereum-mainnet".to_string()));
         assert!(enabled.contains(&"bitcoin-mainnet".to_string()));
+        assert!(enabled.contains(&"sui-mainnet".to_string()));
         let snap = service.get_snapshot().await.unwrap();
         assert_eq!(snap.account_name, "Account 1");
         assert!(snap.can_reveal_mnemonic);
@@ -217,6 +218,32 @@ mod tests {
             vec!["bitcoin-mainnet".to_string()]
         );
         assert!(service.change_network("ethereum-mainnet").is_err());
+        assert!(service.reveal_mnemonic("Password123!").is_err());
+    }
+
+    #[tokio::test]
+    async fn import_sui_privkey_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let signer = taurvia_sui::from_secret(
+            "8869cb07178bf67e08d7c4abdf45487dbf379c9a452fcec2836854bf4a3d29b0",
+        )
+        .unwrap();
+        let secret = signer.to_suiprivkey().unwrap();
+        service
+            .import_private_key(&secret, "Password123!", "SUI key")
+            .unwrap();
+        let addr = service.unlock("Password123!").unwrap();
+        assert_eq!(
+            addr,
+            "0x5e93a736d04fbb25737aa40bee40171ef79f65fae833749e3c089fe7cc2161f1"
+        );
+        assert_eq!(service.import_kind(), models::ImportKind::SuiKey);
+        assert_eq!(
+            service.enabled_network_ids(),
+            vec!["sui-mainnet".to_string()]
+        );
+        assert!(service.change_network("solana-mainnet").is_err());
         assert!(service.reveal_mnemonic("Password123!").is_err());
     }
 
