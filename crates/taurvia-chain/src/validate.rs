@@ -70,13 +70,18 @@ pub fn validate_recipient(family: ChainFamily, address: &str) -> Result<()> {
 }
 
 fn is_evm_hex(address: &str) -> bool {
+    hex_body(address).is_some_and(|h| h.len() == 40)
+}
+
+fn is_sui_hex(address: &str) -> bool {
+    hex_body(address).is_some_and(|h| h.len() == 64)
+}
+
+fn hex_body(address: &str) -> Option<&str> {
     let rest = address
         .strip_prefix("0x")
-        .or_else(|| address.strip_prefix("0X"));
-    match rest {
-        Some(hex) => hex.len() == 40 && hex.chars().all(|c| c.is_ascii_hexdigit()),
-        None => false,
-    }
+        .or_else(|| address.strip_prefix("0X"))?;
+    rest.chars().all(|c| c.is_ascii_hexdigit()).then_some(rest)
 }
 
 fn is_sui_hex(address: &str) -> bool {

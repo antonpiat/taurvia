@@ -12,43 +12,37 @@ impl WalletService {
     ) -> Result<SendPreview, WalletError> {
         let desc = self.active_descriptor();
         taurvia_chain::validate_recipient(desc.family, to).map_err(WalletError::Operation)?;
+        if desc.family == ChainFamily::Solana {
+            return if is_solana_native(asset) {
+                self.preview_sol_send(to, amount).await
+            } else {
+                self.preview_spl_send(asset.unwrap_or(""), to, amount).await
+            };
+        }
+        let from = self.with_session(|k| k.address(desc.family, desc.is_testnet))??;
         match desc.family {
-            ChainFamily::Solana => {
-                let native = asset
-                    .map(|a| a.eq_ignore_ascii_case("sol") || a.eq_ignore_ascii_case("native"))
-                    .unwrap_or(true);
-                if native {
-                    self.preview_sol_send(to, amount).await
-                } else {
-                    self.preview_spl_send(asset.unwrap_or(""), to, amount).await
-                }
-            }
             ChainFamily::Evm => {
                 let url = self.evm_rpc_url.lock().unwrap().clone();
-                let rpc = taurvia_evm::EvmRpc::new(&url, *desc);
-                let from = self.with_session(|k| k.require_evm().map(|e| e.address.clone()))??;
-                rpc.preview_send(&from, to, amount, asset)
+                taurvia_evm::EvmRpc::new(&url, *desc)
+                    .preview_send(&from, to, amount, asset)
                     .await
                     .map_err(WalletError::Operation)
             }
             ChainFamily::Bitcoin => {
                 let url = self.btc_esplora.lock().unwrap().clone();
-                let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
-                let from = self.with_session(|k| {
-                    k.require_btc(desc.is_testnet).map(|s| s.address.clone())
-                })??;
-                rpc.preview_send(&from, to, amount)
+                taurvia_bitcoin::BtcRpc::new(&url, *desc)
+                    .preview_send(&from, to, amount)
                     .await
                     .map_err(WalletError::Operation)
             }
             ChainFamily::Sui => {
                 let url = self.endpoint_for(desc.id);
-                let rpc = taurvia_sui::SuiRpc::new(&url, *desc);
-                let from = self.with_session(|k| k.require_sui().map(|s| s.address.clone()))??;
-                rpc.preview_send(&from, to, amount, asset)
+                taurvia_sui::SuiRpc::new(&url, *desc)
+                    .preview_send(&from, to, amount, asset)
                     .await
                     .map_err(WalletError::Operation)
             }
+            ChainFamily::Solana => unreachable!(),
         }
     }
 
@@ -64,10 +58,7 @@ impl WalletService {
         taurvia_chain::validate_recipient(desc.family, to).map_err(WalletError::Operation)?;
         match desc.family {
             ChainFamily::Solana => {
-                let native = asset
-                    .map(|a| a.eq_ignore_ascii_case("sol") || a.eq_ignore_ascii_case("native"))
-                    .unwrap_or(true);
-                if native {
+                if is_solana_native(asset) {
                     self.send_sol_unlocked(to, amount).await
                 } else {
                     self.send_spl_unlocked(asset.unwrap_or(""), to, amount)
@@ -156,4 +147,10 @@ impl WalletService {
             .await
             .map_err(WalletError::Operation)
     }
+}
+
+fn is_solana_native(asset: Option<&str>) -> bool {
+    asset
+        .map(|a| a.eq_ignore_ascii_case("sol") || a.eq_ignore_ascii_case("native"))
+        .unwrap_or(true)
 }

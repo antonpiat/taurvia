@@ -24,6 +24,7 @@ const ED25519_FLAG: u8 = 0x00;
 pub struct SuiSigner {
     pub address: String,
     secret: Zeroizing<[u8; 32]>,
+    pubkey: [u8; 32],
 }
 
 impl SuiSigner {
@@ -32,7 +33,7 @@ impl SuiSigner {
     }
 
     pub fn public_key_bytes(&self) -> [u8; 32] {
-        VerifyingKey::from(&SigningKey::from_bytes(&self.secret)).to_bytes()
+        self.pubkey
     }
 
     pub fn sign_intent_digest(&self, digest: &[u8; 32]) -> [u8; 64] {
@@ -100,10 +101,11 @@ fn encode_suiprivkey(secret: &[u8; 32]) -> Result<String> {
 }
 
 fn from_secret_bytes(secret: [u8; 32]) -> Result<SuiSigner> {
-    let address = address_from_secret(&secret);
+    let pubkey = VerifyingKey::from(&SigningKey::from_bytes(&secret)).to_bytes();
     Ok(SuiSigner {
-        address,
+        address: address_from_pubkey(&pubkey),
         secret: Zeroizing::new(secret),
+        pubkey,
     })
 }
 
@@ -114,7 +116,7 @@ pub fn validate_address(address: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn is_sui_address(address: &str) -> bool {
+fn is_sui_address(address: &str) -> bool {
     let rest = address
         .strip_prefix("0x")
         .or_else(|| address.strip_prefix("0X"));
@@ -122,11 +124,6 @@ pub fn is_sui_address(address: &str) -> bool {
         Some(hex) => hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit()),
         None => false,
     }
-}
-
-fn address_from_secret(secret: &[u8; 32]) -> String {
-    let verifying = VerifyingKey::from(&SigningKey::from_bytes(secret));
-    address_from_pubkey(&verifying.to_bytes())
 }
 
 fn address_from_pubkey(pubkey: &[u8; 32]) -> String {

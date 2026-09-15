@@ -90,7 +90,7 @@ export function SendPage() {
   const isNative = selectedToken?.mint === nativeMint;
   const tokenSymbol = selectedToken?.symbol ?? nativeSymbol;
   const recipientPlaceholder =
-    networkInfo?.family === "evm"
+    networkInfo?.family === "evm" || networkInfo?.family === "sui"
       ? "0x…"
       : networkInfo?.family === "sui"
         ? "0x…"
