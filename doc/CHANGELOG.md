@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+---
+
+## [0.5.2] - 2026-09-16
+
 ### Added
 
 - Sui Mainnet + Testnet: SLIP-0010 Ed25519 from the same seed, JSON-RPC balances and PaySui transfers, Suiscan links. New mnemonic wallets activate Sui with the other mainnets. Swap stays off (`features.swap = false`). Private-key import accepts `suiprivkey1…`.
@@ -335,7 +339,8 @@ When cutting a new version:
 6. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z` (tag must match `tauri.conf.json`).
 7. [Release](../.github/workflows/release.yml) builds unsigned installers and attaches them to the GitHub Release. Edit the notes if needed.
 
-[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/antonpiat/taurvia/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/antonpiat/taurvia/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/antonpiat/taurvia/compare/v0.4.3...v0.5.0
 [0.4.3]: https://github.com/antonpiat/taurvia/compare/v0.4.2...v0.4.3
