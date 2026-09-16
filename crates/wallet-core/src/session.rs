@@ -451,6 +451,7 @@ impl WalletService {
             .get(id)
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
+            .filter(|s| !retired_sui_json_rpc(s))
         {
             return url;
         }
@@ -550,6 +551,11 @@ impl WalletService {
         }
         out
     }
+}
+
+fn retired_sui_json_rpc(url: &str) -> bool {
+    let u = url.to_ascii_lowercase();
+    u.contains("fullnode.mainnet.sui.io") || u.contains("fullnode.testnet.sui.io")
 }
 
 fn split_runtime(settings: &AppSettings, runtime: &RuntimeConfig) -> (String, String, String) {
