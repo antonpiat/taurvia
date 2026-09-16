@@ -49,12 +49,16 @@ impl WalletService {
             Err(_) => return Ok(snap),
         };
 
-        // Skip missing families; omit chains whose RPC failed (do not invent a 0).
+        // Keep activated chains on the dashboard even when an RPC is down (do not invent a 0).
         let chains: Vec<_> =
-            futures::future::join_all(descriptors.into_iter().map(|d| self.chain_snapshot(d)))
+            futures::future::join_all(descriptors.iter().copied().map(|d| self.chain_snapshot(d)))
                 .await
                 .into_iter()
-                .flatten()
+                .zip(descriptors.iter().copied())
+                .map(|(result, desc)| match result {
+                    Ok(chain) => chain,
+                    Err(_) => self.pending_chain(desc),
+                })
                 .collect();
 
         let total: f64 = chains.iter().filter_map(|c| c.total_usd).sum();
@@ -107,6 +111,23 @@ impl WalletService {
         }
         .map_err(WalletError::Operation)?;
         Ok(chain_from_legacy(snap))
+    }
+
+    fn pending_chain(&self, desc: &'static models::NetworkDescriptor) -> ChainSnapshot {
+        let public_key = self
+            .with_session(|k| k.address(desc.family, desc.is_testnet).ok())
+            .ok()
+            .flatten();
+        ChainSnapshot {
+            network: desc.id.to_string(),
+            public_key,
+            native_balance: None,
+            native_symbol: desc.native_symbol.to_string(),
+            native_price_usd: None,
+            native_value_usd: None,
+            total_usd: None,
+            tokens: None,
+        }
     }
 
     async fn solana_chain_snapshot(

@@ -426,10 +426,12 @@ fn is_native_asset(asset: &str) -> bool {
 }
 
 fn is_sui_coin(coin_type: &str) -> bool {
-    let n = coin_type
-        .trim()
-        .trim_start_matches("0x")
-        .trim_start_matches("0X");
+    let n = coin_type.trim();
+    let n = n
+        .strip_prefix("0x")
+        .or_else(|| n.strip_prefix("0X"))
+        .unwrap_or(n)
+        .trim_start_matches('0');
     n.eq_ignore_ascii_case("2::sui::SUI")
 }
 
@@ -594,4 +596,18 @@ struct BalanceChange {
     coin_type: String,
     #[serde(default)]
     amount: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_coin_type_matches_padded_package_id() {
+        assert!(is_sui_coin("0x2::sui::SUI"));
+        assert!(is_sui_coin(
+            "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI"
+        ));
+        assert!(!is_sui_coin("0x2::usdc::USDC"));
+    }
 }

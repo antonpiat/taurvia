@@ -121,9 +121,12 @@ impl WalletService {
             .unwrap_or_else(|_| keyring.primary_address());
 
         let addresses = keyring.addresses();
+        let missing_family_address = addresses.get(models::ChainFamily::Sui).is_some()
+            && wallet.addresses.get(models::ChainFamily::Sui).is_none();
         let needs_upgrade = wallet.version < WALLET_FILE_VERSION
             || wallet.account_name.is_empty()
-            || wallet.enabled_networks.is_empty();
+            || wallet.enabled_networks.is_empty()
+            || missing_family_address;
         if needs_upgrade {
             wallet.version = WALLET_FILE_VERSION;
             wallet.addresses = addresses;

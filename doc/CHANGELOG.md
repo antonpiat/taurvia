@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Sui portfolio used Mysten public fullnodes, which no longer serve JSON-RPC, so activating Sui never appeared on the dashboard. Default RPC is PublicNode (`sui-rpc.publicnode.com`); activated chains still show when an RPC is down.
+
 ---
 
 ## [0.5.2] - 2026-09-16
