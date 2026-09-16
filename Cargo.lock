@@ -2466,7 +2466,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "crypto"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -4860,7 +4860,7 @@ dependencies = [
 
 [[package]]
 name = "models"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "serde",
  "specta",
@@ -9643,7 +9643,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "base64 0.23.1",
  "keyring",
@@ -10158,7 +10158,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-bitcoin"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "bip32",
@@ -10174,7 +10174,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-chain"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "models",
@@ -10185,7 +10185,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-desktop"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "models",
  "specta",
@@ -10200,7 +10200,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-evm"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "alloy",
  "anyhow",
@@ -10220,7 +10220,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-hd"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "bip39",
@@ -10230,7 +10230,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-solana"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -10260,7 +10260,7 @@ dependencies = [
 
 [[package]]
 name = "taurvia-sui"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -11003,7 +11003,7 @@ dependencies = [
 
 [[package]]
 name = "wallet-core"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
