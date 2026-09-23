@@ -10,7 +10,7 @@
 
 <p align="center">
   A non-custodial desktop wallet — keys stay on your machine, every signature is produced in Rust.
-  Solana, Ethereum, Bitcoin, and Sui from one seed (or a single private key). Swap on each enabled mainnet.
+  Solana, Ethereum, Bitcoin, and Sui from one seed (or a single private key).
 </p>
 
 <p align="center">
@@ -34,9 +34,9 @@ Built with **Tauri v2**. One BIP39 phrase derives Solana, Ethereum, Bitcoin, and
 
 | | |
 |---|---|
-| **Create & import** | New seed → account name + password (no quiz). Restore with a 12/24-word phrase, a private key (Solana / Ethereum / Bitcoin WIF / Sui suiprivkey), or Taurvia JSON. Hardware wallet listed as coming soon |
-| **Portfolio** | All activated mainnets at once — one USD total, then native + tokens per chain, with chain-badged icons |
-| **Swap** | Same-chain first: Jupiter on Solana, 0x on Ethereum, Thorchain when Bitcoin is the source. Quotes and signatures stay in Rust; password-gated |
+| **Create & import** | New seed → account name + password (no quiz). Restore with a 12/24-word phrase, a private key (Solana / Ethereum / Bitcoin WIF / Sui `suiprivkey1…`), or Taurvia JSON. Hardware wallet listed as coming soon |
+| **Portfolio** | Activated mainnets together — one USD total, then native + tokens per chain. New mnemonic wallets include Sui; existing wallets keep their saved list until you turn Sui on in Settings |
+| **Swap** | Jupiter on Solana, 0x on Ethereum, Thorchain when Bitcoin is the source. Sui has no swap. Quotes and signatures stay in Rust; password-gated |
 | **Send / receive** | Last-used chain for the address, then the asset. Rust preview: network, full recipient, amount, fee |
 | **Activity** | Recent on-chain history |
 | **Lock screen** | Password-gated unlock, signing, and seed reveal (seed reveal is hidden for key-only wallets) |
@@ -50,7 +50,7 @@ flowchart TB
   UI["React UI<br/>apps/desktop<br/><i>balances · forms · QR</i><br/><b>no private keys</b>"]
   WC["wallet-core<br/><i>unlock · sign · send · swap</i>"]
   CRYPTO["crypto<br/>Argon2id · AES-256-GCM"]
-  REG["taurvia-chain<br/>descriptors · prices"]
+  REG["taurvia-chain<br/>descriptors · prices · HTTP"]
   SOL["taurvia-solana"]
   EVM["taurvia-evm"]
   BTC["taurvia-bitcoin"]
@@ -61,10 +61,10 @@ flowchart TB
   WC --> CRYPTO
   WC --> STORE
   WC --> REG
-  REG --> SOL
-  REG --> EVM
-  REG --> BTC
-  REG --> SUI
+  WC --> SOL
+  WC --> EVM
+  WC --> BTC
+  WC --> SUI
 ```
 
 - **At rest:** Argon2id (+ optional OS keychain device binding) + AES-256-GCM — **one envelope** for the mnemonic or imported key
@@ -82,7 +82,7 @@ flowchart TB
 | Shell | Tauri v2 |
 | Core | Rust workspace — `crypto`, `storage`, `taurvia-hd`, `taurvia-chain`, `taurvia-solana`, `taurvia-evm`, `taurvia-bitcoin`, `taurvia-sui`, `wallet-core`, `models` |
 | UI | React 19, TypeScript, Vite, Tailwind CSS 4 |
-| Chains | Solana SDK 4 + SPL; alloy (EVM) in Rust; bitcoin 0.32 Native SegWit; Sui JSON-RPC + SLIP-0010 Ed25519 |
+| Chains | Solana SDK 4 + SPL; alloy (EVM); bitcoin 0.32 Native SegWit; Sui SLIP-0010 Ed25519 + JSON-RPC |
 | Package manager | pnpm |
 
 ## Getting started
@@ -97,7 +97,7 @@ flowchart TB
 ### Install & run
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/antonpiat/taurvia.git
 cd taurvia/apps/desktop
 pnpm install
 pnpm tauri dev
@@ -105,18 +105,21 @@ pnpm tauri dev
 
 ### Optional: custom RPC
 
-By default Taurvia uses a **managed public RPC** per enabled network (Settings → Network). Swap runs on each enabled mainnet that has a backend (Jupiter / 0x / Thorchain). For better reliability or higher rate limits:
+By default Taurvia uses a **managed public RPC** per enabled network (Settings → Network). Swap runs on Solana, Ethereum, and Bitcoin mainnets (Jupiter / 0x / Thorchain) — not Sui. For better reliability or higher rate limits:
 
 ```bash
 cp ../../.env.example ../../.env
 # TAURVIA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
 # TAURVIA_ETH_RPC_URL=https://eth.llamarpc.com
 # TAURVIA_BTC_ESPLORA_URL=https://blockstream.info/api
+# TAURVIA_SUI_RPC_URL=https://sui-rpc.publicnode.com
 # TAURVIA_JUPITER_API_KEY=YOUR_PORTAL_KEY   # free at https://portal.jup.ag
 # TAURVIA_0X_API_KEY=YOUR_0X_KEY            # optional; also Settings → Advanced
 ```
 
-`TAURVIA_RPC_URL` overrides the managed Solana default. Ethereum and Bitcoin have their own env keys. Custom RPC in Settings → Advanced is still per-network.
+`TAURVIA_RPC_URL` overrides the managed Solana default. Ethereum, Bitcoin, and Sui have their own env keys. Settings → Advanced is still per-network.
+
+Sui defaults to [PublicNode](https://sui-rpc.publicnode.com) JSON-RPC. Mysten public fullnodes no longer serve JSON-RPC (gRPC/GraphQL only).
 
 ### Build
 
@@ -135,8 +138,9 @@ Installers (Linux `.deb` / `.rpm` / `.AppImage`, Windows `.msi` / NSIS, macOS `.
 
 ### Test the Rust workspace
 
+From the repo root:
+
 ```bash
-cd taurvia
 # Optional: if /tmp is small or quota-limited
 mkdir -p .tmp && export TMPDIR=$PWD/.tmp
 cargo test
@@ -152,10 +156,10 @@ flowchart LR
   WC --> STORE["storage"]
   WC --> HD["taurvia-hd"]
   WC --> REG["taurvia-chain"]
-  REG --> SOL["taurvia-solana"]
-  REG --> EVM["taurvia-evm"]
-  REG --> BTC["taurvia-bitcoin"]
-  REG --> SUI["taurvia-sui"]
+  WC --> SOL["taurvia-solana"]
+  WC --> EVM["taurvia-evm"]
+  WC --> BTC["taurvia-bitcoin"]
+  WC --> SUI["taurvia-sui"]
   STORE --> DISK[("~/.local/share/com.taurvia.wallet")]
 ```
 
@@ -165,7 +169,7 @@ flowchart LR
 | `crypto` | Argon2id + AES-256-GCM primitives only |
 | `storage` | Persist `WalletFile` JSON to disk (does not encrypt) |
 | `taurvia-hd` | BIP39 generate / validate / seed (no IPC) |
-| `taurvia-chain` | Registry, address-family checks, shared HTTP + prices |
+| `taurvia-chain` | Registry, address-family checks, shared HTTP + prices (no chain SDKs) |
 | `taurvia-solana` | Solana RPC, SPL, Jupiter swap |
 | `taurvia-evm` | alloy provider, EIP-1559, ERC-20, 0x swap |
 | `taurvia-bitcoin` | BIP84 Native SegWit, Esplora, Thorchain quote + inbound send |
