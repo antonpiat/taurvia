@@ -146,7 +146,8 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libssl-dev
+            libssl-dev \
+            zsync
 
       - name: Install mold
         if: matrix.platform == 'linux'
@@ -217,8 +218,11 @@ jobs:
 
       # AppImageHub / firejail --appimage runs as a user that is not the squashfs
       # owner. linuxdeploy ships AppRun.wrapped as 770 → Permission denied.
+      # Repack also embeds gh-releases-zsync and writes the sibling .zsync file.
       - name: Make AppImage contents world-executable
         if: matrix.platform == 'linux'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: bash apps/desktop/src-tauri/scripts/repack-appimage.sh
 
       # Workspace member, so Cargo writes to repo-root target/. Fall back to
@@ -235,8 +239,8 @@ jobs:
             fi
             found=1
             find "$bundle" -type f \( \
-              -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
-              -o -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
+              -name '*.AppImage' -o -name '*.AppImage.zsync' -o -name '*.deb' \
+              -o -name '*.rpm' -o -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
               -o -name '*.app.tar.gz' -o -name '*.sig' \
             \) -exec cp -v {} dist/ \;
           done
@@ -279,7 +283,9 @@ jobs:
           set -euo pipefail
           names=$(gh release view "$TAG" --json assets --jq '.assets[].name')
           echo "$names"
-          echo "$names" | grep -Eq '\.(AppImage|deb|rpm)$' || { echo "missing Linux installer"; exit 1; }
+          echo "$names" | grep -Eq '\.AppImage$' || { echo "missing Linux AppImage"; exit 1; }
+          echo "$names" | grep -Eq '\.AppImage\.zsync$' || { echo "missing AppImage zsync"; exit 1; }
+          echo "$names" | grep -Eq '\.(deb|rpm)$' || { echo "missing Linux installer"; exit 1; }
           echo "$names" | grep -Eq '\.(msi|exe)$' || { echo "missing Windows installer"; exit 1; }
           echo "$names" | grep -Eq '\.(dmg|app\.tar\.gz)$' || { echo "missing macOS installer"; exit 1; }
 
