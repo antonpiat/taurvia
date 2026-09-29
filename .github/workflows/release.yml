@@ -204,10 +204,16 @@ jobs:
       #   Tauri updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
       # Linux stays unsigned (optional later: GPG).
       - name: Build Tauri app (unsigned)
+        if: matrix.platform == 'linux'
         working-directory: apps/desktop
         run: |
           umask 022
           pnpm tauri build
+
+      - name: Build Tauri app (unsigned)
+        if: matrix.platform != 'linux'
+        working-directory: apps/desktop
+        run: pnpm tauri build
 
       # AppImageHub / firejail --appimage runs as a user that is not the squashfs
       # owner. linuxdeploy ships AppRun.wrapped as 770 → Permission denied.
