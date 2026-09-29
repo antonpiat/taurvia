@@ -1,6 +1,6 @@
 [package]
 name = "taurvia-desktop"
-version = "0.5.2"
+version = "0.5.3"
 description = "Taurvia Solana Desktop Wallet"
 authors = ["you"]
 edition.workspace = true
