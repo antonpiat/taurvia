@@ -123,7 +123,7 @@ Sui defaults to [PublicNode](https://sui-rpc.publicnode.com) JSON-RPC. Mysten pu
 
 ### Build
 
-Local builds produce packages for the **host OS only**. On Linux that means `.deb`, `.rpm`, and `.AppImage`:
+Local builds produce packages for the **host OS only**. On Linux that means `.deb`, `.rpm`, and `.AppImage`. GitHub Release Linux AppImages are built on **Ubuntu 22.04** (glibc 2.35) so they run on more distros than a 24.04/glibc 2.39 binary.
 
 ```bash
 cd apps/desktop

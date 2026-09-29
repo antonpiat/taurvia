@@ -10,6 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 
 - Sui portfolio used Mysten public fullnodes, which no longer serve JSON-RPC, so activating Sui never appeared on the dashboard. Default RPC is PublicNode (`sui-rpc.publicnode.com`); activated chains still show when an RPC is down.
+- Linux AppImage: `AppRun.wrapped` was mode `770`, so AppImageHub/Firejail could not start it (`Permission denied`). Release builds now world-execute bundled binaries and run on Ubuntu 22.04 (glibc 2.35) instead of 24.04.
 
 ---
 

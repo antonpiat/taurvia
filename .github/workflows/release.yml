@@ -120,7 +120,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Ubuntu 22.04 = glibc 2.35. ubuntu-latest (24.04) links glibc 2.39 and
+          # AppImageHub flags it as not portable. Tauri v2 needs WebKitGTK 4.1,
+          # which 22.04 still ships.
+          - os: ubuntu-22.04
             platform: linux
           - os: windows-latest
             platform: windows
@@ -136,6 +139,7 @@ jobs:
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: |
+          umask 022
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev \
@@ -201,7 +205,15 @@ jobs:
       # Linux stays unsigned (optional later: GPG).
       - name: Build Tauri app (unsigned)
         working-directory: apps/desktop
-        run: pnpm tauri build
+        run: |
+          umask 022
+          pnpm tauri build
+
+      # AppImageHub / firejail --appimage runs as a user that is not the squashfs
+      # owner. linuxdeploy ships AppRun.wrapped as 770 → Permission denied.
+      - name: Make AppImage contents world-executable
+        if: matrix.platform == 'linux'
+        run: bash apps/desktop/src-tauri/scripts/repack-appimage.sh
 
       # Workspace member, so Cargo writes to repo-root target/. Fall back to
       # src-tauri/target if Tauri ever isolates the crate.
