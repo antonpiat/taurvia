@@ -17,6 +17,7 @@ export function TokenIcon({
   symbol,
   mint,
   chain,
+  networkId,
   logoUri,
   size = 36,
   className,
@@ -24,6 +25,7 @@ export function TokenIcon({
   symbol: string;
   mint?: string;
   chain?: TokenChain;
+  networkId?: string;
   logoUri?: string | null;
   size?: number;
   className?: string;
@@ -36,7 +38,7 @@ export function TokenIcon({
   }, [chain, mint, symbol, logoUri]);
   const showImg = Boolean(src) && !failed;
   const hue = hueFromId(mint || symbol);
-  const badge = chain ? chainBadgeSrc(chain) : null;
+  const badge = chain ? chainBadgeSrc(chain, symbol, networkId) : null;
 
   return (
     <span

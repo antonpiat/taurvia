@@ -23,19 +23,38 @@ export function findNetwork(
   return networks.find((n) => n.id === normalized);
 }
 
-/** Last-used picker: activated mainnets plus testnets of those families. */
+/** Last-used picker: activated mainnets plus testnets of those paired mainnets. */
+export function pairedMainnetId(info: NetworkInfo): string {
+  if (!info.is_testnet) return info.id;
+  switch (info.id) {
+    case "solana-devnet":
+      return "solana-mainnet";
+    case "ethereum-sepolia":
+      return "ethereum-mainnet";
+    case "bnb-testnet":
+      return "bnb-mainnet";
+    case "bitcoin-testnet":
+      return "bitcoin-mainnet";
+    case "sui-testnet":
+      return "sui-mainnet";
+    case "polygon-amoy":
+      return "polygon-mainnet";
+    case "base-sepolia":
+      return "base-mainnet";
+    default:
+      return info.id.replace(/-(testnet|sepolia|devnet|amoy)$/, "-mainnet");
+  }
+}
+
 export function lastUsedNetworkOptions(
   networks: NetworkInfo[],
   activatedIds: string[],
 ): NetworkInfo[] {
   const activated = new Set(activatedIds);
-  const families = new Set(
-    networks.filter((n) => activated.has(n.id)).map((n) => n.family),
-  );
   return networks.filter(
     (n) =>
       n.enabled &&
-      (activated.has(n.id) || (n.is_testnet && families.has(n.family))),
+      (activated.has(n.id) || (n.is_testnet && activated.has(pairedMainnetId(n)))),
   );
 }
 

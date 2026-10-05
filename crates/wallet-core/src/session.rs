@@ -417,11 +417,11 @@ impl WalletService {
             )));
         }
         if desc.is_testnet {
-            let main = models::mainnet_id_for_family(desc.family);
+            let main = models::paired_mainnet_id(desc);
             if !enabled.iter().any(|eid| normalize_network_id(eid) == main) {
                 return Err(WalletError::Operation(anyhow::anyhow!(
                     "activate {} before using the testnet",
-                    desc.name
+                    require_network(main).name
                 )));
             }
         }
@@ -529,22 +529,22 @@ impl WalletService {
         let mut out = Vec::new();
         for id in self.enabled_network_ids() {
             let desc = require_network(&id);
-            if !desc.enabled {
+            if !desc.enabled || desc.is_testnet {
                 continue;
             }
-            if desc.family == last.family {
-                if !out
-                    .iter()
-                    .any(|d: &&models::NetworkDescriptor| d.id == last.id)
-                {
-                    out.push(last);
-                }
-            } else if !out
+            if !out
                 .iter()
-                .any(|d: &&models::NetworkDescriptor| d.family == desc.family)
+                .any(|d: &&models::NetworkDescriptor| d.id == desc.id)
             {
                 out.push(desc);
             }
+        }
+        if last.enabled
+            && last.is_testnet
+            && out.iter().any(|d| d.id == models::paired_mainnet_id(last))
+            && !out.iter().any(|d| d.id == last.id)
+        {
+            out.push(last);
         }
         if out.is_empty() {
             out.push(last);

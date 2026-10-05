@@ -9,6 +9,8 @@ pub const NETWORK_BITCOIN_MAINNET: &str = "bitcoin-mainnet";
 pub const NETWORK_BITCOIN_TESTNET: &str = "bitcoin-testnet";
 pub const NETWORK_SUI_MAINNET: &str = "sui-mainnet";
 pub const NETWORK_SUI_TESTNET: &str = "sui-testnet";
+pub const NETWORK_BNB_MAINNET: &str = "bnb-mainnet";
+pub const NETWORK_BNB_TESTNET: &str = "bnb-testnet";
 pub const DEFAULT_NETWORK_ID: &str = NETWORK_SOLANA_MAINNET;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
@@ -102,6 +104,12 @@ const SUI_FEATURES: ChainFeatures = ChainFeatures {
     utxo: false,
 };
 
+const BNB_FEATURES: ChainFeatures = ChainFeatures {
+    tokens: true,
+    swap: false,
+    utxo: false,
+};
+
 /// Static network table. **EVM L2s (Polygon, Base) are extra rows** with `ChainFamily::Evm`.
 /// A new VM needs a family crate + `ChainFamily` variant — not a descriptor-only change.
 pub static NETWORKS: &[NetworkDescriptor] = &[
@@ -168,6 +176,36 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         features: EVM_FEATURES,
         enabled: true,
         coingecko_id: Some("ethereum"),
+    },
+    NetworkDescriptor {
+        id: NETWORK_BNB_MAINNET,
+        family: ChainFamily::Evm,
+        name: "BNB Chain",
+        native_symbol: "BNB",
+        is_testnet: false,
+        eip155_chain_id: Some(56),
+        default_rpc: "https://bsc-rpc.publicnode.com",
+        explorer_tx: "https://bscscan.com/tx/{txid}",
+        explorer_address: "https://bscscan.com/address/{address}",
+        explorer_api: Some("https://api.bscscan.com/api"),
+        features: BNB_FEATURES,
+        enabled: true,
+        coingecko_id: Some("binancecoin"),
+    },
+    NetworkDescriptor {
+        id: NETWORK_BNB_TESTNET,
+        family: ChainFamily::Evm,
+        name: "BNB Chain Testnet",
+        native_symbol: "BNB",
+        is_testnet: true,
+        eip155_chain_id: Some(97),
+        default_rpc: "https://bsc-testnet-rpc.publicnode.com",
+        explorer_tx: "https://testnet.bscscan.com/tx/{txid}",
+        explorer_address: "https://testnet.bscscan.com/address/{address}",
+        explorer_api: Some("https://api-testnet.bscscan.com/api"),
+        features: BNB_FEATURES,
+        enabled: true,
+        coingecko_id: Some("binancecoin"),
     },
     NetworkDescriptor {
         id: NETWORK_BITCOIN_MAINNET,
@@ -333,6 +371,7 @@ pub fn default_enabled_network_ids() -> Vec<String> {
     vec![
         NETWORK_SOLANA_MAINNET.to_string(),
         NETWORK_ETHEREUM_MAINNET.to_string(),
+        NETWORK_BNB_MAINNET.to_string(),
         NETWORK_BITCOIN_MAINNET.to_string(),
         NETWORK_SUI_MAINNET.to_string(),
     ]
@@ -344,6 +383,23 @@ pub fn mainnet_id_for_family(family: ChainFamily) -> &'static str {
         ChainFamily::Evm => NETWORK_ETHEREUM_MAINNET,
         ChainFamily::Bitcoin => NETWORK_BITCOIN_MAINNET,
         ChainFamily::Sui => NETWORK_SUI_MAINNET,
+    }
+}
+
+/// Mainnet that must be activated before using this testnet (or the id itself).
+pub fn paired_mainnet_id(desc: &NetworkDescriptor) -> &'static str {
+    if !desc.is_testnet {
+        return desc.id;
+    }
+    match desc.id {
+        NETWORK_SOLANA_DEVNET => NETWORK_SOLANA_MAINNET,
+        NETWORK_ETHEREUM_SEPOLIA => NETWORK_ETHEREUM_MAINNET,
+        NETWORK_BNB_TESTNET => NETWORK_BNB_MAINNET,
+        NETWORK_BITCOIN_TESTNET => NETWORK_BITCOIN_MAINNET,
+        NETWORK_SUI_TESTNET => NETWORK_SUI_MAINNET,
+        "polygon-amoy" => "polygon-mainnet",
+        "base-sepolia" => "base-mainnet",
+        _ => mainnet_id_for_family(desc.family),
     }
 }
 
@@ -359,4 +415,39 @@ pub fn env_rpc_override(family: ChainFamily) -> Option<String> {
         .ok()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bnb_mainnet_is_first_class_evm() {
+        let n = get_network(NETWORK_BNB_MAINNET).expect("bnb-mainnet");
+        assert_eq!(n.family, ChainFamily::Evm);
+        assert_eq!(n.eip155_chain_id, Some(56));
+        assert_eq!(n.native_symbol, "BNB");
+        assert!(n.enabled);
+        assert!(!n.features.swap);
+        assert_eq!(n.coingecko_id, Some("binancecoin"));
+    }
+
+    #[test]
+    fn chapel_pairs_to_bnb_mainnet() {
+        let n = require_network(NETWORK_BNB_TESTNET);
+        assert_eq!(n.eip155_chain_id, Some(97));
+        assert!(n.is_testnet);
+        assert_eq!(paired_mainnet_id(n), NETWORK_BNB_MAINNET);
+        assert_eq!(
+            paired_mainnet_id(require_network(NETWORK_ETHEREUM_SEPOLIA)),
+            NETWORK_ETHEREUM_MAINNET
+        );
+    }
+
+    #[test]
+    fn new_mnemonic_defaults_include_bnb() {
+        let ids = default_enabled_network_ids();
+        assert!(ids.iter().any(|id| id == NETWORK_BNB_MAINNET));
+        assert!(ids.iter().any(|id| id == NETWORK_ETHEREUM_MAINNET));
+    }
 }

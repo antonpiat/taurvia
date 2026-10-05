@@ -145,6 +145,7 @@ mod tests {
         let enabled = service.enabled_network_ids();
         assert!(enabled.contains(&"solana-mainnet".to_string()));
         assert!(enabled.contains(&"ethereum-mainnet".to_string()));
+        assert!(enabled.contains(&"bnb-mainnet".to_string()));
         assert!(enabled.contains(&"bitcoin-mainnet".to_string()));
         assert!(enabled.contains(&"sui-mainnet".to_string()));
         let snap = service.get_snapshot().await.unwrap();
@@ -332,5 +333,70 @@ mod tests {
             .create_wallet(&mnemonic, "Password123!", "Account 1")
             .unwrap();
         assert!(service.wallet_exists());
+    }
+
+    #[tokio::test]
+    async fn snapshot_includes_ethereum_and_bnb() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
+        service.unlock("Password123!").unwrap();
+        let snap = service.get_snapshot().await.unwrap();
+        let ids: Vec<&str> = snap.chains.iter().map(|c| c.network.as_str()).collect();
+        assert!(ids.contains(&"ethereum-mainnet"), "{ids:?}");
+        assert!(ids.contains(&"bnb-mainnet"), "{ids:?}");
+    }
+
+    #[tokio::test]
+    async fn persisted_enabled_networks_do_not_auto_gain_bnb() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
+        service.unlock("Password123!").unwrap();
+        service
+            .set_enabled_networks(&[
+                "solana-mainnet".into(),
+                "ethereum-mainnet".into(),
+                "bitcoin-mainnet".into(),
+                "sui-mainnet".into(),
+            ])
+            .unwrap();
+        assert!(!service
+            .enabled_network_ids()
+            .iter()
+            .any(|id| id == "bnb-mainnet"));
+        let snap = service.get_snapshot().await.unwrap();
+        assert!(!snap.chains.iter().any(|c| c.network == "bnb-mainnet"));
+    }
+
+    #[tokio::test]
+    async fn bnb_testnet_requires_bnb_mainnet() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
+        service.unlock("Password123!").unwrap();
+        service
+            .set_enabled_networks(&["ethereum-mainnet".into()])
+            .unwrap();
+        let err = service.change_network("bnb-testnet").unwrap_err();
+        assert!(
+            err.to_string().to_lowercase().contains("bnb")
+                || err.to_string().to_lowercase().contains("activate"),
+            "{err}"
+        );
+        service
+            .set_enabled_networks(&["ethereum-mainnet".into(), "bnb-mainnet".into()])
+            .unwrap();
+        service.change_network("bnb-testnet").unwrap();
+        assert_eq!(service.wallet_network(), "bnb-testnet");
     }
 }

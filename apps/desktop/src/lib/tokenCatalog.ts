@@ -10,12 +10,14 @@ import bonkLogo from "@/assets/tokens/bonk.png";
 import ethLogo from "@/assets/tokens/eth.svg";
 import btcLogo from "@/assets/tokens/btc.svg";
 import suiLogo from "@/assets/tokens/sui.svg";
+import bnbLogo from "@/assets/tokens/bnb.svg";
 
 export const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
 export const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const ETH_NATIVE = "eth";
 export const BTC_NATIVE = "btc";
 export const SUI_NATIVE = "sui";
+export const BNB_NATIVE = "bnb";
 
 const SOL_USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 const SOL_JUP = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
@@ -26,6 +28,9 @@ const ETH_USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const ETH_WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const ETH_DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
 const ETH_WBTC = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599";
+const BSC_WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+const BSC_USDT = "0x55d398326f99059fF775485246999027B3197955";
+const BSC_USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
 
 export type TokenChain = "solana" | "evm" | "bitcoin" | "sui";
 
@@ -39,11 +44,15 @@ const SOL_LOGOS: Record<string, string> = {
 
 const EVM_LOGOS: Record<string, string> = {
   [ETH_NATIVE]: ethLogo,
+  [BNB_NATIVE]: bnbLogo,
   [ETH_WETH.toLowerCase()]: ethLogo,
   [ETH_USDC.toLowerCase()]: usdcLogo,
   [ETH_USDT.toLowerCase()]: usdtLogo,
   [ETH_DAI.toLowerCase()]: usdcLogo,
   [ETH_WBTC.toLowerCase()]: btcLogo,
+  [BSC_WBNB.toLowerCase()]: bnbLogo,
+  [BSC_USDT.toLowerCase()]: usdtLogo,
+  [BSC_USDC.toLowerCase()]: usdcLogo,
 };
 
 export const MAJOR_TOKENS: TokenInfo[] = [
@@ -109,7 +118,8 @@ export const SUI_NATIVE_TOKEN: TokenInfo = {
   logo_uri: suiLogo,
 };
 
-export function chainBadgeSrc(chain: TokenChain): string {
+export function chainBadgeSrc(chain: TokenChain, nativeSymbol?: string, networkId?: string): string {
+  if (nativeSymbol === "BNB" || networkId?.startsWith("bnb-")) return bnbLogo;
   if (chain === "evm") return ethLogo;
   if (chain === "bitcoin") return btcLogo;
   if (chain === "sui") return suiLogo;
@@ -124,6 +134,7 @@ export function localLogoForAsset(
   const m = mint.trim();
   if (chain === "bitcoin" || m.toLowerCase() === "btc" || symbol === "BTC") return btcLogo;
   if (chain === "sui" || m.toLowerCase() === "sui" || symbol === "SUI") return suiLogo;
+  if (m.toLowerCase() === "bnb" || symbol === "BNB" || symbol === "WBNB") return bnbLogo;
   if (chain === "evm") {
     if (m.toLowerCase() === "eth" || symbol === "ETH") return ethLogo;
     return EVM_LOGOS[m.toLowerCase()] ?? null;
@@ -176,6 +187,7 @@ export function inferTokenChain(mint: string): TokenChain {
   if (m.toLowerCase() === "btc") return "bitcoin";
   if (m.toLowerCase() === "sui" || m.includes("::")) return "sui";
   if (m.toLowerCase() === "eth") return "evm";
+  if (m.toLowerCase() === "bnb") return "evm";
   if (m.startsWith("0x") || m.startsWith("0X")) {
     const hex = m.slice(2);
     if (hex.length === 64) return "sui";
