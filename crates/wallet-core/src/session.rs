@@ -92,9 +92,9 @@ impl FamilyKeyring {
     }
 
     pub fn require_evm(&self) -> Result<&taurvia_evm::EvmSigner, WalletError> {
-        self.evm.as_ref().ok_or_else(|| {
-            WalletError::Operation(anyhow::anyhow!("this wallet has no Ethereum key"))
-        })
+        self.evm
+            .as_ref()
+            .ok_or_else(|| WalletError::Operation(anyhow::anyhow!("this wallet has no EVM key")))
     }
 
     pub fn address(&self, family: ChainFamily, testnet: bool) -> Result<String, WalletError> {
@@ -340,12 +340,7 @@ impl WalletService {
                 if desc.family != family {
                     return Err(WalletError::Operation(anyhow::anyhow!(
                         "this wallet can only use {}",
-                        match family {
-                            ChainFamily::Solana => "Solana",
-                            ChainFamily::Evm => "Ethereum",
-                            ChainFamily::Bitcoin => "Bitcoin",
-                            ChainFamily::Sui => "Sui",
-                        }
+                        family_key_label(family)
                     )));
                 }
             }
@@ -397,12 +392,7 @@ impl WalletService {
         if !self.family_available(desc.family) {
             return Err(WalletError::Operation(anyhow::anyhow!(
                 "this wallet has no {} key",
-                match desc.family {
-                    ChainFamily::Solana => "Solana",
-                    ChainFamily::Evm => "Ethereum",
-                    ChainFamily::Bitcoin => "Bitcoin",
-                    ChainFamily::Sui => "Sui",
-                }
+                family_key_label(desc.family)
             )));
         }
         let enabled = self.enabled_network_ids();
@@ -465,7 +455,7 @@ impl WalletService {
                 return url;
             }
         }
-        models::env_rpc_override(require_network(id).family)
+        models::env_rpc_override_for_network(id)
             .unwrap_or_else(|| models::managed_rpc_url(id).to_string())
     }
 
@@ -550,6 +540,15 @@ impl WalletService {
             out.push(last);
         }
         out
+    }
+}
+
+fn family_key_label(family: ChainFamily) -> &'static str {
+    match family {
+        ChainFamily::Solana => "Solana",
+        ChainFamily::Evm => "EVM",
+        ChainFamily::Bitcoin => "Bitcoin",
+        ChainFamily::Sui => "Sui",
     }
 }
 

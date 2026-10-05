@@ -2,7 +2,7 @@
  * Network identity helpers. Labels and features come from Rust `list_networks()`.
  */
 
-import type { ChainFamily, NetworkInfo } from "@/bindings";
+import type { NetworkInfo } from "@/bindings";
 
 export const DEFAULT_NETWORK_ID = "solana-mainnet";
 
@@ -26,24 +26,8 @@ export function findNetwork(
 /** Last-used picker: activated mainnets plus testnets of those paired mainnets. */
 export function pairedMainnetId(info: NetworkInfo): string {
   if (!info.is_testnet) return info.id;
-  switch (info.id) {
-    case "solana-devnet":
-      return "solana-mainnet";
-    case "ethereum-sepolia":
-      return "ethereum-mainnet";
-    case "bnb-testnet":
-      return "bnb-mainnet";
-    case "bitcoin-testnet":
-      return "bitcoin-mainnet";
-    case "sui-testnet":
-      return "sui-mainnet";
-    case "polygon-amoy":
-      return "polygon-mainnet";
-    case "base-sepolia":
-      return "base-mainnet";
-    default:
-      return info.id.replace(/-(testnet|sepolia|devnet|amoy)$/, "-mainnet");
-  }
+  const prefix = info.id.split("-")[0];
+  return `${prefix}-mainnet`;
 }
 
 export function lastUsedNetworkOptions(
@@ -73,8 +57,9 @@ export function networkShortLabel(info: NetworkInfo | undefined, id?: unknown): 
   return normalizeNetworkId(id);
 }
 
-export function nativeAssetId(family: ChainFamily | undefined): string {
-  switch (family) {
+export function nativeAssetId(info: NetworkInfo | undefined): string {
+  if (info?.id.startsWith("bnb-")) return "bnb";
+  switch (info?.family) {
     case "evm":
       return "eth";
     case "bitcoin":
@@ -101,19 +86,4 @@ export function recipientAddressPlaceholder(info: NetworkInfo | undefined): stri
 export function receiveWarning(info: NetworkInfo | undefined): string {
   const name = info?.name ?? "this network";
   return `Only send ${name} assets to this address.`;
-}
-
-export function familyLabel(family: ChainFamily): string {
-  switch (family) {
-    case "solana":
-      return "Solana";
-    case "evm":
-      return "Ethereum";
-    case "bitcoin":
-      return "Bitcoin";
-    case "sui":
-      return "Sui";
-    default:
-      return family;
-  }
 }

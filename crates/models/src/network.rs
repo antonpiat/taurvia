@@ -370,10 +370,9 @@ pub fn managed_rpc_url(network_id: &str) -> &'static str {
 pub fn default_enabled_network_ids() -> Vec<String> {
     vec![
         NETWORK_SOLANA_MAINNET.to_string(),
+        NETWORK_BITCOIN_MAINNET.to_string(),
         NETWORK_ETHEREUM_MAINNET.to_string(),
         NETWORK_BNB_MAINNET.to_string(),
-        NETWORK_BITCOIN_MAINNET.to_string(),
-        NETWORK_SUI_MAINNET.to_string(),
     ]
 }
 
@@ -404,6 +403,7 @@ pub fn paired_mainnet_id(desc: &NetworkDescriptor) -> &'static str {
 }
 
 /// Env overlay for a family (dev-only). Network-specific map in settings wins first.
+/// Ethereum env (`TAURVIA_ETH_RPC_URL`) applies only to Ethereum mainnet/Sepolia — never BNB or L2s.
 pub fn env_rpc_override(family: ChainFamily) -> Option<String> {
     let key = match family {
         ChainFamily::Solana => "TAURVIA_RPC_URL",
@@ -415,6 +415,18 @@ pub fn env_rpc_override(family: ChainFamily) -> Option<String> {
         .ok()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+}
+
+pub fn env_rpc_override_for_network(network_id: &str) -> Option<String> {
+    let desc = require_network(network_id);
+    match desc.family {
+        ChainFamily::Evm
+            if desc.id != NETWORK_ETHEREUM_MAINNET && desc.id != NETWORK_ETHEREUM_SEPOLIA =>
+        {
+            None
+        }
+        family => env_rpc_override(family),
+    }
 }
 
 #[cfg(test)]
@@ -449,5 +461,14 @@ mod tests {
         let ids = default_enabled_network_ids();
         assert!(ids.iter().any(|id| id == NETWORK_BNB_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_ETHEREUM_MAINNET));
+        assert!(ids.iter().any(|id| id == NETWORK_BITCOIN_MAINNET));
+        assert!(ids.iter().any(|id| id == NETWORK_SOLANA_MAINNET));
+        assert!(!ids.iter().any(|id| id == NETWORK_SUI_MAINNET));
+    }
+
+    #[test]
+    fn eth_rpc_env_does_not_apply_to_bnb() {
+        assert!(env_rpc_override_for_network(NETWORK_BNB_MAINNET).is_none());
+        assert!(env_rpc_override_for_network(NETWORK_BNB_TESTNET).is_none());
     }
 }

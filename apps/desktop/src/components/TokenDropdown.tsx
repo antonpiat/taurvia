@@ -40,6 +40,7 @@ export function TokenDropdown({
   onAddToken,
   enableRemoteSearch = false,
   chain,
+  networkId,
 }: {
   label: string;
   token: DropdownToken | undefined;
@@ -53,6 +54,7 @@ export function TokenDropdown({
   onAddToken?: (info: TokenInfo) => void;
   enableRemoteSearch?: boolean;
   chain?: TokenChain;
+  networkId?: string;
 }) {
   const { hideBalances } = useWallet();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -160,6 +162,7 @@ export function TokenDropdown({
                 symbol={displayToken.symbol}
                 mint={displayToken.mint}
                 chain={displayToken.chain}
+                networkId={networkId}
                 logoUri={displayToken.logo_uri}
                 size={32}
               />
@@ -239,6 +242,7 @@ export function TokenDropdown({
                           symbol={row.symbol}
                           mint={row.mint}
                           chain={row.chain}
+                          networkId={networkId}
                           logoUri={row.logo_uri}
                           size={32}
                         />
@@ -289,6 +293,7 @@ export function TokenDropdown({
                               symbol={row.symbol}
                               mint={row.mint}
                               chain={chain}
+                              networkId={networkId}
                               logoUri={row.logo_uri}
                               size={32}
                             />

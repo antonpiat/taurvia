@@ -21,7 +21,6 @@ sol! {
 }
 
 const MARKET_DATA_BUDGET: Duration = Duration::from_secs(4);
-const NATIVE_MINT: &str = "eth";
 
 pub struct EvmRpc {
     pub(crate) rpc_url: String,
@@ -210,15 +209,8 @@ impl EvmRpc {
         amount: f64,
         asset: Option<&str>,
     ) -> Result<(String, TransactionRequest)> {
-        let native = asset
-            .map(|a| {
-                a.eq_ignore_ascii_case(NATIVE_MINT)
-                    || a.eq_ignore_ascii_case("native")
-                    || a.eq_ignore_ascii_case(self.descriptor.native_symbol)
-            })
-            .unwrap_or(true)
-            || asset.map(|a| a.is_empty()).unwrap_or(true);
-        if native || asset == Some("") {
+        let native = asset.map(|a| self.is_native_asset(a)).unwrap_or(true);
+        if native {
             let wei = f64_to_u256(amount, 18);
             let tx = TransactionRequest::default()
                 .with_from(from)
@@ -239,5 +231,12 @@ impl EvmRpc {
             .with_to(contract)
             .with_input(call.abi_encode());
         Ok((token.symbol.to_string(), tx))
+    }
+
+    fn is_native_asset(&self, asset: &str) -> bool {
+        let a = asset.trim();
+        a.is_empty()
+            || a.eq_ignore_ascii_case("native")
+            || a.eq_ignore_ascii_case(self.descriptor.native_symbol)
     }
 }

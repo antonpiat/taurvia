@@ -35,7 +35,7 @@ Built with **Tauri v2**. One BIP39 phrase derives Solana, Ethereum (and BNB Chai
 | | |
 |---|---|
 | **Create & import** | New seed → account name + password (no quiz). Restore with a 12/24-word phrase, a private key (Solana / Ethereum / Bitcoin WIF / Sui `suiprivkey1…`), or Taurvia JSON. Hardware wallet listed as coming soon |
-| **Portfolio** | Activated mainnets together — one USD total, then native + tokens per chain. New mnemonic wallets include Sui and BNB Chain; existing wallets keep their saved list until you turn those on in Settings |
+| **Portfolio** | Activated mainnets together — one USD total, then native + tokens per chain. New mnemonic wallets include Solana, Bitcoin, Ethereum, and BNB Chain. Sui stays off until you turn it on in Settings; existing wallets keep their saved list |
 | **Swap** | Jupiter on Solana, 0x on Ethereum, Thorchain when Bitcoin is the source. Sui and BNB Chain have no swap. Quotes and signatures stay in Rust; password-gated |
 | **Send / receive** | Last-used chain for the address, then the asset. Rust preview: network, full recipient, amount, fee |
 | **Activity** | Recent on-chain history |

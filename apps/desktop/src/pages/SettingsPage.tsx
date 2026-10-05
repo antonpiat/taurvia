@@ -867,7 +867,7 @@ export function SettingsPage() {
                   />
                 </div>
               )}
-              {(networkInfo?.family === "evm" || activatedNetworks.includes("ethereum-mainnet")) && (
+              {activatedNetworks.includes("ethereum-mainnet") && (
                 <div className="space-y-2">
                   <Label htmlFor="zerox-key">0x API key (Ethereum swap)</Label>
                   <Input

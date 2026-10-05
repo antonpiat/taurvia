@@ -22,7 +22,7 @@ impl WalletService {
         let from = self.with_session(|k| k.address(desc.family, desc.is_testnet))??;
         match desc.family {
             ChainFamily::Evm => {
-                let url = self.evm_rpc_url.lock().unwrap().clone();
+                let url = self.endpoint_for(desc.id);
                 taurvia_evm::EvmRpc::new(&url, *desc)
                     .preview_send(&from, to, amount, asset)
                     .await
@@ -66,7 +66,7 @@ impl WalletService {
                 }
             }
             ChainFamily::Evm => {
-                let url = self.evm_rpc_url.lock().unwrap().clone();
+                let url = self.endpoint_for(desc.id);
                 let rpc = taurvia_evm::EvmRpc::new(&url, *desc);
                 let signer = self.with_session(|k| k.require_evm().cloned())??;
                 rpc.send(&signer, to, amount, asset)
