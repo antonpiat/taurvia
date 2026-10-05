@@ -100,6 +100,7 @@ export function DashboardPage() {
                       symbol={chain.native_symbol}
                       mint={chain.native_symbol.toLowerCase()}
                       chain={tokenChain}
+                      networkId={chain.network}
                       size={28}
                     />
                     {info?.name ?? chain.native_symbol}
@@ -127,6 +128,7 @@ export function DashboardPage() {
                         symbol={chain.native_symbol}
                         mint={chain.native_symbol.toLowerCase()}
                         chain={tokenChain}
+                        networkId={chain.network}
                         size={36}
                       />
                       <div className="min-w-0">
@@ -164,6 +166,7 @@ export function DashboardPage() {
                             symbol={token.symbol}
                             mint={token.mint}
                             chain={tokenChain}
+                            networkId={chain.network}
                             logoUri={branded.logo_uri}
                             size={36}
                           />

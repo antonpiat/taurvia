@@ -30,7 +30,6 @@ import { DEFAULT_AUTO_LOCK_MINUTES, normalizeAutoLockMinutes } from "@/lib/autoL
 import { explorerLabel, normalizeExplorer } from "@/lib/explorer";
 import {
   lastUsedNetworkOptions,
-  familyLabel,
   networkShortLabel,
   normalizeNetworkId,
 } from "@/lib/network";
@@ -812,7 +811,7 @@ export function SettingsPage() {
                   .map((info) => ({
                   value: info.id,
                   label: info.name,
-                  description: `${familyLabel(info.family)}${info.features.swap ? " · Swap" : ""}${
+                  description: `${info.name}${info.features.swap ? " · Swap" : ""}${
                     info.is_testnet ? " · testnet" : ""
                   }`,
                 }))}

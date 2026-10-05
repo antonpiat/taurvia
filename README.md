@@ -10,7 +10,7 @@
 
 <p align="center">
   A non-custodial desktop wallet — keys stay on your machine, every signature is produced in Rust.
-  Solana, Ethereum, Bitcoin, and Sui from one seed (or a single private key).
+  Solana, Ethereum, BNB Chain, Bitcoin, and Sui from one seed (or a single private key).
 </p>
 
 <p align="center">
@@ -28,15 +28,15 @@
 
 Most wallets ask you to trust a browser tab or a hosted service. Taurvia is a **native desktop app**: your seed phrase and private keys never leave your device, and every signature is produced inside a Rust core the UI cannot bypass.
 
-Built with **Tauri v2**. One BIP39 phrase derives Solana, Ethereum, Bitcoin, and Sui. Importing a raw private key unlocks that family only. Not a dApp browser, not WalletConnect, and no JavaScript key material.
+Built with **Tauri v2**. One BIP39 phrase derives Solana, Ethereum (and BNB Chain), Bitcoin, and Sui. Importing a raw private key unlocks that family only. Not a dApp browser, not WalletConnect, and no JavaScript key material.
 
 ## Features
 
 | | |
 |---|---|
 | **Create & import** | New seed → account name + password (no quiz). Restore with a 12/24-word phrase, a private key (Solana / Ethereum / Bitcoin WIF / Sui `suiprivkey1…`), or Taurvia JSON. Hardware wallet listed as coming soon |
-| **Portfolio** | Activated mainnets together — one USD total, then native + tokens per chain. New mnemonic wallets include Sui; existing wallets keep their saved list until you turn Sui on in Settings |
-| **Swap** | Jupiter on Solana, 0x on Ethereum, Thorchain when Bitcoin is the source. Sui has no swap. Quotes and signatures stay in Rust; password-gated |
+| **Portfolio** | Activated mainnets together — one USD total, then native + tokens per chain. New mnemonic wallets include Sui and BNB Chain; existing wallets keep their saved list until you turn those on in Settings |
+| **Swap** | Jupiter on Solana, 0x on Ethereum, Thorchain when Bitcoin is the source. Sui and BNB Chain have no swap. Quotes and signatures stay in Rust; password-gated |
 | **Send / receive** | Last-used chain for the address, then the asset. Rust preview: network, full recipient, amount, fee |
 | **Activity** | Recent on-chain history |
 | **Lock screen** | Password-gated unlock, signing, and seed reveal (seed reveal is hidden for key-only wallets) |
@@ -105,7 +105,7 @@ pnpm tauri dev
 
 ### Optional: custom RPC
 
-By default Taurvia uses a **managed public RPC** per enabled network (Settings → Network). Swap runs on Solana, Ethereum, and Bitcoin mainnets (Jupiter / 0x / Thorchain) — not Sui. For better reliability or higher rate limits:
+By default Taurvia uses a **managed public RPC** per enabled network (Settings → Network). Swap runs on Solana, Ethereum, and Bitcoin mainnets (Jupiter / 0x / Thorchain) — not Sui or BNB Chain. For better reliability or higher rate limits:
 
 ```bash
 cp ../../.env.example ../../.env
@@ -117,7 +117,7 @@ cp ../../.env.example ../../.env
 # TAURVIA_0X_API_KEY=YOUR_0X_KEY            # optional; also Settings → Advanced
 ```
 
-`TAURVIA_RPC_URL` overrides the managed Solana default. Ethereum, Bitcoin, and Sui have their own env keys. Settings → Advanced is still per-network.
+`TAURVIA_RPC_URL` overrides the managed Solana default. Ethereum, Bitcoin, and Sui have their own env keys. `TAURVIA_ETH_RPC_URL` is family-wide (every EVM network); do not use it for BNB — set Settings → Advanced `rpc_urls["bnb-mainnet"]` instead. Settings → Advanced is still per-network.
 
 Sui defaults to [PublicNode](https://sui-rpc.publicnode.com) JSON-RPC. Mysten public fullnodes no longer serve JSON-RPC (gRPC/GraphQL only).
 
@@ -184,7 +184,7 @@ Same BIP39 seed as Phantom / MetaMask / typical BIP84 wallets. Tests live next t
 | Family | Path | Address |
 |--------|------|---------|
 | Solana | `m/44'/501'/0'/0'` | base58 |
-| Ethereum (and later Polygon/Base) | `m/44'/60'/0'/0/0` | EIP-55 `0x…` |
+| Ethereum / BNB Chain (and later Polygon/Base) | `m/44'/60'/0'/0/0` | EIP-55 `0x…` |
 | Bitcoin | `m/84'/0'/0'/0/0` (testnet `m/84'/1'/0'/0/0`) | Native SegWit `bc1q` / `tb1q` |
 | Sui | SLIP-0010 `m/44'/784'/0'/0'/0'` | `0x` + 64 hex |
 
@@ -192,7 +192,7 @@ Same BIP39 seed as Phantom / MetaMask / typical BIP84 wallets. Tests live next t
 
 | You want | What to change |
 |---------|----------------|
-| **Polygon / Base** (or another EVM L2) | One `NetworkDescriptor` row: RPC, `eip155_chain_id`, explorer, token list, `enabled: true`. Same `EvmSigner`. No new crate. |
+| **Polygon / Base** (or another EVM L2) | One `NetworkDescriptor` row: RPC, `eip155_chain_id`, explorer, token list, `enabled: true`. Same `EvmSigner`. No new crate. BNB Chain is already first-class this way. |
 | **A new VM** | New `crates/taurvia-*` implementing the chain backend, `ChainFamily` variant, `FamilyKeyring` field. UI picks it up from `list_networks()`. |
 
 Signing still cannot move to JavaScript. Disabled stubs already exist for `polygon-mainnet`, `polygon-amoy`, `base-mainnet`, and `base-sepolia`.

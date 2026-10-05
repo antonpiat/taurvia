@@ -54,7 +54,7 @@ React UI  →  Tauri IPC  →  wallet-core (Rust)  →  crypto / storage / famil
 The IPC boundary is the trust boundary. The React UI never receives mnemonics, private keys, or raw signers. Specta types are public: addresses, balances, previews, txids. Seed reveal is the only exception, still password + re-decrypt from disk, still not stored in session.
 
 - Private keys and mnemonics are encrypted at rest on disk (`wallet.json`) in **one envelope**. New chains do not get separate wallet files or weaker encryption.
-- Unlock from a mnemonic derives a **family keyring** (Solana ed25519 + EVM secp256k1 + Bitcoin mainnet/testnet + Sui SLIP-0010 ed25519), then drops the mnemonic. A key-only import holds **that family only**. Unlock returns immediately; the portfolio snapshot fetches **enabled** families in parallel.
+- Unlock from a mnemonic derives a **family keyring** (Solana ed25519 + EVM secp256k1 + Bitcoin mainnet/testnet + Sui SLIP-0010 ed25519), then drops the mnemonic. A key-only import holds **that family only**. Unlock returns immediately; the portfolio snapshot fetches **enabled** networks in parallel (including more than one EVM, e.g. Ethereum and BNB Chain).
 - Revealing the recovery phrase always re-authenticates with the wallet password and re-decrypts from disk (ephemeral); plaintext is not stored back into the session. Key-only wallets cannot reveal a seed.
 - Signing happens only in Rust after password verification for send/swap. Last-used network is metadata for Send/Receive (no password), not an exclusive mode.
 - On `lock()`, the session is dropped. EVM, Bitcoin, and Sui secrets use `zeroize`; Solana key material is dropped with the keyring.

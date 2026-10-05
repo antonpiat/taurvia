@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- BNB Chain (BSC) Mainnet + Chapel testnet: same EVM key as Ethereum (`m/44'/60'/0'/0/0`), PublicNode RPC, BscScan, dashboard balances while Ethereum stays on. New mnemonic wallets activate BNB with the other mainnets; existing wallets keep their saved list. Swap stays off (`features.swap = false`).
+
 ### Fixed
 
 - Linux AppImage: embed GitHub Releases update information and publish a `.zsync` so AppImageUpdate can delta-update. AppImageHub’s “not self-contained / glibc 2.35” note is expected — AppImages use the system C library, and Tauri v2 cannot build older than Ubuntu 22.04 (WebKitGTK 4.1).

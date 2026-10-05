@@ -44,6 +44,13 @@ impl EvmRpc {
         Ok(ProviderBuilder::new().connect_http(url))
     }
 
+    fn coingecko_platform(&self) -> &'static str {
+        match self.descriptor.id {
+            models::NETWORK_BNB_MAINNET | models::NETWORK_BNB_TESTNET => "binance-smart-chain",
+            _ => "ethereum",
+        }
+    }
+
     pub async fn snapshot(&self, address: &str) -> Result<WalletSnapshot> {
         let owner = Address::from_str(address).context("invalid stored evm address")?;
         let provider = self.provider()?;
@@ -96,7 +103,7 @@ impl EvmRpc {
             return Ok(Vec::new());
         }
         let contracts: Vec<String> = curated.iter().map(|t| t.address.to_string()).collect();
-        let prices_fut = taurvia_chain::token_prices_usd("ethereum", &contracts);
+        let prices_fut = taurvia_chain::token_prices_usd(self.coingecko_platform(), &contracts);
         let balances_fut = async {
             stream::iter(curated.iter().copied())
                 .map(|token| {
@@ -204,7 +211,11 @@ impl EvmRpc {
         asset: Option<&str>,
     ) -> Result<(String, TransactionRequest)> {
         let native = asset
-            .map(|a| a.eq_ignore_ascii_case(NATIVE_MINT) || a.eq_ignore_ascii_case("native"))
+            .map(|a| {
+                a.eq_ignore_ascii_case(NATIVE_MINT)
+                    || a.eq_ignore_ascii_case("native")
+                    || a.eq_ignore_ascii_case(self.descriptor.native_symbol)
+            })
             .unwrap_or(true)
             || asset.map(|a| a.is_empty()).unwrap_or(true);
         if native || asset == Some("") {
