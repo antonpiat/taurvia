@@ -118,8 +118,8 @@ export const SUI_NATIVE_TOKEN: TokenInfo = {
   logo_uri: suiLogo,
 };
 
-export function chainBadgeSrc(chain: TokenChain, nativeSymbol?: string, networkId?: string): string {
-  if (nativeSymbol === "BNB" || networkId?.startsWith("bnb-")) return bnbLogo;
+export function chainBadgeSrc(chain: TokenChain, networkId?: string): string {
+  if (networkId?.startsWith("bnb-")) return bnbLogo;
   if (chain === "evm") return ethLogo;
   if (chain === "bitcoin") return btcLogo;
   if (chain === "sui") return suiLogo;

@@ -144,10 +144,10 @@ mod tests {
         service.unlock("Password123!").unwrap();
         let enabled = service.enabled_network_ids();
         assert!(enabled.contains(&"solana-mainnet".to_string()));
+        assert!(enabled.contains(&"bitcoin-mainnet".to_string()));
         assert!(enabled.contains(&"ethereum-mainnet".to_string()));
         assert!(enabled.contains(&"bnb-mainnet".to_string()));
-        assert!(enabled.contains(&"bitcoin-mainnet".to_string()));
-        assert!(enabled.contains(&"sui-mainnet".to_string()));
+        assert!(!enabled.contains(&"sui-mainnet".to_string()));
         let snap = service.get_snapshot().await.unwrap();
         assert_eq!(snap.account_name, "Account 1");
         assert!(snap.can_reveal_mnemonic);

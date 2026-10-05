@@ -38,7 +38,7 @@ export function TokenIcon({
   }, [chain, mint, symbol, logoUri]);
   const showImg = Boolean(src) && !failed;
   const hue = hueFromId(mint || symbol);
-  const badge = chain ? chainBadgeSrc(chain, symbol, networkId) : null;
+  const badge = chain ? chainBadgeSrc(chain, networkId) : null;
 
   return (
     <span

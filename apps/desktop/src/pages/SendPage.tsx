@@ -34,7 +34,7 @@ export function SendPage() {
     enabledNetworks,
     changeNetwork,
   } = useWallet();
-  const nativeMint = nativeAssetId(networkInfo?.family);
+  const nativeMint = nativeAssetId(networkInfo);
   const tokenChain = networkFamilyToChain(networkInfo?.family);
   const [selectedMint, setSelectedMint] = useState(nativeMint);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -44,7 +44,7 @@ export function SendPage() {
 
   useEffect(() => {
     setSelectedMint(nativeMint);
-  }, [nativeMint]);
+  }, [nativeMint, network]);
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [password, setPassword] = useState("");
@@ -182,6 +182,7 @@ export function SendPage() {
                 setSuccess(null);
               }}
               chain={tokenChain}
+              networkId={network}
             />
           ) : (
             <div className="space-y-2">

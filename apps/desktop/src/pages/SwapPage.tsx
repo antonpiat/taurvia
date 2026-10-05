@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
-import { canSwapAny, familyLabel } from "@/lib/network";
+import { canSwapAny } from "@/lib/network";
 import {
   BTC_NATIVE,
   BTC_NATIVE_TOKEN,
@@ -433,7 +433,7 @@ export function SwapPage() {
                     void changeNetwork(n.id);
                   }}
                 >
-                  {familyLabel(n.family)}
+                  {n.name}
                 </Button>
               ))}
             </div>
@@ -450,6 +450,7 @@ export function SwapPage() {
             onAddToken={persistFavorite}
             enableRemoteSearch={networkInfo?.family === "solana" || networkInfo?.family === "evm"}
             chain={networkFamilyToChain(networkInfo?.family)}
+            networkId={network}
           />
 
           {networkInfo?.family !== "bitcoin" && (
@@ -473,6 +474,7 @@ export function SwapPage() {
             onAddToken={persistFavorite}
             enableRemoteSearch={networkInfo?.family === "solana" || networkInfo?.family === "evm"}
             chain={networkFamilyToChain(networkInfo?.family)}
+            networkId={network}
           />
 
           <div className="space-y-2">

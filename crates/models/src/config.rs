@@ -3,7 +3,8 @@ use specta::Type;
 use std::collections::HashMap;
 
 use crate::{
-    env_rpc_override, managed_rpc_url, normalize_network_id, require_network, DEFAULT_NETWORK_ID,
+    env_rpc_override_for_network, managed_rpc_url, normalize_network_id, require_network,
+    DEFAULT_NETWORK_ID,
 };
 
 /// Public / product default Solana mainnet RPC (no user setup required).
@@ -173,7 +174,7 @@ impl RuntimeConfig {
             .filter(|s| !s.is_empty())
             .filter(|_| desc.family == crate::ChainFamily::Solana);
 
-        let from_env = env_rpc_override(desc.family);
+        let from_env = env_rpc_override_for_network(network_id);
 
         let jupiter_from_settings = settings
             .jupiter_api_key

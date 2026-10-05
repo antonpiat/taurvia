@@ -30,10 +30,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   network: DEFAULT_NETWORK_ID,
   enabled_networks: [
     "solana-mainnet",
+    "bitcoin-mainnet",
     "ethereum-mainnet",
     "bnb-mainnet",
-    "bitcoin-mainnet",
-    "sui-mainnet",
   ],
   zerox_api_key: null,
   auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,

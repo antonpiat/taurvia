@@ -100,11 +100,13 @@ pub fn token_info(token: &CuratedToken) -> models::TokenInfo {
 }
 
 pub fn resolve_curated(network_id: &str, asset: &str) -> Option<&'static CuratedToken> {
-    if asset.eq_ignore_ascii_case("eth")
-        || asset.eq_ignore_ascii_case("bnb")
-        || asset.eq_ignore_ascii_case("native")
-    {
+    if asset.eq_ignore_ascii_case("native") {
         return None;
+    }
+    if let Some(desc) = models::get_network(network_id) {
+        if asset.eq_ignore_ascii_case(desc.native_symbol) {
+            return None;
+        }
     }
     curated_tokens(network_id)
         .iter()
@@ -156,5 +158,7 @@ mod tests {
         assert!(tokens.iter().any(|t| t.symbol == "USDC"));
         assert!(curated_tokens(models::NETWORK_BNB_TESTNET).is_empty());
         assert!(resolve_curated(models::NETWORK_BNB_MAINNET, "bnb").is_none());
+        assert!(resolve_curated(models::NETWORK_BNB_MAINNET, "eth").is_none());
+        assert!(resolve_curated(models::NETWORK_ETHEREUM_MAINNET, "ETH").is_none());
     }
 }
