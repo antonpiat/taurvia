@@ -263,5 +263,24 @@ mod tests {
             EvmRpc::new(bnb.default_rpc, bnb).coingecko_platform(),
             "binance-smart-chain"
         );
+        let eth = *models::require_network(models::NETWORK_ETHEREUM_MAINNET);
+        assert_eq!(
+            EvmRpc::new(eth.default_rpc, eth).coingecko_platform(),
+            "ethereum"
+        );
+    }
+
+    #[test]
+    fn native_asset_matches_symbol_not_eth_on_polygon() {
+        let desc = *models::require_network(models::NETWORK_POLYGON_MAINNET);
+        let rpc = EvmRpc::new(desc.default_rpc, desc);
+        assert!(rpc.is_native_asset("pol"));
+        assert!(rpc.is_native_asset("POL"));
+        assert!(rpc.is_native_asset("native"));
+        assert!(!rpc.is_native_asset("eth"));
+        let bnb = *models::require_network(models::NETWORK_BNB_MAINNET);
+        let bnb_rpc = EvmRpc::new(bnb.default_rpc, bnb);
+        assert!(bnb_rpc.is_native_asset("bnb"));
+        assert!(!bnb_rpc.is_native_asset("eth"));
     }
 }

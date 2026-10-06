@@ -100,23 +100,15 @@ const BITCOIN_FEATURES: ChainFeatures = ChainFeatures {
     utxo: true,
 };
 
-const SUI_FEATURES: ChainFeatures = ChainFeatures {
+const TOKENS_NO_SWAP: ChainFeatures = ChainFeatures {
     tokens: true,
     swap: false,
     utxo: false,
 };
 
-const BNB_FEATURES: ChainFeatures = ChainFeatures {
-    tokens: true,
-    swap: false,
-    utxo: false,
-};
-
-const POLYGON_FEATURES: ChainFeatures = ChainFeatures {
-    tokens: true,
-    swap: false,
-    utxo: false,
-};
+const SUI_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
+const BNB_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
+const POLYGON_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
 
 /// Static network table. **EVM L2s (Polygon, Base) are extra rows** with `ChainFamily::Evm`.
 /// A new VM needs a family crate + `ChainFamily` variant — not a descriptor-only change.
@@ -147,11 +139,7 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         explorer_tx: "https://solscan.io/tx/{txid}?cluster=devnet",
         explorer_address: "https://solscan.io/account/{address}?cluster=devnet",
         explorer_api: None,
-        features: ChainFeatures {
-            tokens: true,
-            swap: false,
-            utxo: false,
-        },
+        features: TOKENS_NO_SWAP,
         enabled: true,
         coingecko_id: Some("solana"),
     },
@@ -331,11 +319,7 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         explorer_tx: "https://suiscan.xyz/testnet/tx/{txid}",
         explorer_address: "https://suiscan.xyz/testnet/account/{address}",
         explorer_api: None,
-        features: ChainFeatures {
-            tokens: true,
-            swap: false,
-            utxo: false,
-        },
+        features: SUI_FEATURES,
         enabled: true,
         coingecko_id: Some("sui"),
     },

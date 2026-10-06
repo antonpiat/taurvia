@@ -172,8 +172,6 @@ pub struct WalletService {
     pub(crate) session: Arc<Mutex<Option<WalletSession>>>,
     pub(crate) cached_wallet: Mutex<Option<WalletFile>>,
     pub(crate) rpc: Mutex<SolanaRpc>,
-    pub(crate) evm_rpc_url: Mutex<String>,
-    pub(crate) btc_esplora: Mutex<String>,
     pub(crate) device_secrets: DeviceSecretStore,
 }
 
@@ -221,7 +219,7 @@ impl WalletService {
         device_secrets: DeviceSecretStore,
     ) -> Self {
         configure_jupiter_api_key(runtime.jupiter_api_key.clone());
-        let (sol_rpc, evm_url, btc_url) = split_runtime(&settings, &runtime);
+        let sol_rpc = solana_rpc_url(&settings, &runtime);
         Self {
             storage,
             config_store,
@@ -229,8 +227,6 @@ impl WalletService {
             session: Arc::new(Mutex::new(None)),
             cached_wallet: Mutex::new(None),
             rpc: Mutex::new(SolanaRpc::new(Some(&sol_rpc))),
-            evm_rpc_url: Mutex::new(evm_url),
-            btc_esplora: Mutex::new(btc_url),
             device_secrets,
         }
     }
@@ -257,10 +253,8 @@ impl WalletService {
             || prev.network != settings.network;
         if connectivity_changed {
             configure_jupiter_api_key(runtime.jupiter_api_key.clone());
-            let (sol_rpc, evm_url, btc_url) = split_runtime(&settings, &runtime);
+            let sol_rpc = solana_rpc_url(&settings, &runtime);
             *self.rpc.lock().unwrap() = SolanaRpc::new(Some(&sol_rpc));
-            *self.evm_rpc_url.lock().unwrap() = evm_url;
-            *self.btc_esplora.lock().unwrap() = btc_url;
         }
         Ok(runtime)
     }
@@ -557,9 +551,9 @@ fn retired_sui_json_rpc(url: &str) -> bool {
     u.contains("fullnode.mainnet.sui.io") || u.contains("fullnode.testnet.sui.io")
 }
 
-fn split_runtime(settings: &AppSettings, runtime: &RuntimeConfig) -> (String, String, String) {
+fn solana_rpc_url(settings: &AppSettings, runtime: &RuntimeConfig) -> String {
     let desc = require_network(&settings.network);
-    let sol = if desc.family == ChainFamily::Solana {
+    if desc.family == ChainFamily::Solana {
         runtime.rpc_url.clone()
     } else {
         settings
@@ -569,20 +563,5 @@ fn split_runtime(settings: &AppSettings, runtime: &RuntimeConfig) -> (String, St
             .or_else(|| settings.rpc_url.clone())
             .filter(|s| !s.trim().is_empty())
             .unwrap_or_else(|| models::MANAGED_DEFAULT_RPC_URL.to_string())
-    };
-    let evm = if desc.family == ChainFamily::Evm {
-        runtime.rpc_url.clone()
-    } else {
-        require_network(models::NETWORK_ETHEREUM_MAINNET)
-            .default_rpc
-            .to_string()
-    };
-    let btc = if desc.family == ChainFamily::Bitcoin {
-        runtime.rpc_url.clone()
-    } else {
-        require_network(models::NETWORK_BITCOIN_MAINNET)
-            .default_rpc
-            .to_string()
-    };
-    (sol, evm, btc)
+    }
 }

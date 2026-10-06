@@ -127,9 +127,21 @@ export const SUI_NATIVE_TOKEN: TokenInfo = {
   logo_uri: suiLogo,
 };
 
+const NETWORK_PREFIX_BADGE: Record<string, string> = {
+  bnb: bnbLogo,
+  polygon: polLogo,
+  ethereum: ethLogo,
+  base: ethLogo,
+  bitcoin: btcLogo,
+  sui: suiLogo,
+  solana: solLogo,
+};
+
 export function chainBadgeSrc(chain: TokenChain, networkId?: string): string {
-  if (networkId?.startsWith("bnb-")) return bnbLogo;
-  if (networkId?.startsWith("polygon-")) return polLogo;
+  if (networkId) {
+    const prefix = networkId.split("-")[0];
+    if (prefix && NETWORK_PREFIX_BADGE[prefix]) return NETWORK_PREFIX_BADGE[prefix];
+  }
   if (chain === "evm") return ethLogo;
   if (chain === "bitcoin") return btcLogo;
   if (chain === "sui") return suiLogo;
@@ -195,11 +207,10 @@ export function networkFamilyToChain(family: string | undefined): TokenChain | u
 
 export function inferTokenChain(mint: string): TokenChain {
   const m = mint.trim();
-  if (m.toLowerCase() === "btc") return "bitcoin";
-  if (m.toLowerCase() === "sui" || m.includes("::")) return "sui";
-  if (m.toLowerCase() === "eth") return "evm";
-  if (m.toLowerCase() === "bnb") return "evm";
-  if (m.toLowerCase() === "pol") return "evm";
+  const lower = m.toLowerCase();
+  if (lower === "btc") return "bitcoin";
+  if (lower === "sui" || m.includes("::")) return "sui";
+  if (lower === ETH_NATIVE || lower === BNB_NATIVE || lower === POL_NATIVE) return "evm";
   if (m.startsWith("0x") || m.startsWith("0X")) {
     const hex = m.slice(2);
     if (hex.length === 64) return "sui";
