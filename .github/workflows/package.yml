@@ -23,6 +23,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -36,6 +37,12 @@ jobs:
     defaults:
       run:
         shell: bash
+    # Local sccache dir (not the GHA-per-object backend: that rate-limits on
+    # solana/alloy). One blob per OS, reused across tags when Cargo.lock matches.
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_DIR: ${{ runner.temp }}/sccache
+      SCCACHE_CACHE_SIZE: 2G
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v7
