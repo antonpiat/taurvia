@@ -22,7 +22,7 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write
+  actions: read
 
 jobs:
   gate:
