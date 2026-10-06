@@ -10,6 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Added
 
 - BNB Chain (BSC) Mainnet + Chapel testnet: same EVM key as Ethereum (`m/44'/60'/0'/0/0`), PublicNode RPC, BscScan, dashboard balances while Ethereum stays on. New mnemonic wallets activate Solana, Bitcoin, Ethereum, and BNB (not Sui). Existing wallets keep their saved list. Swap stays off (`features.swap = false`).
+- Polygon PoS Mainnet + Amoy testnet: same EVM key as Ethereum (`m/44'/60'/0'/0/0`), PublicNode RPC, Polygonscan, dashboard balances alongside Ethereum and BNB. New mnemonic wallets also activate Polygon. Existing wallets keep their saved list. Swap stays off (`features.swap = false`).
 
 ### Fixed
 
