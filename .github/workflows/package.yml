@@ -23,6 +23,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -36,6 +37,12 @@ jobs:
     defaults:
       run:
         shell: bash
+    # Local sccache dir (not the GHA-per-object backend: that rate-limits on
+    # solana/alloy). One blob per OS, reused across tags when Cargo.lock matches.
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_DIR: ${{ runner.temp }}/sccache
+      SCCACHE_CACHE_SIZE: 2G
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v7
@@ -62,6 +69,19 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
+      - name: Restore sccache
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}/sccache
+          key: sccache-${{ inputs.platform }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            sccache-${{ inputs.platform }}-
+
+      # Registry/git only. Do not cache target/: three OS release trees exceed
+      # the 10GB repo cache and evict CI. sccache holds the rustc object hits.
       - name: Cargo registry cache
         uses: Swatinem/rust-cache@v2
         with:
@@ -103,6 +123,9 @@ jobs:
       #          APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
       #   Windows: see https://v2.tauri.app/distribute/sign/windows/
       #   Tauri updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+      # Gate already required a green CI typecheck; skip tsc here. First run
+      # still compiles Solana/alloy/Tauri; later runs with the same lockfile
+      # should hit sccache for those crates and mainly relink + bundle.
       - name: Build Tauri app (unsigned)
         working-directory: apps/desktop
         env:
@@ -111,7 +134,13 @@ jobs:
           if [ "$PLATFORM" = "linux" ]; then
             umask 022
           fi
-          pnpm tauri build
+          pnpm exec tauri build --ci --config '{"build":{"beforeBuildCommand":"pnpm exec vite build"}}'
+
+      - name: sccache stats
+        if: always()
+        run: |
+          sccache --show-stats || true
+          sccache --stop-server || true
 
       - name: Stage raw AppImage
         if: inputs.platform == 'linux'
@@ -133,7 +162,7 @@ jobs:
 
       - name: Upload raw AppImage
         if: inputs.platform == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-appimage-raw
           path: dist-appimage-raw/*.AppImage

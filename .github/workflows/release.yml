@@ -22,12 +22,12 @@ concurrency:
 
 permissions:
   contents: write
-  actions: read
+  actions: write
 
 jobs:
   gate:
     name: Verify tag and CI
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       version: ${{ steps.meta.outputs.version }}
@@ -139,9 +139,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
+          - os: windows-2022
             platform: windows
-          - os: macos-latest
+          # Standard GitHub-hosted macOS is arm64; longer queues are a
+          # runner-pool notice, not a misconfiguration.
+          - os: macos-26
             platform: macos
     uses: ./.github/workflows/package.yml
     with:
@@ -172,7 +174,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends zsync
 
       - name: Download raw Linux AppImage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-appimage-raw
           path: raw-appimage
@@ -215,7 +217,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [gate, package-linux, package, linux-repack]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Confirm Linux, Windows, and macOS assets
