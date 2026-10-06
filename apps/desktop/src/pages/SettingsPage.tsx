@@ -145,7 +145,6 @@ export function SettingsPage() {
   const [rpcUrl, setRpcUrl] = useState(settings.rpc_url ?? "");
   const [jupiterKey, setJupiterKey] = useState(settings.jupiter_api_key ?? "");
   const [managedDefault, setManagedDefault] = useState("");
-  const [activeRpc, setActiveRpc] = useState(settings.rpc_url?.trim() || "");
   const [configError, setConfigError] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(
@@ -238,7 +237,6 @@ export function SettingsPage() {
       try {
         const defaultUrl = await walletApi.getManagedDefaultRpcUrl(normalizeNetworkId(network));
         setManagedDefault(defaultUrl);
-        setActiveRpc(rpcOverrideFor(settings, network) || defaultUrl);
       } catch {
         // ignore initial load errors
       }
@@ -368,8 +366,7 @@ export function SettingsPage() {
         rpc_urls: rpcUrls,
         jupiter_api_key: jupiterKey.trim() ? jupiterKey.trim() : null,
       };
-      const runtime = await saveSettings(next);
-      setActiveRpc(runtime.rpc_url);
+      await saveSettings(next);
       setToast({ message: "RPC settings saved.", tone: "success" });
       void refreshBalances();
     } catch (err) {
@@ -397,7 +394,6 @@ export function SettingsPage() {
         jupiter_api_key: null,
       };
       const runtime = await saveSettings(next);
-      setActiveRpc(runtime.rpc_url);
       setManagedDefault(runtime.rpc_url);
       setToast({ message: "Reset to managed default RPC.", tone: "success" });
       void refreshBalances();
