@@ -84,7 +84,7 @@ export function SendPage() {
       }
     }
     return options;
-  }, [nativeBalance, nativeMint, nativeSymbol, networkInfo?.name, showTokens, tokens]);
+  }, [nativeBalance, nativeMint, nativeSymbol, networkInfo?.name, showTokens, tokenChain, tokens]);
 
   const selectedToken = selectable.find((token) => token.mint === selectedMint) ?? selectable[0];
   const isNative = selectedToken?.mint === nativeMint;

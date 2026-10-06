@@ -58,7 +58,7 @@ pub async fn native_price_usd(coingecko_id: &str) -> Result<f64> {
     Ok(price)
 }
 
-/// ERC-20 USD prices keyed by lowercase contract address (Ethereum platform).
+/// ERC-20 USD prices keyed by lowercase contract address on `platform` (ethereum, binance-smart-chain, polygon-pos, …).
 pub async fn token_prices_usd(
     platform: &str,
     contracts: &[String],

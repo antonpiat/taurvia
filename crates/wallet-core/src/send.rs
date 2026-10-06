@@ -29,7 +29,7 @@ impl WalletService {
                     .map_err(WalletError::Operation)
             }
             ChainFamily::Bitcoin => {
-                let url = self.btc_esplora.lock().unwrap().clone();
+                let url = self.endpoint_for(desc.id);
                 taurvia_bitcoin::BtcRpc::new(&url, *desc)
                     .preview_send(&from, to, amount)
                     .await
@@ -74,7 +74,7 @@ impl WalletService {
                     .map_err(WalletError::Operation)
             }
             ChainFamily::Bitcoin => {
-                let url = self.btc_esplora.lock().unwrap().clone();
+                let url = self.endpoint_for(desc.id);
                 let rpc = taurvia_bitcoin::BtcRpc::new(&url, *desc);
                 let signer = self.with_session(|k| k.require_btc(desc.is_testnet).cloned())??;
                 rpc.send(&signer, to, amount)
