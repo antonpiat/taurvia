@@ -19,6 +19,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 
 - Linux AppImage: embed GitHub Releases update information and publish a `.zsync` so AppImageUpdate can delta-update. AppImageHub’s “not self-contained / glibc 2.35” note is expected — AppImages use the system C library, and Tauri v2 cannot build older than Ubuntu 22.04 (WebKitGTK 4.1).
+- Linux AppImage repack: generate the sibling `.zsync` with system `zsyncmake`. Current `appimagetool` continuous can log success without writing the file.
 - EVM send uses each network’s native symbol (BNB/POL, not ETH). Bitcoin and EVM send resolve RPC per network instead of a cached family URL.
 
 ---

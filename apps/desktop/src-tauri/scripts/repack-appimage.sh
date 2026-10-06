@@ -76,13 +76,23 @@ for image in "${appimages[@]}"; do
   echo "Update information: $upd_info"
 
   # Output must use the published filename so the .zsync Filename: field matches
-  # the GitHub Release asset.
+  # the GitHub Release asset. Run from $workdir: zsyncmake writes basename.zsync
+  # in CWD, not next to an absolute destination path.
   out="$workdir/$publish_name"
-  rm -f "$out" "$out.zsync"
-  ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$tool" -u "$upd_info" "$extract" "$out"
+  rm -f "$out" "$out.zsync" "./${publish_name}.zsync"
+  (
+    cd "$workdir"
+    ARCH=x86_64 APPIMAGE_EXTRACT_AND_RUN=1 "$tool" -u "$upd_info" "$extract" "$publish_name"
+    chmod a+x "$publish_name"
+    # appimagetool continuous often logs "generating zsync file" then writes
+    # nothing (https://github.com/AppImage/appimagetool/issues/84). Always
+    # build the sibling with the system zsyncmake we already require.
+    rm -f "${publish_name}.zsync"
+    zsyncmake -u "$publish_name" "$publish_name"
+  )
   chmod a+x "$out"
   if [ ! -f "$out.zsync" ]; then
-    echo "appimagetool did not write $out.zsync"
+    echo "zsyncmake did not write $out.zsync"
     exit 1
   fi
   mv -f "$out" "$image"
