@@ -3,6 +3,9 @@
 # `inputs.tag` to compile. That is the split Release needs: current packaging
 # jobs, tagged application source. Local `uses: ./` composites do not fit —
 # they resolve from GITHUB_WORKSPACE after checkout, which is the tag.
+#
+# Do not put ${{ runner.* }} in this file's job-level env. workflow_call
+# jobs are validated without a runner, so GitHub rejects the whole file.
 name: Package
 
 on:
@@ -23,7 +26,6 @@ on:
 
 permissions:
   contents: write
-  actions: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -37,12 +39,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    # Local sccache dir (not the GHA-per-object backend: that rate-limits on
-    # solana/alloy). One blob per OS, reused across tags when Cargo.lock matches.
-    env:
-      RUSTC_WRAPPER: sccache
-      SCCACHE_DIR: ${{ runner.temp }}/sccache
-      SCCACHE_CACHE_SIZE: 2G
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v7
@@ -51,7 +47,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Linux build dependencies
-        if: inputs.platform == 'linux'
+        if: ${{ inputs.platform == 'linux' }}
         run: |
           umask 022
           sudo apt-get update
@@ -63,7 +59,7 @@ jobs:
             libssl-dev
 
       - name: Install mold
-        if: inputs.platform == 'linux'
+        if: ${{ inputs.platform == 'linux' }}
         uses: rui314/setup-mold@v1
 
       - name: Install Rust
@@ -124,7 +120,7 @@ jobs:
           pnpm exec tauri build --ci --config '{"build":{"beforeBuildCommand":"pnpm exec vite build"}}'
 
       - name: Stage raw AppImage
-        if: inputs.platform == 'linux'
+        if: ${{ inputs.platform == 'linux' }}
         run: |
           set -euo pipefail
           mkdir -p dist-appimage-raw
@@ -142,7 +138,7 @@ jobs:
           ls -la dist-appimage-raw
 
       - name: Upload raw AppImage
-        if: inputs.platform == 'linux'
+        if: ${{ inputs.platform == 'linux' }}
         uses: actions/upload-artifact@v7
         with:
           name: linux-appimage-raw

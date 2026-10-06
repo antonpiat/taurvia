@@ -22,7 +22,7 @@ concurrency:
 
 permissions:
   contents: write
-  actions: write
+  actions: read
 
 jobs:
   gate:
@@ -165,6 +165,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+          sparse-checkout-cone-mode: true
           sparse-checkout: |
             apps/desktop/src-tauri/scripts
 
