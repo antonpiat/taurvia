@@ -23,21 +23,16 @@ jobs:
   rust:
     name: Rust tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install mold
-        uses: rui314/setup-mold@v1
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          workspaces: ". -> target"
           shared-key: ci-linux
+          mold: "true"
 
       # Skip taurvia-desktop: compiling Tauri needs WebKit GTK and only runs a
       # Specta bindings export. Bindings are committed; tsc covers the TS side.
@@ -47,42 +42,13 @@ jobs:
   frontend:
     name: Frontend typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # Prefer Corepack over pnpm/action-setup: standalone mode crashes while
-      # switching versions (integrity undefined), and the npm self-installer
-      # breaks on Node 24 runners.
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Install pnpm from packageManager
-        working-directory: apps/desktop
-        run: corepack install
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        working-directory: apps/desktop
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('apps/desktop/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install frontend dependencies
-        working-directory: apps/desktop
-        run: pnpm install --frozen-lockfile
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       - name: Typecheck
         working-directory: apps/desktop
