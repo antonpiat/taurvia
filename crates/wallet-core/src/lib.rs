@@ -147,6 +147,7 @@ mod tests {
         assert!(enabled.contains(&"bitcoin-mainnet".to_string()));
         assert!(enabled.contains(&"ethereum-mainnet".to_string()));
         assert!(enabled.contains(&"bnb-mainnet".to_string()));
+        assert!(enabled.contains(&"polygon-mainnet".to_string()));
         assert!(!enabled.contains(&"sui-mainnet".to_string()));
         let snap = service.get_snapshot().await.unwrap();
         assert_eq!(snap.account_name, "Account 1");
@@ -336,7 +337,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn snapshot_includes_ethereum_and_bnb() {
+    async fn snapshot_includes_ethereum_bnb_and_polygon() {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
@@ -348,6 +349,7 @@ mod tests {
         let ids: Vec<&str> = snap.chains.iter().map(|c| c.network.as_str()).collect();
         assert!(ids.contains(&"ethereum-mainnet"), "{ids:?}");
         assert!(ids.contains(&"bnb-mainnet"), "{ids:?}");
+        assert!(ids.contains(&"polygon-mainnet"), "{ids:?}");
     }
 
     #[tokio::test]
@@ -371,8 +373,13 @@ mod tests {
             .enabled_network_ids()
             .iter()
             .any(|id| id == "bnb-mainnet"));
+        assert!(!service
+            .enabled_network_ids()
+            .iter()
+            .any(|id| id == "polygon-mainnet"));
         let snap = service.get_snapshot().await.unwrap();
         assert!(!snap.chains.iter().any(|c| c.network == "bnb-mainnet"));
+        assert!(!snap.chains.iter().any(|c| c.network == "polygon-mainnet"));
     }
 
     #[tokio::test]
@@ -398,5 +405,30 @@ mod tests {
             .unwrap();
         service.change_network("bnb-testnet").unwrap();
         assert_eq!(service.wallet_network(), "bnb-testnet");
+    }
+
+    #[tokio::test]
+    async fn amoy_requires_polygon_mainnet() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
+        service.unlock("Password123!").unwrap();
+        service
+            .set_enabled_networks(&["ethereum-mainnet".into()])
+            .unwrap();
+        let err = service.change_network("polygon-amoy").unwrap_err();
+        assert!(
+            err.to_string().to_lowercase().contains("polygon")
+                || err.to_string().to_lowercase().contains("activate"),
+            "{err}"
+        );
+        service
+            .set_enabled_networks(&["ethereum-mainnet".into(), "polygon-mainnet".into()])
+            .unwrap();
+        service.change_network("polygon-amoy").unwrap();
+        assert_eq!(service.wallet_network(), "polygon-amoy");
     }
 }

@@ -46,6 +46,7 @@ impl EvmRpc {
     fn coingecko_platform(&self) -> &'static str {
         match self.descriptor.id {
             models::NETWORK_BNB_MAINNET | models::NETWORK_BNB_TESTNET => "binance-smart-chain",
+            models::NETWORK_POLYGON_MAINNET | models::NETWORK_POLYGON_AMOY => "polygon-pos",
             _ => "ethereum",
         }
     }
@@ -238,5 +239,29 @@ impl EvmRpc {
         a.is_empty()
             || a.eq_ignore_ascii_case("native")
             || a.eq_ignore_ascii_case(self.descriptor.native_symbol)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn polygon_uses_polygon_pos_coingecko_platform() {
+        let desc = *models::require_network(models::NETWORK_POLYGON_MAINNET);
+        assert_eq!(
+            EvmRpc::new(desc.default_rpc, desc).coingecko_platform(),
+            "polygon-pos"
+        );
+        let amoy = *models::require_network(models::NETWORK_POLYGON_AMOY);
+        assert_eq!(
+            EvmRpc::new(amoy.default_rpc, amoy).coingecko_platform(),
+            "polygon-pos"
+        );
+        let bnb = *models::require_network(models::NETWORK_BNB_MAINNET);
+        assert_eq!(
+            EvmRpc::new(bnb.default_rpc, bnb).coingecko_platform(),
+            "binance-smart-chain"
+        );
     }
 }

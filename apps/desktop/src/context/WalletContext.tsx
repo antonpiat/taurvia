@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     "bitcoin-mainnet",
     "ethereum-mainnet",
     "bnb-mainnet",
+    "polygon-mainnet",
   ],
   zerox_api_key: null,
   auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,

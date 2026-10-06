@@ -11,6 +11,8 @@ pub const NETWORK_SUI_MAINNET: &str = "sui-mainnet";
 pub const NETWORK_SUI_TESTNET: &str = "sui-testnet";
 pub const NETWORK_BNB_MAINNET: &str = "bnb-mainnet";
 pub const NETWORK_BNB_TESTNET: &str = "bnb-testnet";
+pub const NETWORK_POLYGON_MAINNET: &str = "polygon-mainnet";
+pub const NETWORK_POLYGON_AMOY: &str = "polygon-amoy";
 pub const DEFAULT_NETWORK_ID: &str = NETWORK_SOLANA_MAINNET;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
@@ -105,6 +107,12 @@ const SUI_FEATURES: ChainFeatures = ChainFeatures {
 };
 
 const BNB_FEATURES: ChainFeatures = ChainFeatures {
+    tokens: true,
+    swap: false,
+    utxo: false,
+};
+
+const POLYGON_FEATURES: ChainFeatures = ChainFeatures {
     tokens: true,
     swap: false,
     utxo: false,
@@ -238,7 +246,7 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         coingecko_id: Some("bitcoin"),
     },
     NetworkDescriptor {
-        id: "polygon-mainnet",
+        id: NETWORK_POLYGON_MAINNET,
         family: ChainFamily::Evm,
         name: "Polygon",
         native_symbol: "POL",
@@ -248,23 +256,23 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         explorer_tx: "https://polygonscan.com/tx/{txid}",
         explorer_address: "https://polygonscan.com/address/{address}",
         explorer_api: Some("https://api.polygonscan.com/api"),
-        features: EVM_FEATURES,
-        enabled: false,
+        features: POLYGON_FEATURES,
+        enabled: true,
         coingecko_id: Some("matic-network"),
     },
     NetworkDescriptor {
-        id: "polygon-amoy",
+        id: NETWORK_POLYGON_AMOY,
         family: ChainFamily::Evm,
         name: "Polygon Amoy",
         native_symbol: "POL",
         is_testnet: true,
         eip155_chain_id: Some(80002),
-        default_rpc: "https://rpc-amoy.polygon.technology",
+        default_rpc: "https://polygon-amoy-bor-rpc.publicnode.com",
         explorer_tx: "https://amoy.polygonscan.com/tx/{txid}",
         explorer_address: "https://amoy.polygonscan.com/address/{address}",
         explorer_api: Some("https://api-amoy.polygonscan.com/api"),
-        features: EVM_FEATURES,
-        enabled: false,
+        features: POLYGON_FEATURES,
+        enabled: true,
         coingecko_id: Some("matic-network"),
     },
     NetworkDescriptor {
@@ -373,6 +381,7 @@ pub fn default_enabled_network_ids() -> Vec<String> {
         NETWORK_BITCOIN_MAINNET.to_string(),
         NETWORK_ETHEREUM_MAINNET.to_string(),
         NETWORK_BNB_MAINNET.to_string(),
+        NETWORK_POLYGON_MAINNET.to_string(),
     ]
 }
 
@@ -396,7 +405,7 @@ pub fn paired_mainnet_id(desc: &NetworkDescriptor) -> &'static str {
         NETWORK_BNB_TESTNET => NETWORK_BNB_MAINNET,
         NETWORK_BITCOIN_TESTNET => NETWORK_BITCOIN_MAINNET,
         NETWORK_SUI_TESTNET => NETWORK_SUI_MAINNET,
-        "polygon-amoy" => "polygon-mainnet",
+        NETWORK_POLYGON_AMOY => NETWORK_POLYGON_MAINNET,
         "base-sepolia" => "base-mainnet",
         _ => mainnet_id_for_family(desc.family),
     }
@@ -460,6 +469,7 @@ mod tests {
     fn new_mnemonic_defaults_include_bnb() {
         let ids = default_enabled_network_ids();
         assert!(ids.iter().any(|id| id == NETWORK_BNB_MAINNET));
+        assert!(ids.iter().any(|id| id == NETWORK_POLYGON_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_ETHEREUM_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_BITCOIN_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_SOLANA_MAINNET));
@@ -467,8 +477,31 @@ mod tests {
     }
 
     #[test]
+    fn polygon_mainnet_is_first_class_evm() {
+        let n = get_network(NETWORK_POLYGON_MAINNET).expect("polygon-mainnet");
+        assert_eq!(n.family, ChainFamily::Evm);
+        assert_eq!(n.eip155_chain_id, Some(137));
+        assert_eq!(n.native_symbol, "POL");
+        assert!(n.enabled);
+        assert!(!n.features.swap);
+        assert_eq!(n.coingecko_id, Some("matic-network"));
+    }
+
+    #[test]
+    fn amoy_pairs_to_polygon_mainnet() {
+        let n = require_network(NETWORK_POLYGON_AMOY);
+        assert_eq!(n.eip155_chain_id, Some(80002));
+        assert!(n.is_testnet);
+        assert!(n.enabled);
+        assert!(!n.features.swap);
+        assert_eq!(paired_mainnet_id(n), NETWORK_POLYGON_MAINNET);
+    }
+
+    #[test]
     fn eth_rpc_env_does_not_apply_to_bnb() {
         assert!(env_rpc_override_for_network(NETWORK_BNB_MAINNET).is_none());
         assert!(env_rpc_override_for_network(NETWORK_BNB_TESTNET).is_none());
+        assert!(env_rpc_override_for_network(NETWORK_POLYGON_MAINNET).is_none());
+        assert!(env_rpc_override_for_network(NETWORK_POLYGON_AMOY).is_none());
     }
 }
