@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+---
+
+## [0.5.4] - 2026-10-06
+
 ### Added
 
 - BNB Chain (BSC) Mainnet + Chapel testnet: same EVM key as Ethereum (`m/44'/60'/0'/0/0`), PublicNode RPC, BscScan, dashboard balances while Ethereum stays on. New mnemonic wallets activate Solana, Bitcoin, Ethereum, and BNB (not Sui). Existing wallets keep their saved list. Swap stays off (`features.swap = false`).
@@ -15,6 +19,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 
 - Linux AppImage: embed GitHub Releases update information and publish a `.zsync` so AppImageUpdate can delta-update. AppImageHub’s “not self-contained / glibc 2.35” note is expected — AppImages use the system C library, and Tauri v2 cannot build older than Ubuntu 22.04 (WebKitGTK 4.1).
+- EVM send uses each network’s native symbol (BNB/POL, not ETH). Bitcoin and EVM send resolve RPC per network instead of a cached family URL.
 
 ---
 
@@ -357,7 +362,8 @@ When cutting a new version:
 6. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z` (tag must match `tauri.conf.json`).
 7. [Release](../.github/workflows/release.yml) builds unsigned installers and attaches them to the GitHub Release. Edit the notes if needed.
 
-[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/antonpiat/taurvia/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/antonpiat/taurvia/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/antonpiat/taurvia/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/antonpiat/taurvia/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/antonpiat/taurvia/compare/v0.5.0...v0.5.1
