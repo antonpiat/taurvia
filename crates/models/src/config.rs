@@ -95,9 +95,12 @@ pub struct AppSettings {
     /// Active network id. Synced with `WalletFile.network` on switch.
     #[serde(default = "default_network")]
     pub network: String,
-    /// Activated mainnets (Phantom-style). Testnets stay Advanced via `network`.
+    /// Activated mainnets (Phantom-style). Testnets are used when `developer_mode` is on.
     #[serde(default = "default_enabled_networks")]
     pub enabled_networks: Vec<String>,
+    /// Phantom-style testnet mode: every activated chain uses its testnet/devnet.
+    #[serde(default)]
+    pub developer_mode: bool,
     /// Optional 0x API key for Ethereum swaps.
     #[serde(default)]
     pub zerox_api_key: Option<String>,
@@ -136,6 +139,7 @@ impl Default for AppSettings {
             jupiter_api_key: None,
             network: default_network(),
             enabled_networks: default_enabled_networks(),
+            developer_mode: false,
             zerox_api_key: None,
             auto_lock_minutes: default_auto_lock_minutes(),
             hide_balances: default_hide_balances(),

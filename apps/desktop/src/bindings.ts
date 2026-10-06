@@ -282,9 +282,13 @@ jupiter_api_key: string | null;
  */
 network?: string; 
 /**
- * Activated mainnets (Phantom-style). Testnets stay Advanced via `network`.
+ * Activated mainnets (Phantom-style). Testnets are used when `developer_mode` is on.
  */
 enabled_networks?: string[]; 
+/**
+ * Phantom-style testnet mode: every activated chain uses its testnet/devnet.
+ */
+developer_mode?: boolean; 
 /**
  * Optional 0x API key for Ethereum swaps.
  */

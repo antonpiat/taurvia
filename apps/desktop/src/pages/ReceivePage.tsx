@@ -1,19 +1,21 @@
 import { QRCodeSVG } from "qrcode.react";
+import { NetworkPicker } from "@/components/NetworkPicker";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWallet } from "@/context/WalletContext";
 import { receiveWarning } from "@/lib/network";
 import { Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function ReceivePage() {
   const { publicKey, networkInfo, nativeSymbol, networks, enabledNetworks, network, changeNetwork } =
     useWallet();
   const [copied, setCopied] = useState(false);
-  const switchable = networks.filter(
-    (n) => n.enabled && enabledNetworks.includes(n.id) && !n.is_testnet,
-  );
+
+  useEffect(() => {
+    setCopied(false);
+  }, [network, publicKey]);
 
   const handleCopy = async () => {
     if (!publicKey) return;
@@ -37,25 +39,17 @@ export function ReceivePage() {
           <CardDescription>{receiveWarning(networkInfo)}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
-          {switchable.length > 1 && (
-            <div className="flex flex-wrap justify-center gap-1">
-              {switchable.map((n) => (
-                <Button
-                  key={n.id}
-                  type="button"
-                  size="sm"
-                  variant={n.id === network ? "default" : "outline"}
-                  onClick={() => void changeNetwork(n.id)}
-                >
-                  {n.name}
-                </Button>
-              ))}
-            </div>
-          )}
+          <NetworkPicker
+            className="mx-auto w-full max-w-sm"
+            networks={networks}
+            activatedIds={enabledNetworks}
+            selected={network}
+            onSelect={(id) => void changeNetwork(id)}
+          />
           {publicKey ? (
             <>
               <div className="rounded-xl bg-white p-3 sm:p-4">
-                <QRCodeSVG className="h-44 w-44 sm:h-[220px] sm:w-[220px]" value={publicKey} size={220} />
+                <QRCodeSVG key={publicKey} className="h-44 w-44 sm:h-[220px] sm:w-[220px]" value={publicKey} size={220} />
               </div>
               <p className="break-all text-center font-mono text-sm">{publicKey}</p>
               <Button onClick={handleCopy}>

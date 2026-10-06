@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/context/WalletContext";
 import { normalizeAppView, useLayoutMode, useSyncAppViewOnResize } from "@/lib/appView";
 import { canSwapAny, networkShortLabel } from "@/lib/network";
+import { NetworkPicker } from "@/components/NetworkPicker";
 import {
   DEFAULT_SETTINGS_SECTION,
   SETTINGS_SECTIONS,
@@ -56,11 +57,10 @@ export function MainLayout() {
   const isDesktop = layout === "desktop";
   const networkLabel = networkShortLabel(networkInfo, network);
   const visibleNav = navItems.filter(
-    (item) => !item.mainnetOnly || canSwapAny(enabledNetworks, networks),
+    (item) =>
+      !item.mainnetOnly || canSwapAny(enabledNetworks, networks, Boolean(settings.developer_mode)),
   );
-  const switchable = networks.filter(
-    (n) => n.enabled && enabledNetworks.includes(n.id) && !n.is_testnet,
-  );
+  const developerMode = Boolean(settings.developer_mode);
   const [copied, setCopied] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const wasOnSettings = useRef(false);
@@ -120,16 +120,29 @@ export function MainLayout() {
   };
 
   return (
-    <div
-      className={cn(
-        "flex h-dvh overflow-hidden bg-background",
-        isPhone ? "flex-col" : "flex-row",
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      {developerMode && (
+        <div className="flex shrink-0 items-center justify-center gap-x-3 gap-y-1 bg-amber-400 px-3 py-2 text-center text-xs font-semibold text-amber-950">
+          <span>You are in developer mode. Testnet assets have no real value.</span>
+          <button
+            type="button"
+            className="underline underline-offset-2"
+            onClick={() => navigate("/settings/developer")}
+          >
+            Developer settings
+          </button>
+        </div>
       )}
-    >
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 overflow-hidden",
+          isPhone ? "flex-col" : "flex-row",
+        )}
+      >
       {!isPhone && (
         <aside
           className={cn(
-            "sticky top-0 flex h-dvh shrink-0 flex-col border-r border-border bg-card/40",
+            "sticky top-0 flex h-full shrink-0 flex-col border-r border-border bg-card/40",
             isCompact ? "w-20 p-3" : "w-64 p-4",
           )}
         >
@@ -307,25 +320,13 @@ export function MainLayout() {
                     </span>
                   </button>
 
-                  {switchable.length > 1 && (
-                    <div className="flex flex-wrap gap-1">
-                      {switchable.map((n) => (
-                        <button
-                          key={n.id}
-                          type="button"
-                          onClick={() => void changeNetwork(n.id)}
-                          className={cn(
-                            "rounded-full border px-2 py-0.5 text-[11px]",
-                            n.id === network
-                              ? "border-primary bg-primary/15 text-primary"
-                              : "border-border text-muted-foreground hover:bg-accent",
-                          )}
-                        >
-                          {n.native_symbol}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <NetworkPicker
+                    variant="toolbar"
+                    networks={networks}
+                    activatedIds={enabledNetworks}
+                    selected={network}
+                    onSelect={(id) => void changeNetwork(id)}
+                  />
 
                   <div className="grid grid-cols-2 gap-2">
                     <Button
@@ -441,6 +442,7 @@ export function MainLayout() {
           </div>
         </nav>
       )}
+      </div>
     </div>
   );
 }

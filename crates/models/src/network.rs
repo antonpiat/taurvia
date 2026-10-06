@@ -395,6 +395,16 @@ pub fn paired_mainnet_id(desc: &NetworkDescriptor) -> &'static str {
     }
 }
 
+/// Testnet/devnet paired with this mainnet (or the id itself when already a testnet).
+pub fn paired_testnet_id(desc: &NetworkDescriptor) -> Option<&'static str> {
+    if desc.is_testnet {
+        return Some(desc.id);
+    }
+    NETWORKS.iter().find(|n| {
+        n.enabled && n.is_testnet && paired_mainnet_id(n) == desc.id
+    }).map(|n| n.id)
+}
+
 /// Env overlay for a family (dev-only). Network-specific map in settings wins first.
 /// Ethereum env (`TAURVIA_ETH_RPC_URL`) applies only to Ethereum mainnet/Sepolia — never BNB or L2s.
 pub fn env_rpc_override(family: ChainFamily) -> Option<String> {
@@ -446,6 +456,18 @@ mod tests {
         assert_eq!(
             paired_mainnet_id(require_network(NETWORK_ETHEREUM_SEPOLIA)),
             NETWORK_ETHEREUM_MAINNET
+        );
+        assert_eq!(
+            paired_testnet_id(require_network(NETWORK_BNB_MAINNET)),
+            Some(NETWORK_BNB_TESTNET)
+        );
+        assert_eq!(
+            paired_testnet_id(require_network(NETWORK_SOLANA_MAINNET)),
+            Some(NETWORK_SOLANA_DEVNET)
+        );
+        assert_eq!(
+            paired_testnet_id(require_network(NETWORK_SOLANA_DEVNET)),
+            Some(NETWORK_SOLANA_DEVNET)
         );
     }
 

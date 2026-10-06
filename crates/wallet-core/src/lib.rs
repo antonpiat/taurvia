@@ -94,7 +94,10 @@ mod tests {
         service
             .create_wallet(&mnemonic, "Password123!", "Account 1")
             .unwrap();
-        service.change_network("solana-devnet").unwrap();
+        let mut on = service.get_settings();
+        on.developer_mode = true;
+        service.update_settings(on).unwrap();
+        assert_eq!(service.wallet_network(), "solana-devnet");
 
         let mut settings = service.get_settings();
         settings.network = "solana-mainnet".into();
@@ -404,6 +407,11 @@ mod tests {
             .set_enabled_networks(&["ethereum-mainnet".into(), "bnb-mainnet".into()])
             .unwrap();
         service.change_network("bnb-testnet").unwrap();
+        assert_eq!(service.wallet_network(), "bnb-mainnet");
+        let mut on = service.get_settings();
+        on.developer_mode = true;
+        service.update_settings(on).unwrap();
+        service.change_network("bnb-testnet").unwrap();
         assert_eq!(service.wallet_network(), "bnb-testnet");
     }
 
@@ -429,6 +437,46 @@ mod tests {
             .set_enabled_networks(&["ethereum-mainnet".into(), "polygon-mainnet".into()])
             .unwrap();
         service.change_network("polygon-amoy").unwrap();
+        assert_eq!(service.wallet_network(), "polygon-mainnet");
+        let mut on = service.get_settings();
+        on.developer_mode = true;
+        service.update_settings(on).unwrap();
+        service.change_network("polygon-amoy").unwrap();
         assert_eq!(service.wallet_network(), "polygon-amoy");
+    }
+
+    #[tokio::test]
+    async fn developer_mode_switches_every_activated_chain_to_testnet() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
+        service.unlock("Password123!").unwrap();
+        service
+            .set_enabled_networks(&[
+                "solana-mainnet".into(),
+                "ethereum-mainnet".into(),
+                "bitcoin-mainnet".into(),
+            ])
+            .unwrap();
+        let mut on = service.get_settings();
+        on.developer_mode = true;
+        service.update_settings(on).unwrap();
+        assert!(service.get_settings().developer_mode);
+        assert_eq!(service.wallet_network(), "solana-devnet");
+        service.change_network("ethereum-mainnet").unwrap();
+        assert_eq!(service.wallet_network(), "ethereum-sepolia");
+        let snap = service.get_snapshot().await.unwrap();
+        assert!(snap.chains.iter().any(|c| c.network == "solana-devnet"));
+        assert!(snap.chains.iter().any(|c| c.network == "ethereum-sepolia"));
+        assert!(snap.chains.iter().any(|c| c.network == "bitcoin-testnet"));
+        assert!(!snap.chains.iter().any(|c| c.network == "solana-mainnet"));
+        let mut off = service.get_settings();
+        off.developer_mode = false;
+        service.update_settings(off).unwrap();
+        assert!(!service.get_settings().developer_mode);
+        assert_eq!(service.wallet_network(), "ethereum-mainnet");
     }
 }

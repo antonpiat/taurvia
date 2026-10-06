@@ -28,11 +28,8 @@ import {
 } from "@/lib/appView";
 import { DEFAULT_AUTO_LOCK_MINUTES, normalizeAutoLockMinutes } from "@/lib/autoLock";
 import { explorerLabel, normalizeExplorer } from "@/lib/explorer";
-import {
-  lastUsedNetworkOptions,
-  networkShortLabel,
-  normalizeNetworkId,
-} from "@/lib/network";
+import { networkShortLabel, normalizeNetworkId, sortNetworkPickerOptions } from "@/lib/network";
+import { TokenIcon } from "@/components/TokenIcon";
 import { isPasswordStrong, passwordStrengthError } from "@/lib/password";
 import {
   DEFAULT_SETTINGS_SECTION,
@@ -40,7 +37,6 @@ import {
   isSettingsSectionId,
   type SettingsSectionId,
 } from "@/lib/settingsNav";
-import { TokenIcon } from "@/components/TokenIcon";
 import { inferTokenChain, withLocalLogo } from "@/lib/tokenCatalog";
 import { ApiError, AppSettings, ExplorerKind, type ImportKind, walletApi } from "@/lib/tauri";
 import { shortenAddress } from "@/lib/utils";
@@ -91,12 +87,13 @@ const SECTION_COPY: Record<SettingsSectionId, string> = {
   wallet: "Session preferences and tokens you added for Swap.",
   security: "Protect access to your wallet on this device.",
   transactions: "Swap slippage and explorer links.",
-  network: "Active network and RPC endpoint.",
+  network: "Turn chains on or off.",
+  developer: "Testnet mode for every activated chain.",
   advanced: "Optional RPC overrides.",
   danger: "Remove this wallet from the device.",
 };
 
-type OpenMenu = "app-view" | "auto-lock" | "explorer" | "network" | null;
+type OpenMenu = "app-view" | "auto-lock" | "explorer" | null;
 
 function rpcOverrideFor(settings: AppSettings, networkId: string): string {
   const id = normalizeNetworkId(networkId);
@@ -120,7 +117,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { section: sectionParam } = useParams<{ section: string }>();
-  const { refresh, refreshBalances, settings, saveSettings, network, changeNetwork, networks, networkInfo, canRevealMnemonic, enabledNetworks: activatedNetworks, setEnabledNetworks, importKind } =
+  const { refresh, refreshBalances, settings, saveSettings, network, networks, networkInfo, canRevealMnemonic, enabledNetworks: activatedNetworks, setEnabledNetworks, setDeveloperMode, importKind } =
     useWallet();
   const layout = useLayoutMode();
   const [seedOpen, setSeedOpen] = useState(false);
@@ -128,7 +125,6 @@ export function SettingsPage() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [networkError, setNetworkError] = useState<string | null>(null);
-  const [switchingNetwork, setSwitchingNetwork] = useState(false);
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -412,32 +408,6 @@ export function SettingsPage() {
       setToast({ message, tone: "error" });
     } finally {
       setSavingConfig(false);
-    }
-  };
-
-  const handleNetworkSwitch = async (next: string) => {
-    if (next === normalizeNetworkId(network) || switchingNetwork) return;
-    setSwitchingNetwork(true);
-    setNetworkError(null);
-    try {
-      const runtime = await changeNetwork(next);
-      setActiveRpc(runtime.rpc_url);
-      setRpcUrl("");
-      setManagedDefault(runtime.rpc_url);
-      const info = networks.find((n) => n.id === next);
-      setToast({
-        message: info
-          ? `Switched to ${info.name}.${info.features.swap ? "" : " Swap is unavailable on this network."}`
-          : `Switched to ${next}.`,
-        tone: "success",
-      });
-    } catch (err) {
-      const apiError = err as ApiError;
-      const message = apiError.message ?? "Failed to switch network";
-      setNetworkError(message);
-      setToast({ message, tone: "error" });
-    } finally {
-      setSwitchingNetwork(false);
     }
   };
 
@@ -773,60 +743,98 @@ export function SettingsPage() {
               <p className="text-sm font-medium">Activated chains</p>
               <p className="text-xs text-muted-foreground">
                 {importKind === "mnemonic"
-                  ? "Turn chains on or off. Last-used chain is for Send and Receive."
+                  ? "Turn chains on or off. Switch the current chain from the sidebar, Send, Receive, or Activity."
                   : "This wallet was imported from a single key."}
               </p>
-              {networks
-                .filter((n) => n.enabled && !n.is_testnet)
-                .map((info) => {
-                const id = info.id;
-                const on = activatedNetworks.includes(id);
-                const keyFamily = keyImportFamily(importKind);
-                const lockedOut = Boolean(keyFamily && info.family !== keyFamily);
-                return (
-                  <label key={id} className="flex cursor-pointer items-center gap-2.5 text-sm">
-                    <Checkbox
-                      checked={on}
-                      disabled={lockedOut}
-                      onCheckedChange={(checked) => {
-                        const next = checked
-                          ? [...activatedNetworks.filter((x) => x !== id), id]
-                          : activatedNetworks.filter((x) => x !== id);
-                        void setEnabledNetworks(next).catch((err) => {
-                          const apiError = err as ApiError;
-                          setNetworkError(apiError.message ?? "Could not update chains");
+              {sortNetworkPickerOptions(networks.filter((n) => n.enabled && !n.is_testnet)).map(
+                (info) => {
+                  const id = info.id;
+                  const on = activatedNetworks.includes(id);
+                  const keyFamily = keyImportFamily(importKind);
+                  const lockedOut = Boolean(keyFamily && info.family !== keyFamily);
+                  const mainnetCount = networks.filter(
+                    (n) => n.enabled && !n.is_testnet && activatedNetworks.includes(n.id),
+                  ).length;
+                  return (
+                    <label key={id} className="flex cursor-pointer items-center gap-2.5 text-sm">
+                      <Checkbox
+                        checked={on}
+                        disabled={lockedOut || (on && mainnetCount === 1)}
+                        onCheckedChange={(checked) => {
+                          const next = checked
+                            ? [...activatedNetworks.filter((x) => x !== id), id]
+                            : activatedNetworks.filter((x) => x !== id);
+                          void setEnabledNetworks(next).catch((err) => {
+                            const apiError = err as ApiError;
+                            setNetworkError(apiError.message ?? "Could not update chains");
+                          });
+                        }}
+                      />
+                      <TokenIcon
+                        symbol={info.native_symbol}
+                        mint={info.native_symbol.toLowerCase()}
+                        networkId={info.id}
+                        size={20}
+                      />
+                      <span>
+                        {info.name}
+                        {lockedOut ? " (this key)" : ""}
+                      </span>
+                    </label>
+                  );
+                },
+              )}
+              {networkError && (
+                <Alert className="border-destructive/40 text-destructive">{networkError}</Alert>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {section === "developer" && (
+          <Card>
+            <CardContent className="space-y-4 pt-6">
+              {Boolean(settings.developer_mode) && (
+                <Alert className="border-amber-400/40 bg-amber-400/10 text-amber-100">
+                  You are in developer mode. Every activated chain is on its testnet or
+                  devnet. Testnet assets have no real value.
+                </Alert>
+              )}
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <Checkbox
+                  checked={Boolean(settings.developer_mode)}
+                  disabled={savingPrefs}
+                  onCheckedChange={(checked) => {
+                    void (async () => {
+                      setSavingPrefs(true);
+                      setNetworkError(null);
+                      try {
+                        await setDeveloperMode(Boolean(checked));
+                        setToast({
+                          message: checked
+                            ? "Developer mode on. All networks are testnets."
+                            : "Back on mainnet.",
+                          tone: "success",
                         });
-                      }}
-                    />
-                    <span>{info.name}{lockedOut ? " (this key)" : ""}</span>
-                  </label>
-                );
-              })}
-              <SelectDropdown
-                label="Network"
-                value={normalizeNetworkId(network)}
-                options={lastUsedNetworkOptions(networks, activatedNetworks)
-                  .slice()
-                  .sort((a, b) => a.family.localeCompare(b.family) || a.name.localeCompare(b.name))
-                  .map((info) => ({
-                  value: info.id,
-                  label: info.name,
-                  description: `${info.name}${info.features.swap ? " · Swap" : ""}${
-                    info.is_testnet ? " · testnet" : ""
-                  }`,
-                }))}
-                open={openMenu === "network"}
-                disabled={switchingNetwork}
-                onOpenChange={(open) => setOpenMenu(open ? "network" : null)}
-                onChange={(next) => void handleNetworkSwitch(next)}
-              />
-              <div className="flex justify-between gap-3 text-sm">
-                <span className="text-muted-foreground">Active RPC</span>
-                <span className="max-w-[60%] truncate font-mono text-xs">{activeRpc || "—"}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Last-used chain for Send and Receive. Testnets stay here under Advanced.
-              </p>
+                      } catch (err) {
+                        const apiError = err as ApiError;
+                        const message = apiError.message ?? "Could not update developer mode";
+                        setNetworkError(message);
+                        setToast({ message, tone: "error" });
+                      } finally {
+                        setSavingPrefs(false);
+                      }
+                    })();
+                  }}
+                />
+                <span className="min-w-0">
+                  <span className="block font-medium">Testnet mode</span>
+                  <span className="block pt-1 text-xs text-muted-foreground">
+                    When on, Solana uses Devnet and every other activated chain uses its
+                    testnet. Turn this off to return to mainnet.
+                  </span>
+                </span>
+              </label>
               {networkError && (
                 <Alert className="border-destructive/40 text-destructive">{networkError}</Alert>
               )}

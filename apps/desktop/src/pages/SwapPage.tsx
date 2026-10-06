@@ -19,6 +19,7 @@ import { Alert } from "@/components/ui/misc";
 import { useWallet } from "@/context/WalletContext";
 import { txExplorerUrl } from "@/lib/explorer";
 import { canSwapAny } from "@/lib/network";
+import { NetworkPicker } from "@/components/NetworkPicker";
 import {
   BTC_NATIVE,
   BTC_NATIVE_TOKEN,
@@ -115,26 +116,14 @@ export function SwapPage() {
     });
   }, [settings.swap_favorite_tokens]);
 
-  const swapChains = useMemo(
-    () =>
-      networks.filter(
-        (n) => n.enabled && !n.is_testnet && n.features.swap && enabledNetworks.includes(n.id),
-      ),
-    [networks, enabledNetworks],
-  );
-
-  useEffect(() => {
-    if (swapChains.length === 0) return;
-    if (swapChains.some((n) => n.id === network)) return;
-    void changeNetwork(swapChains[0].id);
-  }, [network, swapChains, changeNetwork]);
+  const swapOnThisNetwork = Boolean(networkInfo?.features.swap && !networkInfo.is_testnet);
 
   const selectable = useMemo(() => {
     const map = new Map<string, SelectableToken>();
     const family = networkInfo?.family;
     const chain = networkFamilyToChain(family);
+    const chainSnap = chains.find((c) => c.network === network);
     if (family === "evm") {
-      const chainSnap = chains.find((c) => c.network.startsWith("ethereum"));
       map.set(ETH_NATIVE, {
         ...ETH_MAJOR_TOKENS[0],
         balanceUi: chainSnap?.native_balance ?? 0,
@@ -157,7 +146,6 @@ export function SwapPage() {
       return Array.from(map.values());
     }
     if (family === "bitcoin") {
-      const chainSnap = chains.find((c) => c.network.startsWith("bitcoin"));
       map.set(BTC_NATIVE, {
         ...BTC_NATIVE_TOKEN,
         balanceUi: chainSnap?.native_balance ?? 0,
@@ -167,7 +155,6 @@ export function SwapPage() {
       map.set(WRAPPED_SOL, { ...MAJOR_TOKENS[0], chain: "solana" });
       return Array.from(map.values());
     }
-    const chainSnap = chains.find((c) => c.network.startsWith("solana"));
     map.set(WRAPPED_SOL, {
       ...MAJOR_TOKENS[0],
       balanceUi: chainSnap?.native_balance ?? 0,
@@ -191,7 +178,7 @@ export function SwapPage() {
       if (!map.has(extra.mint)) map.set(extra.mint, withLocalLogo({ ...extra, chain: "solana" }, "solana"));
     }
     return Array.from(map.values());
-  }, [extraTokens, networkInfo?.family, chains]);
+  }, [extraTokens, network, networkInfo?.family, chains]);
 
   const fromSelectable = useMemo(() => {
     if (networkInfo?.family === "bitcoin") {
@@ -388,18 +375,58 @@ export function SwapPage() {
     slippageBps % 100 === 0 ? 1 : 2,
   )}%`;
 
-  if (!canSwapAny(enabledNetworks, networks)) {
+  if (!canSwapAny(enabledNetworks, networks, Boolean(settings.developer_mode))) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <PageHeader title="Swap" description="Activate Solana, Ethereum, or Bitcoin mainnet to swap." />
+        <PageHeader
+          title="Swap"
+          description={
+            settings.developer_mode
+              ? "Swap is off in developer mode."
+              : "Activate Solana, Ethereum, or Bitcoin mainnet to swap."
+          }
+        />
         <Card>
           <CardContent className="space-y-3 pt-6">
             <p className="text-sm text-muted-foreground">
-              Swap needs an enabled mainnet. Turn one on in Settings → Network.
+              {settings.developer_mode
+                ? "Turn off Testnet mode in Settings → Developer to swap on mainnet."
+                : "Swap needs Solana, Ethereum, or Bitcoin mainnet. Turn one on in Settings → Network. BNB, Polygon, and Sui stay send/receive-only."}
             </p>
-            <Button variant="outline" onClick={() => navigate("/settings/network")}>
-              Open Network settings
+            <Button
+              variant="outline"
+              onClick={() =>
+                navigate(settings.developer_mode ? "/settings/developer" : "/settings/network")
+              }
+            >
+              {settings.developer_mode ? "Open Developer settings" : "Open Network settings"}
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!swapOnThisNetwork) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <PageHeader
+          title="Swap"
+          description={`Swap is off on ${networkInfo?.name ?? "this network"}.`}
+        />
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <p className="text-sm text-muted-foreground">
+              Choose Solana, Ethereum, or Bitcoin. Visiting Swap does not change your last-used
+              network until you pick one.
+            </p>
+            <NetworkPicker
+              networks={networks}
+              activatedIds={enabledNetworks}
+              selected={network}
+              onSelect={(id) => void changeNetwork(id)}
+              extraFilter={(n) => n.features.swap && !n.is_testnet}
+            />
           </CardContent>
         </Card>
       </div>
@@ -419,25 +446,13 @@ export function SwapPage() {
           <CardDescription>Review the estimated rate before continuing.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {swapChains.length > 1 && (
-            <div className="flex flex-wrap gap-1">
-              {swapChains.map((n) => (
-                <Button
-                  key={n.id}
-                  type="button"
-                  size="sm"
-                  variant={n.id === network ? "default" : "outline"}
-                  aria-pressed={n.id === network}
-                  onClick={() => {
-                    if (n.id === network) return;
-                    void changeNetwork(n.id);
-                  }}
-                >
-                  {n.name}
-                </Button>
-              ))}
-            </div>
-          )}
+          <NetworkPicker
+            networks={networks}
+            activatedIds={enabledNetworks}
+            selected={network}
+            onSelect={(id) => void changeNetwork(id)}
+            extraFilter={(n) => n.features.swap && !n.is_testnet}
+          />
           <TokenDropdown
             label="From"
             token={fromToken}
@@ -448,7 +463,7 @@ export function SwapPage() {
             onOpenChange={(open) => setPickerSide(open ? "from" : null)}
             onSelect={(mint) => handleSelectToken("from", mint)}
             onAddToken={persistFavorite}
-            enableRemoteSearch={networkInfo?.family === "solana" || networkInfo?.family === "evm"}
+            enableRemoteSearch={networkInfo?.family === "solana" || networkInfo?.id === "ethereum-mainnet"}
             chain={networkFamilyToChain(networkInfo?.family)}
             networkId={network}
           />
@@ -472,7 +487,7 @@ export function SwapPage() {
             onOpenChange={(open) => setPickerSide(open ? "to" : null)}
             onSelect={(mint) => handleSelectToken("to", mint)}
             onAddToken={persistFavorite}
-            enableRemoteSearch={networkInfo?.family === "solana" || networkInfo?.family === "evm"}
+            enableRemoteSearch={networkInfo?.family === "solana" || networkInfo?.id === "ethereum-mainnet"}
             chain={networkFamilyToChain(networkInfo?.family)}
             networkId={network}
           />

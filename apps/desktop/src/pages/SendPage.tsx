@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { TokenDropdown, type DropdownToken } from "@/components/TokenDropdown";
+import { NetworkPicker } from "@/components/NetworkPicker";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,13 +39,6 @@ export function SendPage() {
   const tokenChain = networkFamilyToChain(networkInfo?.family);
   const [selectedMint, setSelectedMint] = useState(nativeMint);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const switchable = networks.filter(
-    (n) => n.enabled && enabledNetworks.includes(n.id) && !n.is_testnet,
-  );
-
-  useEffect(() => {
-    setSelectedMint(nativeMint);
-  }, [nativeMint, network]);
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [password, setPassword] = useState("");
@@ -56,6 +50,16 @@ export function SendPage() {
   const [successTxid, setSuccessTxid] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedMint(nativeMint);
+    setTo("");
+    setAmount("");
+    setPreview(null);
+    setError(null);
+    setSuccess(null);
+    setSuccessTxid(null);
+  }, [nativeMint, network]);
 
   const showTokens = Boolean(networkInfo?.features.tokens);
 
@@ -151,21 +155,12 @@ export function SendPage() {
           <CardDescription>Review carefully before confirming.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {switchable.length > 1 && (
-            <div className="flex flex-wrap gap-1">
-              {switchable.map((n) => (
-                <Button
-                  key={n.id}
-                  type="button"
-                  size="sm"
-                  variant={n.id === network ? "default" : "outline"}
-                  onClick={() => void changeNetwork(n.id)}
-                >
-                  {n.name}
-                </Button>
-              ))}
-            </div>
-          )}
+          <NetworkPicker
+            networks={networks}
+            activatedIds={enabledNetworks}
+            selected={network}
+            onSelect={(id) => void changeNetwork(id)}
+          />
           {showTokens ? (
             <TokenDropdown
               label="Token"
