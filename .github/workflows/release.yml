@@ -1,7 +1,8 @@
 name: Release
 
 # Package only an explicit version tag. Never runs because tauri.conf.json
-# changed on main. Rebuild a tag via workflow_dispatch after signing is added.
+# changed on main. Rebuild a tag via workflow_dispatch from main (uses this
+# workflow file + packaging script; still compiles the tagged commit).
 on:
   push:
     tags:
@@ -9,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing version tag to rebuild (e.g. v0.5.0)"
+        description: "Existing version tag to rebuild (e.g. v0.5.4)"
         required: true
         type: string
 
@@ -25,17 +26,23 @@ jobs:
   gate:
     name: Verify tag and CI
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: Resolve tag
         id: tag
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ inputs.tag }}"
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$DISPATCH_TAG"
           else
-            TAG="${GITHUB_REF_NAME}"
+            TAG="$REF_NAME"
           fi
           TAG="${TAG#refs/tags/}"
           if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -111,20 +118,108 @@ jobs:
             gh release create "$TAG" --draft --title "Taurvia $TAG" --generate-notes
           fi
 
-  build:
+  # Own job (not the win/mac matrix) so linux-repack can start as soon as
+  # Linux finishes, and a Windows/macOS failure does not skip AppImage zsync.
+  package-linux:
+    name: Package linux
+    needs: gate
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.gate.outputs.tag }}
+
+      - name: Install Linux build dependencies
+        run: |
+          umask 022
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          shared-key: release-linux
+          cache-targets: "false"
+          mold: "true"
+
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+
+      - name: Build Tauri app (unsigned)
+        working-directory: apps/desktop
+        run: |
+          umask 022
+          pnpm tauri build
+
+      # Artifact for linux-repack. Do not attach this linuxdeploy image to the
+      # GitHub Release (AppRun.wrapped is still 770).
+      - name: Stage raw AppImage
+        run: |
+          set -euo pipefail
+          mkdir -p dist-appimage-raw
+          found=0
+          for bundle in target/release/bundle/appimage \
+            apps/desktop/src-tauri/target/release/bundle/appimage; do
+            [ -d "$bundle" ] || continue
+            shopt -s nullglob
+            for f in "$bundle"/*.AppImage; do
+              cp -v "$f" dist-appimage-raw/
+              found=1
+            done
+          done
+          test "$found" = 1
+          ls -la dist-appimage-raw
+
+      - name: Upload raw AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage-raw
+          path: dist-appimage-raw/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Collect .deb / .rpm
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for bundle in target/release/bundle apps/desktop/src-tauri/target/release/bundle; do
+            [ -d "$bundle" ] || continue
+            find "$bundle" -type f \( -name '*.deb' -o -name '*.rpm' \) \
+              -exec cp -v {} dist/ \;
+          done
+          echo "Collected:"
+          ls -la dist
+          test -n "$(ls -A dist)"
+
+      - name: Attach Linux installers to draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.gate.outputs.tag }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(dist/*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "dist/ is empty"
+            exit 1
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber
+
+  package:
     name: Package ${{ matrix.platform }}
     needs: gate
-    # Signing later: add `environment: release` here and set Apple/Windows secrets
-    # on that environment. Do not enable it until then — it can queue the job.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Ubuntu 22.04 = glibc 2.35. ubuntu-latest (24.04) links glibc 2.39 and
-          # AppImageHub flags it as not portable. Tauri v2 needs WebKitGTK 4.1,
-          # which 22.04 still ships.
-          - os: ubuntu-22.04
-            platform: linux
           - os: windows-latest
             platform: windows
           - os: macos-latest
@@ -136,97 +231,24 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.tag }}
 
-      - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
-        run: |
-          umask 022
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libssl-dev \
-            zsync
-
-      - name: Install mold
-        if: matrix.platform == 'linux'
-        uses: rui314/setup-mold@v1
-
-      # Prefer Corepack over pnpm/action-setup: standalone mode crashes while
-      # switching versions (integrity undefined), and the npm self-installer
-      # breaks on Node 24 runners.
-      - name: Setup Node
-        uses: actions/setup-node@v6
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
         with:
-          node-version: 24
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Install pnpm from packageManager
-        working-directory: apps/desktop
-        run: corepack install
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        working-directory: apps/desktop
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('apps/desktop/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cargo registry cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ". -> target"
           shared-key: release-${{ matrix.platform }}
-          # Release objects are multi-GB; caching them is slower than a compile
-          # on an infrequent tag. Registry/git cache still helps crate downloads.
-          cache-targets: false
+          cache-targets: "false"
 
-      - name: Install frontend dependencies
-        working-directory: apps/desktop
-        run: pnpm install --frozen-lockfile
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
 
       # Unsigned until Apple/Windows secrets exist. Then:
       #   Apple: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
       #          APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
       #   Windows: see https://v2.tauri.app/distribute/sign/windows/
       #   Tauri updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-      # Linux stays unsigned (optional later: GPG).
       - name: Build Tauri app (unsigned)
-        if: matrix.platform == 'linux'
-        working-directory: apps/desktop
-        run: |
-          umask 022
-          pnpm tauri build
-
-      - name: Build Tauri app (unsigned)
-        if: matrix.platform != 'linux'
         working-directory: apps/desktop
         run: pnpm tauri build
 
-      # AppImageHub / firejail --appimage runs as a user that is not the squashfs
-      # owner. linuxdeploy ships AppRun.wrapped as 770 → Permission denied.
-      # Repack also embeds gh-releases-zsync and writes the sibling .zsync file.
-      - name: Make AppImage contents world-executable
-        if: matrix.platform == 'linux'
-        env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: bash apps/desktop/src-tauri/scripts/repack-appimage.sh
-
-      # Workspace member, so Cargo writes to repo-root target/. Fall back to
-      # src-tauri/target if Tauri ever isolates the crate.
       - name: Collect installers
         shell: bash
         run: |
@@ -234,15 +256,12 @@ jobs:
           mkdir -p dist
           found=0
           for bundle in target/release/bundle apps/desktop/src-tauri/target/release/bundle; do
-            if [ ! -d "$bundle" ]; then
-              continue
-            fi
-            found=1
+            [ -d "$bundle" ] || continue
             find "$bundle" -type f \( \
-              -name '*.AppImage' -o -name '*.AppImage.zsync' -o -name '*.deb' \
-              -o -name '*.rpm' -o -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
+              -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
               -o -name '*.app.tar.gz' -o -name '*.sig' \
             \) -exec cp -v {} dist/ \;
+            found=1
           done
           if [ "$found" -eq 0 ]; then
             echo "No bundle directory. Listing target/release:"
@@ -268,12 +287,73 @@ jobs:
           fi
           gh release upload "$TAG" "${files[@]}" --clobber
 
+  # Starts when package-linux finishes — does not wait for Windows/macOS.
+  # Re-run failed jobs retries only this job (no Rust rebuild).
+  # Checkout github.sha so workflow_dispatch from main uses the current script
+  # while still compiling the tagged commit in package-linux.
+  linux-repack:
+    name: Repack Linux AppImage
+    needs: [gate, package-linux]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout packaging script
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Install zsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zsync
+
+      - name: Download raw Linux AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage-raw
+          path: raw-appimage
+
+      - name: Place AppImage for repack
+        run: |
+          set -euo pipefail
+          mkdir -p target/release/bundle/appimage
+          found=0
+          while IFS= read -r -d '' f; do
+            cp -v "$f" target/release/bundle/appimage/
+            found=1
+          done < <(find raw-appimage -type f -name '*.AppImage' -print0)
+          test "$found" = 1
+          ls -la target/release/bundle/appimage
+
+      - name: Make AppImage contents world-executable
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash apps/desktop/src-tauri/scripts/repack-appimage.sh
+
+      - name: Attach AppImage and zsync to draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.gate.outputs.tag }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(
+            target/release/bundle/appimage/*.AppImage
+            target/release/bundle/appimage/*.AppImage.zsync
+          )
+          if [ ${#files[@]} -lt 2 ]; then
+            echo "expected AppImage and .zsync"
+            ls -la target/release/bundle/appimage || true
+            exit 1
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber
+
   publish:
     name: Publish GitHub Release
-    needs: [gate, build]
+    needs: [gate, package-linux, package, linux-repack]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      # Stay draft until every OS job succeeded. Uploads already landed on the draft.
       - name: Confirm Linux, Windows, and macOS assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
