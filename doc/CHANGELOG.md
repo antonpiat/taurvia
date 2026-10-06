@@ -10,6 +10,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Fixed
 
 - Linux Release: write the AppImage `.zsync` with system `zsyncmake` next to the published file (do not trust `appimagetool` continuous). Linux package is a separate job from Windows/macOS so AppImage repack starts as soon as Linux finishes and is retryable without a Rust rebuild. `workflow_dispatch` from `main` can package an older tag with the current packaging jobs (`package.yml` is a reusable workflow loaded from the caller ref; it checks out the tag once to compile).
+- CI/Release runners are pinned (`ubuntu-24.04`, `windows-2022`, `macos-26`) so `*-latest` image migrations do not move builds. Artifact actions use Node 24 (`upload-artifact@v7`, `download-artifact@v8`).
+- Release Tauri builds use sccache (2GB per OS, keyed on `Cargo.lock`) so a second package of the same lockfile does not recompile Solana/alloy/Tauri from scratch. `target/` is still not cached (three OS trees exceed the 10GB Actions cache).
 
 ---
 
