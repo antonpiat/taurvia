@@ -13,6 +13,7 @@ pub fn curated_tokens(network_id: &str) -> &'static [CuratedToken] {
     match network_id {
         models::NETWORK_ETHEREUM_MAINNET => ETHEREUM_MAINNET,
         models::NETWORK_BNB_MAINNET => BNB_MAINNET,
+        models::NETWORK_POLYGON_MAINNET => POLYGON_MAINNET,
         _ => &[],
     }
 }
@@ -89,6 +90,34 @@ const BNB_MAINNET: &[CuratedToken] = &[
     },
 ];
 
+const TW_WPOL: &str = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/assets/0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270/logo.png";
+const TW_POL_USDT: &str = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/assets/0xc2132D05D31c914a87C6611C10748AEb04B58e8F/logo.png";
+const TW_POL_USDC: &str = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/assets/0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359/logo.png";
+
+const POLYGON_MAINNET: &[CuratedToken] = &[
+    CuratedToken {
+        address: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+        symbol: "WPOL",
+        name: "Wrapped POL",
+        decimals: 18,
+        logo_uri: Some(TW_WPOL),
+    },
+    CuratedToken {
+        address: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+        symbol: "USDT",
+        name: "Tether USD",
+        decimals: 6,
+        logo_uri: Some(TW_POL_USDT),
+    },
+    CuratedToken {
+        address: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+        symbol: "USDC",
+        name: "USD Coin",
+        decimals: 6,
+        logo_uri: Some(TW_POL_USDC),
+    },
+];
+
 pub fn token_info(token: &CuratedToken) -> models::TokenInfo {
     models::TokenInfo {
         mint: token.address.to_string(),
@@ -160,5 +189,20 @@ mod tests {
         assert!(resolve_curated(models::NETWORK_BNB_MAINNET, "bnb").is_none());
         assert!(resolve_curated(models::NETWORK_BNB_MAINNET, "eth").is_none());
         assert!(resolve_curated(models::NETWORK_ETHEREUM_MAINNET, "ETH").is_none());
+    }
+
+    #[test]
+    fn polygon_mainnet_has_curated_majors() {
+        let tokens = curated_tokens(models::NETWORK_POLYGON_MAINNET);
+        assert!(tokens.iter().any(|t| t.symbol == "WPOL"));
+        assert!(tokens.iter().any(|t| t
+            .address
+            .eq_ignore_ascii_case("0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270")));
+        assert!(tokens.iter().any(|t| t.symbol == "USDT"));
+        assert!(tokens.iter().any(|t| t.symbol == "USDC"));
+        assert!(curated_tokens(models::NETWORK_POLYGON_AMOY).is_empty());
+        assert!(resolve_curated(models::NETWORK_POLYGON_MAINNET, "pol").is_none());
+        assert!(resolve_curated(models::NETWORK_POLYGON_MAINNET, "POL").is_none());
+        assert!(resolve_curated(models::NETWORK_POLYGON_MAINNET, "eth").is_none());
     }
 }

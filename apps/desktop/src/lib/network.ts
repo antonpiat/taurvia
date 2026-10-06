@@ -59,6 +59,7 @@ export function networkShortLabel(info: NetworkInfo | undefined, id?: unknown): 
 
 export function nativeAssetId(info: NetworkInfo | undefined): string {
   if (info?.id.startsWith("bnb-")) return "bnb";
+  if (info?.id.startsWith("polygon-")) return "pol";
   switch (info?.family) {
     case "evm":
       return "eth";
