@@ -1,0 +1,193 @@
+# Reusable packager. GitHub loads this file from the *caller* workflow's ref
+# (main on workflow_dispatch; the tag on a tag push), then this job checks out
+# `inputs.tag` to compile. That is the split Release needs: current packaging
+# jobs, tagged application source. Local `uses: ./` composites do not fit —
+# they resolve from GITHUB_WORKSPACE after checkout, which is the tag.
+name: Package
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Version tag to compile (vX.Y.Z)
+        required: true
+        type: string
+      os:
+        description: GitHub runner label
+        required: true
+        type: string
+      platform:
+        description: linux | windows | macos
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  build:
+    name: ${{ inputs.platform }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+
+      - name: Install Linux build dependencies
+        if: inputs.platform == 'linux'
+        run: |
+          umask 022
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Install mold
+        if: inputs.platform == 'linux'
+        uses: rui314/setup-mold@v1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo registry cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          shared-key: release-${{ inputs.platform }}
+          cache-targets: "false"
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm from packageManager
+        working-directory: apps/desktop
+        run: corepack install
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        working-directory: apps/desktop
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('apps/desktop/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: pnpm install --frozen-lockfile
+
+      # Unsigned until Apple/Windows secrets exist. Then:
+      #   Apple: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+      #          APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+      #   Windows: see https://v2.tauri.app/distribute/sign/windows/
+      #   Tauri updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+      - name: Build Tauri app (unsigned)
+        working-directory: apps/desktop
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          if [ "$PLATFORM" = "linux" ]; then
+            umask 022
+          fi
+          pnpm tauri build
+
+      - name: Stage raw AppImage
+        if: inputs.platform == 'linux'
+        run: |
+          set -euo pipefail
+          mkdir -p dist-appimage-raw
+          found=0
+          for bundle in target/release/bundle/appimage \
+            apps/desktop/src-tauri/target/release/bundle/appimage; do
+            [ -d "$bundle" ] || continue
+            shopt -s nullglob
+            for f in "$bundle"/*.AppImage; do
+              cp -v "$f" dist-appimage-raw/
+              found=1
+            done
+          done
+          test "$found" = 1
+          ls -la dist-appimage-raw
+
+      - name: Upload raw AppImage
+        if: inputs.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage-raw
+          path: dist-appimage-raw/*.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Collect installers
+        env:
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          found=0
+          for bundle in target/release/bundle apps/desktop/src-tauri/target/release/bundle; do
+            [ -d "$bundle" ] || continue
+            case "$PLATFORM" in
+              linux)
+                find "$bundle" -type f \( -name '*.deb' -o -name '*.rpm' \) \
+                  -exec cp -v {} dist/ \;
+                ;;
+              windows)
+                find "$bundle" -type f \( -name '*.msi' -o -name '*.exe' -o -name '*.sig' \) \
+                  -exec cp -v {} dist/ \;
+                ;;
+              macos)
+                find "$bundle" -type f \( -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*.sig' \) \
+                  -exec cp -v {} dist/ \;
+                ;;
+              *)
+                echo "unknown platform: $PLATFORM"
+                exit 1
+                ;;
+            esac
+            found=1
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No bundle directory. Listing target/release:"
+            find target/release -maxdepth 3 -type d || true
+            exit 1
+          fi
+          echo "Collected:"
+          ls -la dist
+          test -n "$(ls -A dist)"
+
+      - name: Attach installers to draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(dist/*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "dist/ is empty"
+            exit 1
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber

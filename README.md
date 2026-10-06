@@ -134,7 +134,7 @@ Output lands in `target/release/bundle/`.
 
 [CI](.github/workflows/ci.yml) runs `cargo test` and TypeScript checks on every pull request and every push to `main`. It does not package installers.
 
-Installers (Linux `.deb` / `.rpm` / `.AppImage`, Windows `.msi` / NSIS, macOS `.dmg`) are produced by [Release](.github/workflows/release.yml) only when you push a `vX.Y.Z` tag whose commit is on `main` and already has a green CI run. Assets land on the GitHub Release. These builds are not code-signed or notarized yet.
+Installers (Linux `.deb` / `.rpm` / `.AppImage`, Windows `.msi` / NSIS, macOS `.dmg`) are produced by [Release](.github/workflows/release.yml) when you push a `vX.Y.Z` tag whose commit is on `main` and already has a green CI run, or when you run that workflow from **main** (`workflow_dispatch`) and pass an existing tag. Packaging jobs come from [package.yml](.github/workflows/package.yml) on the workflow ref; they check out the tag to compile. Assets land on the GitHub Release. These builds are not code-signed or notarized yet.
 
 ### Test the Rust workspace
 
