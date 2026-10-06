@@ -9,7 +9,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Fixed
 
-- Linux Release: write the AppImage `.zsync` with system `zsyncmake` next to the published file (do not trust `appimagetool` continuous). Linux package is a separate job from Windows/macOS so AppImage repack starts as soon as Linux finishes and is retryable without a Rust rebuild. `workflow_dispatch` from `main` can package an older tag with the current script.
+- Linux Release: write the AppImage `.zsync` with system `zsyncmake` next to the published file (do not trust `appimagetool` continuous). Linux package is a separate job from Windows/macOS so AppImage repack starts as soon as Linux finishes and is retryable without a Rust rebuild. `workflow_dispatch` from `main` can package an older tag with the current packaging jobs (`package.yml` is a reusable workflow loaded from the caller ref; it checks out the tag once to compile).
 
 ---
 

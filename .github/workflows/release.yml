@@ -1,8 +1,10 @@
 name: Release
 
-# Package only an explicit version tag. Never runs because tauri.conf.json
-# changed on main. Rebuild a tag via workflow_dispatch from main (uses this
-# workflow file + packaging script; still compiles the tagged commit).
+# Orchestrator. The YAML you run is always this file from the selected ref
+# (tag push = that tag; workflow_dispatch from main = main). Packaging lives in
+# package.yml as workflow_call, so GitHub loads those jobs from the same ref
+# and they check out the *tag* once to compile. linux-repack checks out this
+# workflow commit only (sparse) and retries without a Rust rebuild.
 on:
   push:
     tags:
@@ -123,99 +125,16 @@ jobs:
   package-linux:
     name: Package linux
     needs: gate
-    runs-on: ubuntu-22.04
-    timeout-minutes: 90
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.gate.outputs.tag }}
-
-      - name: Install Linux build dependencies
-        run: |
-          umask 022
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            libssl-dev
-
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust
-        with:
-          shared-key: release-linux
-          cache-targets: "false"
-          mold: "true"
-
-      - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
-
-      - name: Build Tauri app (unsigned)
-        working-directory: apps/desktop
-        run: |
-          umask 022
-          pnpm tauri build
-
-      # Artifact for linux-repack. Do not attach this linuxdeploy image to the
-      # GitHub Release (AppRun.wrapped is still 770).
-      - name: Stage raw AppImage
-        run: |
-          set -euo pipefail
-          mkdir -p dist-appimage-raw
-          found=0
-          for bundle in target/release/bundle/appimage \
-            apps/desktop/src-tauri/target/release/bundle/appimage; do
-            [ -d "$bundle" ] || continue
-            shopt -s nullglob
-            for f in "$bundle"/*.AppImage; do
-              cp -v "$f" dist-appimage-raw/
-              found=1
-            done
-          done
-          test "$found" = 1
-          ls -la dist-appimage-raw
-
-      - name: Upload raw AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-appimage-raw
-          path: dist-appimage-raw/*.AppImage
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Collect .deb / .rpm
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          for bundle in target/release/bundle apps/desktop/src-tauri/target/release/bundle; do
-            [ -d "$bundle" ] || continue
-            find "$bundle" -type f \( -name '*.deb' -o -name '*.rpm' \) \
-              -exec cp -v {} dist/ \;
-          done
-          echo "Collected:"
-          ls -la dist
-          test -n "$(ls -A dist)"
-
-      - name: Attach Linux installers to draft
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.gate.outputs.tag }}
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          files=(dist/*)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "dist/ is empty"
-            exit 1
-          fi
-          gh release upload "$TAG" "${files[@]}" --clobber
+    uses: ./.github/workflows/package.yml
+    with:
+      tag: ${{ needs.gate.outputs.tag }}
+      os: ubuntu-22.04
+      platform: linux
+    secrets: inherit
 
   package:
     name: Package ${{ matrix.platform }}
     needs: gate
-    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -224,73 +143,15 @@ jobs:
             platform: windows
           - os: macos-latest
             platform: macos
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.gate.outputs.tag }}
-
-      - name: Setup Rust
-        uses: ./.github/actions/setup-rust
-        with:
-          shared-key: release-${{ matrix.platform }}
-          cache-targets: "false"
-
-      - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
-
-      # Unsigned until Apple/Windows secrets exist. Then:
-      #   Apple: APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
-      #          APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
-      #   Windows: see https://v2.tauri.app/distribute/sign/windows/
-      #   Tauri updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-      - name: Build Tauri app (unsigned)
-        working-directory: apps/desktop
-        run: pnpm tauri build
-
-      - name: Collect installers
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          found=0
-          for bundle in target/release/bundle apps/desktop/src-tauri/target/release/bundle; do
-            [ -d "$bundle" ] || continue
-            find "$bundle" -type f \( \
-              -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
-              -o -name '*.app.tar.gz' -o -name '*.sig' \
-            \) -exec cp -v {} dist/ \;
-            found=1
-          done
-          if [ "$found" -eq 0 ]; then
-            echo "No bundle directory. Listing target/release:"
-            find target/release -maxdepth 3 -type d || true
-            exit 1
-          fi
-          echo "Collected:"
-          ls -la dist
-          test -n "$(ls -A dist)"
-
-      - name: Attach ${{ matrix.platform }} installers to draft
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.gate.outputs.tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          files=(dist/*)
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "dist/ is empty"
-            exit 1
-          fi
-          gh release upload "$TAG" "${files[@]}" --clobber
+    uses: ./.github/workflows/package.yml
+    with:
+      tag: ${{ needs.gate.outputs.tag }}
+      os: ${{ matrix.os }}
+      platform: ${{ matrix.platform }}
+    secrets: inherit
 
   # Starts when package-linux finishes — does not wait for Windows/macOS.
   # Re-run failed jobs retries only this job (no Rust rebuild).
-  # Checkout github.sha so workflow_dispatch from main uses the current script
-  # while still compiling the tagged commit in package-linux.
   linux-repack:
     name: Repack Linux AppImage
     needs: [gate, package-linux]
@@ -301,6 +162,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            apps/desktop/src-tauri/scripts
 
       - name: Install zsync
         run: |
