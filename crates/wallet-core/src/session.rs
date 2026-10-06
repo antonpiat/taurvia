@@ -240,6 +240,9 @@ impl WalletService {
         let mut settings = settings;
         settings.network = normalize_network_id(&settings.network).to_string();
         if self.storage.exists() {
+            if prev.developer_mode != settings.developer_mode {
+                self.apply_developer_mode(settings.developer_mode)?;
+            }
             settings.network = normalize_network_id(&self.wallet_network()).to_string();
             settings.enabled_networks = self.enabled_network_ids();
         }
@@ -250,7 +253,8 @@ impl WalletService {
             || prev.rpc_urls != settings.rpc_urls
             || prev.jupiter_api_key != settings.jupiter_api_key
             || prev.zerox_api_key != settings.zerox_api_key
-            || prev.network != settings.network;
+            || prev.network != settings.network
+            || prev.developer_mode != settings.developer_mode;
         if connectivity_changed {
             configure_jupiter_api_key(runtime.jupiter_api_key.clone());
             let sol_rpc = solana_rpc_url(&settings, &runtime);
@@ -323,11 +327,11 @@ impl WalletService {
     pub fn set_enabled_networks(&self, networks: &[String]) -> Result<RuntimeConfig, WalletError> {
         let mut wallet = self.cached_or_disk().ok_or(WalletError::NotFound)?;
         let kind = wallet.import_kind;
-        let mut cleaned = Vec::new();
+        let mut requested: Vec<&'static str> = Vec::new();
         for id in networks {
             let id = normalize_network_id(id);
             let desc = require_network(id);
-            if !desc.enabled || desc.is_testnet {
+            if !desc.enabled {
                 continue;
             }
             if let Some(family) = kind.family() {
@@ -338,25 +342,57 @@ impl WalletService {
                     )));
                 }
             }
-            if !cleaned.iter().any(|existing: &String| existing == id) {
-                cleaned.push(id.to_string());
+            if !requested.iter().any(|existing| *existing == id) {
+                requested.push(id);
             }
         }
-        if cleaned.is_empty() {
+        let mut cleaned = Vec::new();
+        for id in &requested {
+            let desc = require_network(id);
+            if desc.is_testnet {
+                continue;
+            }
+            cleaned.push((*id).to_string());
+        }
+        for id in &requested {
+            let desc = require_network(id);
+            if !desc.is_testnet {
+                continue;
+            }
+            let main = models::paired_mainnet_id(desc);
+            if !cleaned.iter().any(|existing| existing == main) {
+                let main_desc = require_network(main);
+                if !main_desc.enabled {
+                    continue;
+                }
+                if let Some(family) = kind.family() {
+                    if main_desc.family != family {
+                        continue;
+                    }
+                }
+                cleaned.push(main.to_string());
+            }
+            cleaned.push((*id).to_string());
+        }
+        if !cleaned.iter().any(|id| !require_network(id).is_testnet) {
             return Err(WalletError::Operation(anyhow::anyhow!(
                 "keep at least one network enabled"
             )));
         }
         wallet.enabled_networks = cleaned.clone();
+        let developer = self.get_settings().developer_mode;
         let last = normalize_network_id(&wallet.network);
-        let last_desc = require_network(last);
-        let last_ok = cleaned.iter().any(|id| {
-            let d = require_network(id);
-            d.family == last_desc.family
-        });
-        if !last_ok {
-            wallet.network = cleaned[0].clone();
-        }
+        let last_main = models::paired_mainnet_id(require_network(last));
+        let pick = if cleaned.iter().any(|id| id == last_main) {
+            last_main.to_string()
+        } else {
+            cleaned
+                .iter()
+                .find(|id| !require_network(id).is_testnet)
+                .cloned()
+                .unwrap_or_else(|| cleaned[0].clone())
+        };
+        wallet.network = Self::network_for_mode(&pick, developer).to_string();
         self.persist_wallet(wallet)?;
         let mut settings = self.get_settings();
         settings.enabled_networks = cleaned;
@@ -374,8 +410,38 @@ impl WalletService {
         }
     }
 
+    fn network_for_mode(id: &str, developer: bool) -> &'static str {
+        let desc = require_network(id);
+        if developer {
+            models::paired_testnet_id(desc).unwrap_or(desc.id)
+        } else {
+            models::paired_mainnet_id(desc)
+        }
+    }
+
+    fn apply_developer_mode(&self, on: bool) -> Result<(), WalletError> {
+        let mut wallet = self.cached_or_disk().ok_or(WalletError::NotFound)?;
+        wallet.network = Self::network_for_mode(&wallet.network, on).to_string();
+        self.persist_wallet(wallet)
+    }
+
     pub fn change_network(&self, network: &str) -> Result<RuntimeConfig, WalletError> {
-        let id = normalize_network_id(network);
+        let requested = normalize_network_id(network);
+        let requested_desc = require_network(requested);
+        if !requested_desc.enabled {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "{} is not enabled yet",
+                requested_desc.name
+            )));
+        }
+        if !self.family_available(requested_desc.family) {
+            return Err(WalletError::Operation(anyhow::anyhow!(
+                "this wallet has no {} key",
+                family_key_label(requested_desc.family)
+            )));
+        }
+        let developer = self.get_settings().developer_mode;
+        let id = Self::network_for_mode(requested, developer);
         let desc = require_network(id);
         if !desc.enabled {
             return Err(WalletError::Operation(anyhow::anyhow!(
@@ -383,31 +449,17 @@ impl WalletService {
                 desc.name
             )));
         }
-        if !self.family_available(desc.family) {
-            return Err(WalletError::Operation(anyhow::anyhow!(
-                "this wallet has no {} key",
-                family_key_label(desc.family)
-            )));
-        }
         let enabled = self.enabled_network_ids();
-        let family_on = enabled
-            .iter()
-            .any(|eid| require_network(eid).family == desc.family)
-            || enabled.iter().any(|eid| normalize_network_id(eid) == id);
-        if !family_on && !desc.is_testnet {
+        let main = models::paired_mainnet_id(desc);
+        let activated = enabled.iter().any(|eid| {
+            let eid = normalize_network_id(eid);
+            eid == desc.id || eid == main || models::paired_mainnet_id(require_network(eid)) == main
+        });
+        if !activated {
             return Err(WalletError::Operation(anyhow::anyhow!(
                 "{} is not activated",
-                desc.name
+                require_network(main).name
             )));
-        }
-        if desc.is_testnet {
-            let main = models::paired_mainnet_id(desc);
-            if !enabled.iter().any(|eid| normalize_network_id(eid) == main) {
-                return Err(WalletError::Operation(anyhow::anyhow!(
-                    "activate {} before using the testnet",
-                    require_network(main).name
-                )));
-            }
         }
 
         let mut wallet = self.cached_or_disk().ok_or(WalletError::NotFound)?;
@@ -509,25 +561,26 @@ impl WalletService {
     }
 
     pub(crate) fn snapshot_descriptors(&self) -> Vec<&'static models::NetworkDescriptor> {
+        let developer = self.get_settings().developer_mode;
         let last = require_network(&self.wallet_network());
         let mut out = Vec::new();
         for id in self.enabled_network_ids() {
             let desc = require_network(&id);
-            if !desc.enabled || desc.is_testnet {
+            if !desc.enabled {
+                continue;
+            }
+            let snap = require_network(Self::network_for_mode(desc.id, developer));
+            if !snap.enabled {
                 continue;
             }
             if !out
                 .iter()
-                .any(|d: &&models::NetworkDescriptor| d.id == desc.id)
+                .any(|d: &&models::NetworkDescriptor| d.id == snap.id)
             {
-                out.push(desc);
+                out.push(snap);
             }
         }
-        if last.enabled
-            && last.is_testnet
-            && out.iter().any(|d| d.id == models::paired_mainnet_id(last))
-            && !out.iter().any(|d| d.id == last.id)
-        {
+        if last.enabled && !out.iter().any(|d| d.id == last.id) {
             out.push(last);
         }
         if out.is_empty() {

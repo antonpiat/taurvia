@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { NetworkPicker } from "@/components/NetworkPicker";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/misc";
@@ -9,24 +10,47 @@ import { ActivityItem, ApiError, walletApi } from "@/lib/tauri";
 import { shortenAddress } from "@/lib/utils";
 
 export function ActivityPage() {
-  const { explorer, network, networkInfo } = useWallet();
+  const {
+    explorer,
+    network,
+    networkInfo,
+    networks,
+    enabledNetworks,
+    changeNetwork,
+    networkReady,
+  } = useWallet();
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!networkReady) {
+      setLoading(true);
+      setItems([]);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     void (async () => {
       try {
         const activity = await walletApi.getActivity(20);
+        if (cancelled) return;
         setItems(activity);
       } catch (err) {
+        if (cancelled) return;
         const apiError = err as ApiError;
         setError(apiError.message ?? "Failed to load activity");
+        setItems([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [network]);
+    return () => {
+      cancelled = true;
+    };
+  }, [network, networkReady]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -43,6 +67,12 @@ export function ActivityPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <NetworkPicker
+            networks={networks}
+            activatedIds={enabledNetworks}
+            selected={network}
+            onSelect={(id) => void changeNetwork(id)}
+          />
           {loading && <p className="text-sm text-muted-foreground">Loading activity...</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
           {!loading && !error && items.length === 0 && (

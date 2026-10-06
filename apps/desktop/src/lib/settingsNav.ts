@@ -4,6 +4,7 @@ export type SettingsSectionId =
   | "security"
   | "transactions"
   | "network"
+  | "developer"
   | "advanced"
   | "danger";
 
@@ -17,6 +18,7 @@ export const SETTINGS_SECTIONS: Array<{
   { id: "security", label: "Security", hint: "Password & backup" },
   { id: "transactions", label: "Transactions", hint: "Slippage & explorer" },
   { id: "network", label: "Network", hint: "Network & RPC" },
+  { id: "developer", label: "Developer", hint: "Testnet mode" },
   { id: "advanced", label: "Advanced", hint: "Overrides" },
   { id: "danger", label: "Danger zone", hint: "Remove wallet" },
 ];

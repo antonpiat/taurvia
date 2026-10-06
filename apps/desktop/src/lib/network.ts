@@ -23,30 +23,73 @@ export function findNetwork(
   return networks.find((n) => n.id === normalized);
 }
 
-/** Last-used picker: activated mainnets plus testnets of those paired mainnets. */
+/** Paired mainnet id for a testnet row (solana-devnet → solana-mainnet). */
 export function pairedMainnetId(info: NetworkInfo): string {
   if (!info.is_testnet) return info.id;
   const prefix = info.id.split("-")[0];
   return `${prefix}-mainnet`;
 }
 
+export function pairedTestnet(
+  networks: NetworkInfo[],
+  mainnet: NetworkInfo,
+): NetworkInfo | undefined {
+  if (mainnet.is_testnet) return mainnet;
+  return networks.find(
+    (n) => n.enabled && n.is_testnet && pairedMainnetId(n) === mainnet.id,
+  );
+}
+
+/** Stable UI order: SOL, BTC, ETH, BNB, POL, SUI, then anything else. */
+const PICKER_FAMILY_ORDER = ["solana", "bitcoin", "ethereum", "bnb", "polygon", "sui"];
+
+export function sortNetworkPickerOptions(options: NetworkInfo[]): NetworkInfo[] {
+  const rank = (id: string) => {
+    const prefix = id.split("-")[0] ?? id;
+    const i = PICKER_FAMILY_ORDER.indexOf(prefix);
+    return i === -1 ? PICKER_FAMILY_ORDER.length : i;
+  };
+  return [...options].sort((a, b) => {
+    const d = rank(a.id) - rank(b.id);
+    if (d !== 0) return d;
+    return Number(a.is_testnet) - Number(b.is_testnet);
+  });
+}
+
 export function lastUsedNetworkOptions(
   networks: NetworkInfo[],
   activatedIds: string[],
+  selected?: string,
+  developerMode = false,
 ): NetworkInfo[] {
-  const activated = new Set(activatedIds);
-  return networks.filter(
-    (n) =>
-      n.enabled &&
-      (activated.has(n.id) || (n.is_testnet && activated.has(pairedMainnetId(n)))),
+  const activated = new Set(activatedIds.map((id) => normalizeNetworkId(id)));
+  const mains = sortNetworkPickerOptions(
+    networks.filter((n) => n.enabled && !n.is_testnet && activated.has(n.id)),
   );
+  const options = developerMode
+    ? mains.map((main) => pairedTestnet(networks, main) ?? main)
+    : mains;
+  const selectedInfo = findNetwork(networks, selected);
+  if (
+    selectedInfo?.enabled &&
+    selectedInfo.is_testnet === developerMode &&
+    !options.some((n) => n.id === selectedInfo.id)
+  ) {
+    return sortNetworkPickerOptions([...options, selectedInfo]);
+  }
+  return options;
 }
 
 function canSwap(info: NetworkInfo | undefined): boolean {
   return Boolean(info?.features.swap && !info.is_testnet);
 }
 
-export function canSwapAny(enabledIds: string[], networks: NetworkInfo[]): boolean {
+export function canSwapAny(
+  enabledIds: string[],
+  networks: NetworkInfo[],
+  developerMode = false,
+): boolean {
+  if (developerMode) return false;
   return enabledIds.some((id) => canSwap(networks.find((n) => n.id === id)));
 }
 
