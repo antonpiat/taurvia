@@ -342,7 +342,7 @@ impl WalletService {
                     )));
                 }
             }
-            if !requested.iter().any(|existing| *existing == id) {
+            if !requested.contains(&id) {
                 requested.push(id);
             }
         }
