@@ -18,8 +18,8 @@ futures.workspace = true
 bech32 = "0.9.1"
 blake2 = "0.10.6"
 ed25519-dalek = { version = "2.2.0", features = ["std"] }
-hmac = "0.12.1"
-sha2 = "0.10.9"
+hmac = "0.13.0"
+sha2.workspace = true
 
 [dev-dependencies]
 taurvia-hd = { path = "../taurvia-hd" }
