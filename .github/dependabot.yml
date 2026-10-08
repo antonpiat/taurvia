@@ -1,14 +1,12 @@
-# Weekly PRs for Cargo, pnpm, and GitHub Actions.
-# Patch/minor updates are grouped so Solana/Alloy and npm churn does not flood CI.
+# Actions: weekly (small PRs, workflows matter).
+# Cargo/npm: monthly, patch/minor grouped — Solana/Alloy weekly would flood CI.
 # Major bumps still open as individual PRs.
 version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
+      interval: monthly
     groups:
       cargo:
         update-types:
@@ -18,9 +16,7 @@ updates:
   - package-ecosystem: npm
     directory: /apps/desktop
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
+      interval: monthly
     groups:
       npm:
         update-types:
@@ -31,8 +27,6 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
     groups:
       github-actions:
         patterns:
