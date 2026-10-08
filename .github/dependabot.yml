@@ -1,0 +1,33 @@
+# Actions: weekly (small PRs, workflows matter).
+# Cargo/npm: monthly, patch/minor grouped — Solana/Alloy weekly would flood CI.
+# Major bumps still open as individual PRs.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      cargo:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /apps/desktop
+    schedule:
+      interval: monthly
+    groups:
+      npm:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
