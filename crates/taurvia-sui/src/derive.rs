@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail, Result};
 use bech32::{FromBase32, ToBase32, Variant};
 use blake2::{digest::consts::U32, Blake2b, Digest};
 use ed25519_dalek::{Signer as _, SigningKey, VerifyingKey};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha512;
 use zeroize::Zeroizing;
 
