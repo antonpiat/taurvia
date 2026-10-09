@@ -138,11 +138,15 @@ const NETWORK_PREFIX_BADGE: Record<string, string> = {
   solana: solLogo,
 };
 
+/** Network brand logo (Base, BNB, Polygon…) — not the native coin, which is ETH on Base. */
+export function networkLogoSrc(networkId: string): string | null {
+  const prefix = networkId.split("-")[0];
+  return (prefix && NETWORK_PREFIX_BADGE[prefix]) || null;
+}
+
 export function chainBadgeSrc(chain: TokenChain, networkId?: string): string {
-  if (networkId) {
-    const prefix = networkId.split("-")[0];
-    if (prefix && NETWORK_PREFIX_BADGE[prefix]) return NETWORK_PREFIX_BADGE[prefix];
-  }
+  const network = networkId ? networkLogoSrc(networkId) : null;
+  if (network) return network;
   if (chain === "evm") return ethLogo;
   if (chain === "bitcoin") return btcLogo;
   if (chain === "sui") return suiLogo;

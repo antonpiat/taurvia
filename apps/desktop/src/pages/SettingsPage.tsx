@@ -29,7 +29,7 @@ import {
 import { DEFAULT_AUTO_LOCK_MINUTES, normalizeAutoLockMinutes } from "@/lib/autoLock";
 import { explorerLabel, normalizeExplorer } from "@/lib/explorer";
 import { networkShortLabel, normalizeNetworkId, sortNetworkPickerOptions } from "@/lib/network";
-import { TokenIcon } from "@/components/TokenIcon";
+import { NetworkIcon, TokenIcon } from "@/components/TokenIcon";
 import { isPasswordStrong, passwordStrengthError } from "@/lib/password";
 import {
   DEFAULT_SETTINGS_SECTION,
@@ -766,12 +766,7 @@ export function SettingsPage() {
                           });
                         }}
                       />
-                      <TokenIcon
-                        symbol={info.native_symbol}
-                        mint={info.native_symbol.toLowerCase()}
-                        networkId={info.id}
-                        size={20}
-                      />
+                      <NetworkIcon networkId={info.id} name={info.name} size={20} />
                       <span>
                         {info.name}
                         {lockedOut ? " (this key)" : ""}

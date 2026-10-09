@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { chainBadgeSrc, localLogoForAsset, type TokenChain } from "@/lib/tokenCatalog";
+import {
+  chainBadgeSrc,
+  localLogoForAsset,
+  networkLogoSrc,
+  type TokenChain,
+} from "@/lib/tokenCatalog";
 
 function initials(symbol: string): string {
   const t = symbol.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
@@ -69,5 +74,26 @@ export function TokenIcon({
         />
       )}
     </span>
+  );
+}
+
+export function NetworkIcon({
+  networkId,
+  name,
+  size = 22,
+  className,
+}: {
+  networkId: string;
+  name: string;
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <TokenIcon
+      symbol={name}
+      logoUri={networkLogoSrc(networkId)}
+      size={size}
+      className={className}
+    />
   );
 }
