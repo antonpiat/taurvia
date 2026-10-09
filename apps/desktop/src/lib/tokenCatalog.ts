@@ -12,6 +12,7 @@ import btcLogo from "@/assets/tokens/btc.svg";
 import suiLogo from "@/assets/tokens/sui.svg";
 import bnbLogo from "@/assets/tokens/bnb.svg";
 import polLogo from "@/assets/tokens/pol.svg";
+import baseLogo from "@/assets/tokens/base.svg";
 
 export const WRAPPED_SOL = "So11111111111111111111111111111111111111112";
 export const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -131,7 +132,7 @@ const NETWORK_PREFIX_BADGE: Record<string, string> = {
   bnb: bnbLogo,
   polygon: polLogo,
   ethereum: ethLogo,
-  base: ethLogo,
+  base: baseLogo,
   bitcoin: btcLogo,
   sui: suiLogo,
   solana: solLogo,

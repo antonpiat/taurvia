@@ -40,8 +40,8 @@ export function pairedTestnet(
   );
 }
 
-/** Stable UI order: SOL, BTC, ETH, BNB, POL, SUI, then anything else. */
-const PICKER_FAMILY_ORDER = ["solana", "bitcoin", "ethereum", "bnb", "polygon", "sui"];
+/** Stable UI order: SOL, BTC, ETH, Base, BNB, POL, SUI, then anything else. */
+const PICKER_FAMILY_ORDER = ["solana", "bitcoin", "ethereum", "base", "bnb", "polygon", "sui"];
 
 export function sortNetworkPickerOptions(options: NetworkInfo[]): NetworkInfo[] {
   const rank = (id: string) => {

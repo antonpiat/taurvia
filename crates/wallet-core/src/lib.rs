@@ -151,6 +151,7 @@ mod tests {
         assert!(enabled.contains(&"ethereum-mainnet".to_string()));
         assert!(enabled.contains(&"bnb-mainnet".to_string()));
         assert!(enabled.contains(&"polygon-mainnet".to_string()));
+        assert!(enabled.contains(&"base-mainnet".to_string()));
         assert!(!enabled.contains(&"sui-mainnet".to_string()));
         let snap = service.get_snapshot().await.unwrap();
         assert_eq!(snap.account_name, "Account 1");
@@ -340,7 +341,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn snapshot_includes_ethereum_bnb_and_polygon() {
+    async fn snapshot_includes_ethereum_bnb_polygon_and_base() {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
         let mnemonic = service.generate_mnemonic().unwrap();
@@ -353,6 +354,7 @@ mod tests {
         assert!(ids.contains(&"ethereum-mainnet"), "{ids:?}");
         assert!(ids.contains(&"bnb-mainnet"), "{ids:?}");
         assert!(ids.contains(&"polygon-mainnet"), "{ids:?}");
+        assert!(ids.contains(&"base-mainnet"), "{ids:?}");
     }
 
     #[tokio::test]
@@ -380,9 +382,14 @@ mod tests {
             .enabled_network_ids()
             .iter()
             .any(|id| id == "polygon-mainnet"));
+        assert!(!service
+            .enabled_network_ids()
+            .iter()
+            .any(|id| id == "base-mainnet"));
         let snap = service.get_snapshot().await.unwrap();
         assert!(!snap.chains.iter().any(|c| c.network == "bnb-mainnet"));
         assert!(!snap.chains.iter().any(|c| c.network == "polygon-mainnet"));
+        assert!(!snap.chains.iter().any(|c| c.network == "base-mainnet"));
     }
 
     #[tokio::test]
@@ -446,6 +453,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn base_sepolia_requires_base_mainnet() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = test_service(dir.path());
+        let mnemonic = service.generate_mnemonic().unwrap();
+        service
+            .create_wallet(&mnemonic, "Password123!", "Account 1")
+            .unwrap();
+        service.unlock("Password123!").unwrap();
+        service
+            .set_enabled_networks(&["ethereum-mainnet".into()])
+            .unwrap();
+        let err = service.change_network("base-sepolia").unwrap_err();
+        assert!(
+            err.to_string().to_lowercase().contains("base")
+                || err.to_string().to_lowercase().contains("activate"),
+            "{err}"
+        );
+        service
+            .set_enabled_networks(&["ethereum-mainnet".into(), "base-mainnet".into()])
+            .unwrap();
+        service.change_network("base-sepolia").unwrap();
+        assert_eq!(service.wallet_network(), "base-mainnet");
+        let mut on = service.get_settings();
+        on.developer_mode = true;
+        service.update_settings(on).unwrap();
+        service.change_network("base-sepolia").unwrap();
+        assert_eq!(service.wallet_network(), "base-sepolia");
+    }
+
+    #[tokio::test]
     async fn developer_mode_switches_every_activated_chain_to_testnet() {
         let dir = tempfile::tempdir().unwrap();
         let service = test_service(dir.path());
@@ -459,6 +496,7 @@ mod tests {
                 "solana-mainnet".into(),
                 "ethereum-mainnet".into(),
                 "bitcoin-mainnet".into(),
+                "base-mainnet".into(),
             ])
             .unwrap();
         let mut on = service.get_settings();
@@ -472,7 +510,9 @@ mod tests {
         assert!(snap.chains.iter().any(|c| c.network == "solana-devnet"));
         assert!(snap.chains.iter().any(|c| c.network == "ethereum-sepolia"));
         assert!(snap.chains.iter().any(|c| c.network == "bitcoin-testnet"));
+        assert!(snap.chains.iter().any(|c| c.network == "base-sepolia"));
         assert!(!snap.chains.iter().any(|c| c.network == "solana-mainnet"));
+        assert!(!snap.chains.iter().any(|c| c.network == "base-mainnet"));
         let mut off = service.get_settings();
         off.developer_mode = false;
         service.update_settings(off).unwrap();

@@ -14,6 +14,7 @@ pub fn curated_tokens(network_id: &str) -> &'static [CuratedToken] {
         models::NETWORK_ETHEREUM_MAINNET => ETHEREUM_MAINNET,
         models::NETWORK_BNB_MAINNET => BNB_MAINNET,
         models::NETWORK_POLYGON_MAINNET => POLYGON_MAINNET,
+        models::NETWORK_BASE_MAINNET => BASE_MAINNET,
         _ => &[],
     }
 }
@@ -118,6 +119,34 @@ const POLYGON_MAINNET: &[CuratedToken] = &[
     },
 ];
 
+const TW_BASE_WETH: &str = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/assets/0x4200000000000000000000000000000000000006/logo.png";
+const TW_BASE_USDC: &str = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/assets/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913/logo.png";
+const TW_BASE_DAI: &str = "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/assets/0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb/logo.png";
+
+const BASE_MAINNET: &[CuratedToken] = &[
+    CuratedToken {
+        address: "0x4200000000000000000000000000000000000006",
+        symbol: "WETH",
+        name: "Wrapped Ether",
+        decimals: 18,
+        logo_uri: Some(TW_BASE_WETH),
+    },
+    CuratedToken {
+        address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        symbol: "USDC",
+        name: "USD Coin",
+        decimals: 6,
+        logo_uri: Some(TW_BASE_USDC),
+    },
+    CuratedToken {
+        address: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+        symbol: "DAI",
+        name: "Dai Stablecoin",
+        decimals: 18,
+        logo_uri: Some(TW_BASE_DAI),
+    },
+];
+
 pub fn token_info(token: &CuratedToken) -> models::TokenInfo {
     models::TokenInfo {
         mint: token.address.to_string(),
@@ -204,5 +233,21 @@ mod tests {
         assert!(resolve_curated(models::NETWORK_POLYGON_MAINNET, "pol").is_none());
         assert!(resolve_curated(models::NETWORK_POLYGON_MAINNET, "POL").is_none());
         assert!(resolve_curated(models::NETWORK_POLYGON_MAINNET, "eth").is_none());
+    }
+
+    #[test]
+    fn base_mainnet_has_curated_majors() {
+        let tokens = curated_tokens(models::NETWORK_BASE_MAINNET);
+        assert!(tokens.iter().any(|t| t.symbol == "WETH"));
+        let usdc = tokens.iter().find(|t| t.symbol == "USDC").expect("usdc");
+        assert_eq!(usdc.decimals, 6);
+        assert!(tokens.iter().any(|t| t.symbol == "DAI"));
+        assert!(curated_tokens(models::NETWORK_BASE_SEPOLIA).is_empty());
+        assert!(resolve_curated(models::NETWORK_BASE_MAINNET, "eth").is_none());
+        assert!(resolve_curated(
+            models::NETWORK_BASE_MAINNET,
+            "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        )
+        .is_some());
     }
 }

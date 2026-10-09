@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     "ethereum-mainnet",
     "bnb-mainnet",
     "polygon-mainnet",
+    "base-mainnet",
   ],
   developer_mode: false,
   zerox_api_key: null,

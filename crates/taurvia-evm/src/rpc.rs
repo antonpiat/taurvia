@@ -47,6 +47,7 @@ impl EvmRpc {
         match self.descriptor.id {
             models::NETWORK_BNB_MAINNET | models::NETWORK_BNB_TESTNET => "binance-smart-chain",
             models::NETWORK_POLYGON_MAINNET | models::NETWORK_POLYGON_AMOY => "polygon-pos",
+            models::NETWORK_BASE_MAINNET | models::NETWORK_BASE_SEPOLIA => "base",
             _ => "ethereum",
         }
     }
@@ -282,5 +283,20 @@ mod tests {
         let bnb_rpc = EvmRpc::new(bnb.default_rpc, bnb);
         assert!(bnb_rpc.is_native_asset("bnb"));
         assert!(!bnb_rpc.is_native_asset("eth"));
+    }
+
+    #[test]
+    fn base_uses_base_coingecko_platform_and_eth_native() {
+        let desc = *models::require_network(models::NETWORK_BASE_MAINNET);
+        let rpc = EvmRpc::new(desc.default_rpc, desc);
+        assert_eq!(rpc.coingecko_platform(), "base");
+        assert!(rpc.is_native_asset("eth"));
+        assert!(rpc.is_native_asset("ETH"));
+        assert_eq!(rpc.descriptor.id, models::NETWORK_BASE_MAINNET);
+        let sepolia = *models::require_network(models::NETWORK_BASE_SEPOLIA);
+        assert_eq!(
+            EvmRpc::new(sepolia.default_rpc, sepolia).coingecko_platform(),
+            "base"
+        );
     }
 }
