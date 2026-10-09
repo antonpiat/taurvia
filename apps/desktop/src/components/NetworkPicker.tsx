@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import type { NetworkInfo } from "@/bindings";
-import { TokenIcon } from "@/components/TokenIcon";
+import { NetworkIcon } from "@/components/TokenIcon";
 import { lastUsedNetworkOptions } from "@/lib/network";
 import { cn } from "@/lib/utils";
 import { useWallet } from "@/context/WalletContext";
@@ -27,12 +27,7 @@ function NetworkRow({
         selected ? "bg-primary/15" : "hover:bg-accent/50",
       )}
     >
-      <TokenIcon
-        symbol={info.native_symbol}
-        mint={info.native_symbol.toLowerCase()}
-        networkId={info.id}
-        size={22}
-      />
+      <NetworkIcon networkId={info.id} name={info.name} size={22} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{info.name}</span>
         <span className="block truncate text-[11px] text-muted-foreground">
@@ -211,12 +206,7 @@ export function NetworkPicker({
           open && "ring-2 ring-ring",
         )}
       >
-        <TokenIcon
-          symbol={current.native_symbol}
-          mint={current.native_symbol.toLowerCase()}
-          networkId={current.id}
-          size={compact ? 18 : 24}
-        />
+        <NetworkIcon networkId={current.id} name={current.name} size={compact ? 18 : 24} />
         <span className="min-w-0 flex-1">
           <span className={cn("block truncate font-medium", compact ? "text-xs" : "text-sm")}>
             {current.name}

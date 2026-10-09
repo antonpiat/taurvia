@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/misc";
 import { PageHeader } from "@/components/PageHeader";
-import { TokenIcon } from "@/components/TokenIcon";
+import { NetworkIcon, TokenIcon } from "@/components/TokenIcon";
 import { useWallet } from "@/context/WalletContext";
 import { findNetwork } from "@/lib/network";
 import { networkFamilyToChain, withLocalLogo } from "@/lib/tokenCatalog";
@@ -96,11 +96,9 @@ export function DashboardPage() {
               <Card key={chain.network}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <TokenIcon
-                      symbol={chain.native_symbol}
-                      mint={chain.native_symbol.toLowerCase()}
-                      chain={tokenChain}
+                    <NetworkIcon
                       networkId={chain.network}
+                      name={info?.name ?? chain.native_symbol}
                       size={28}
                     />
                     {info?.name ?? chain.native_symbol}
