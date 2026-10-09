@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Base Mainnet + Base Sepolia: same EVM key as Ethereum (`m/44'/60'/0'/0/0`), PublicNode RPC, BaseScan, native ETH, curated WETH/USDC/DAI, Base badge in network pickers. New mnemonic wallets also activate Base. Existing wallets keep their saved list. Developer mode maps Base to Base Sepolia. Swap stays off (`features.swap = false`).
+
 ### Fixed
 
 - Linux Release: write the AppImage `.zsync` with system `zsyncmake` next to the published file (do not trust `appimagetool` continuous). Linux package is a separate job from Windows/macOS so AppImage repack starts as soon as Linux finishes and is retryable without a Rust rebuild. `workflow_dispatch` from `main` can package an older tag with the current packaging jobs (`package.yml` is a reusable workflow loaded from the caller ref; it checks out the tag once to compile).

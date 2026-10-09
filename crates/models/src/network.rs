@@ -13,6 +13,8 @@ pub const NETWORK_BNB_MAINNET: &str = "bnb-mainnet";
 pub const NETWORK_BNB_TESTNET: &str = "bnb-testnet";
 pub const NETWORK_POLYGON_MAINNET: &str = "polygon-mainnet";
 pub const NETWORK_POLYGON_AMOY: &str = "polygon-amoy";
+pub const NETWORK_BASE_MAINNET: &str = "base-mainnet";
+pub const NETWORK_BASE_SEPOLIA: &str = "base-sepolia";
 pub const DEFAULT_NETWORK_ID: &str = NETWORK_SOLANA_MAINNET;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
@@ -109,8 +111,9 @@ const TOKENS_NO_SWAP: ChainFeatures = ChainFeatures {
 const SUI_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
 const BNB_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
 const POLYGON_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
+const BASE_FEATURES: ChainFeatures = TOKENS_NO_SWAP;
 
-/// Static network table. **EVM L2s (Polygon, Base) are extra rows** with `ChainFamily::Evm`.
+/// Static network table. **Extra EVM rows (BNB, Polygon, Base)** use `ChainFamily::Evm`.
 /// A new VM needs a family crate + `ChainFamily` variant — not a descriptor-only change.
 pub static NETWORKS: &[NetworkDescriptor] = &[
     NetworkDescriptor {
@@ -264,7 +267,7 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         coingecko_id: Some("matic-network"),
     },
     NetworkDescriptor {
-        id: "base-mainnet",
+        id: NETWORK_BASE_MAINNET,
         family: ChainFamily::Evm,
         name: "Base",
         native_symbol: "ETH",
@@ -274,23 +277,23 @@ pub static NETWORKS: &[NetworkDescriptor] = &[
         explorer_tx: "https://basescan.org/tx/{txid}",
         explorer_address: "https://basescan.org/address/{address}",
         explorer_api: Some("https://api.basescan.org/api"),
-        features: EVM_FEATURES,
-        enabled: false,
+        features: BASE_FEATURES,
+        enabled: true,
         coingecko_id: Some("ethereum"),
     },
     NetworkDescriptor {
-        id: "base-sepolia",
+        id: NETWORK_BASE_SEPOLIA,
         family: ChainFamily::Evm,
         name: "Base Sepolia",
         native_symbol: "ETH",
         is_testnet: true,
         eip155_chain_id: Some(84532),
-        default_rpc: "https://sepolia.base.org",
+        default_rpc: "https://base-sepolia-rpc.publicnode.com",
         explorer_tx: "https://sepolia.basescan.org/tx/{txid}",
         explorer_address: "https://sepolia.basescan.org/address/{address}",
         explorer_api: Some("https://api-sepolia.basescan.org/api"),
-        features: EVM_FEATURES,
-        enabled: false,
+        features: BASE_FEATURES,
+        enabled: true,
         coingecko_id: Some("ethereum"),
     },
     NetworkDescriptor {
@@ -366,6 +369,7 @@ pub fn default_enabled_network_ids() -> Vec<String> {
         NETWORK_ETHEREUM_MAINNET.to_string(),
         NETWORK_BNB_MAINNET.to_string(),
         NETWORK_POLYGON_MAINNET.to_string(),
+        NETWORK_BASE_MAINNET.to_string(),
     ]
 }
 
@@ -390,7 +394,7 @@ pub fn paired_mainnet_id(desc: &NetworkDescriptor) -> &'static str {
         NETWORK_BITCOIN_TESTNET => NETWORK_BITCOIN_MAINNET,
         NETWORK_SUI_TESTNET => NETWORK_SUI_MAINNET,
         NETWORK_POLYGON_AMOY => NETWORK_POLYGON_MAINNET,
-        "base-sepolia" => "base-mainnet",
+        NETWORK_BASE_SEPOLIA => NETWORK_BASE_MAINNET,
         _ => mainnet_id_for_family(desc.family),
     }
 }
@@ -476,6 +480,7 @@ mod tests {
         let ids = default_enabled_network_ids();
         assert!(ids.iter().any(|id| id == NETWORK_BNB_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_POLYGON_MAINNET));
+        assert!(ids.iter().any(|id| id == NETWORK_BASE_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_ETHEREUM_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_BITCOIN_MAINNET));
         assert!(ids.iter().any(|id| id == NETWORK_SOLANA_MAINNET));
@@ -509,5 +514,32 @@ mod tests {
         assert!(env_rpc_override_for_network(NETWORK_BNB_TESTNET).is_none());
         assert!(env_rpc_override_for_network(NETWORK_POLYGON_MAINNET).is_none());
         assert!(env_rpc_override_for_network(NETWORK_POLYGON_AMOY).is_none());
+        assert!(env_rpc_override_for_network(NETWORK_BASE_MAINNET).is_none());
+        assert!(env_rpc_override_for_network(NETWORK_BASE_SEPOLIA).is_none());
+    }
+
+    #[test]
+    fn base_mainnet_is_first_class_evm() {
+        let n = get_network(NETWORK_BASE_MAINNET).expect("base-mainnet");
+        assert_eq!(n.family, ChainFamily::Evm);
+        assert_eq!(n.eip155_chain_id, Some(8453));
+        assert_eq!(n.native_symbol, "ETH");
+        assert!(n.enabled);
+        assert!(!n.features.swap);
+        assert_eq!(n.coingecko_id, Some("ethereum"));
+    }
+
+    #[test]
+    fn base_sepolia_pairs_to_base_mainnet() {
+        let n = require_network(NETWORK_BASE_SEPOLIA);
+        assert_eq!(n.eip155_chain_id, Some(84532));
+        assert!(n.is_testnet);
+        assert!(n.enabled);
+        assert!(!n.features.swap);
+        assert_eq!(paired_mainnet_id(n), NETWORK_BASE_MAINNET);
+        assert_eq!(
+            paired_testnet_id(require_network(NETWORK_BASE_MAINNET)),
+            Some(NETWORK_BASE_SEPOLIA)
+        );
     }
 }
