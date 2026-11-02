@@ -17,7 +17,7 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 futures.workspace = true
-alloy = { version = "1.0.38", default-features = false, features = [
+alloy = { version = "2.5.0", default-features = false, features = [
     "std",
     "provider-http",
     "rpc-types",
