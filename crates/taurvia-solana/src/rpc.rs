@@ -375,7 +375,7 @@ async fn build_activity_item(
                 RpcTransactionConfig {
                     encoding: Some(UiTransactionEncoding::JsonParsed),
                     commitment: Some(CommitmentConfig::confirmed()),
-                    max_supported_transaction_version: Some(0),
+                    max_supported_transaction_version: Some(1),
                 },
             )
             .await
