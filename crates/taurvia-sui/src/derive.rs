@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Result};
-use bech32::{FromBase32, ToBase32, Variant};
+use bech32::{primitives::decode::CheckedHrpstring, Bech32, Hrp};
 use blake2::{digest::consts::U32, Blake2b, Digest};
 use ed25519_dalek::{Signer as _, SigningKey, VerifyingKey};
 use hmac::{Hmac, KeyInit, Mac};
@@ -19,6 +19,7 @@ const SUI_DERIVATION_PATH: [u32; 5] = [
 ];
 
 const ED25519_FLAG: u8 = 0x00;
+const SUIPRIVKEY_HRP: Hrp = Hrp::parse_unchecked("suiprivkey");
 
 #[derive(Clone)]
 pub struct SuiSigner {
@@ -75,12 +76,13 @@ pub fn from_secret(input: &str) -> Result<SuiSigner> {
 }
 
 fn from_suiprivkey(encoded: &str) -> Result<SuiSigner> {
-    let (hrp, data, variant) =
-        bech32::decode(encoded).map_err(|e| anyhow!("invalid suiprivkey: {e}"))?;
-    if hrp != "suiprivkey" || variant != Variant::Bech32 {
+    // Strict Bech32 (not Bech32m) checksum, matching the previous `Variant::Bech32` check.
+    let checked = CheckedHrpstring::new::<Bech32>(encoded)
+        .map_err(|e| anyhow!("invalid suiprivkey: {e}"))?;
+    if checked.hrp() != SUIPRIVKEY_HRP {
         bail!("invalid suiprivkey encoding");
     }
-    let bytes = Vec::<u8>::from_base32(&data).map_err(|e| anyhow!("invalid suiprivkey: {e}"))?;
+    let bytes: Vec<u8> = checked.byte_iter().collect();
     if bytes.len() != 33 {
         bail!("invalid suiprivkey length");
     }
@@ -96,7 +98,7 @@ fn encode_suiprivkey(secret: &[u8; 32]) -> Result<String> {
     let mut payload = Vec::with_capacity(33);
     payload.push(ED25519_FLAG);
     payload.extend_from_slice(secret);
-    bech32::encode("suiprivkey", payload.to_base32(), Variant::Bech32)
+    bech32::encode::<Bech32>(SUIPRIVKEY_HRP, &payload)
         .map_err(|e| anyhow!("encode suiprivkey: {e}"))
 }
 

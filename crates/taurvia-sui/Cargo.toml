@@ -15,7 +15,7 @@ serde_json.workspace = true
 zeroize.workspace = true
 tokio.workspace = true
 futures.workspace = true
-bech32 = "0.9.1"
+bech32 = "0.11.1"
 blake2 = "0.11.0"
 ed25519-dalek = { version = "2.2.0", features = ["std"] }
 hmac = "0.13.0"
